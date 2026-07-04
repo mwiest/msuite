@@ -41,7 +41,7 @@ Fault tolerance + optional cross-device sync **without** a central server the de
 | **Dumb server + E2E encryption** | All merge intelligence in the client; server only shuffles ciphertext it can't read → needs no accounts, no app logic, no schema → hostable anywhere. |
 | **Op-log, not state-blobs** | Sync moves an ordered log of ops (`set field X = Y @ HLC on device D`), not whole records. |
 | **LWW merge for v1** | Last-Writer-Wins: pure Kotlin, simple, good enough when the same field is rarely co-edited offline. |
-| **HLC clock** | Hybrid Logical Clock keeps ordering sane despite device clock skew. |
+| **HLC clock** | Hybrid Logical Clock preserves *causal* order despite clock skew (concurrent edits still resolve LWW-by-wall-clock — see OQ-5). |
 | **CRDT deferred, not rejected** | Only needed for true concurrent co-editing (e.g. shared rich-text). Would require a Rust engine → breaks "stay in Kotlin," so out of scope until justified. |
 | **Fully local search** | E2E means no server-side indexing, ever. Fine at todo/notes/contacts scale. |
 
@@ -152,27 +152,17 @@ msuite/                        (one git repo)
 - Accounts, logins, or proprietary SDKs.
 - Monetization — solo hobby project, unfunded. Donations optional, never required.
 
-## Open questions
+## Decisions & open questions
 
-Stable IDs so we can tackle these one by one; numbering is kept stable as items resolve. OQ-3 is expensive to change later and should be resolved before writing much code; the rest can be settled incrementally.
+OQ numbers stay stable as items resolve. **OQ-1–11 are resolved; OQ-12–15 remain open.**
 
-- **OQ-1 (one identity/store vs. per-app) is resolved** — per-app data stores + shared identity via federation; see *Identity, pairing & recovery* and *Coherence across apps*.
-- **OQ-2 (op-log compaction / GC) is resolved** — convergent LWW state means the log is transport, not history; remote growth is bounded by membership-free snapshots; deletes are LWW tombstones. See *Log retention & snapshots*.
-- **OQ-3 (dumb-store plug contract) is resolved** — a narrow append-only `put`/`list`/`get` interface with immutable, content-addressed, typed names (`v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}`) so distinct writes never collide → no second merge layer; enumeration is list-and-diff (no cursor); no-delete plugs compact client-side. See *Backend "plugs"* → *Plug contract*.
-- **OQ-4 (reorder within a list) is resolved** — `position` is one LWW fractional-index string (jitter on generation, `itemId` tiebreak); sort by `(position, itemId)`. Convergent (no move-ops → snapshots still subsume); concurrent-reorder anomalies reduce to cosmetic interleave, no dupes/loss/crash. Manual order only in v1; rebalancing deferred. See *Merge correctness*.
-- **OQ-5 (wrong-clock / silent LWW loss) is resolved** — accept silent per-field loss for v1 (no ToDo field is catastrophic; conflict detection would need version vectors that fight OQ-2). Pure HLC, no max-drift clamp (pathological-clock case accepted; clamp deferred as a cheap ingest-time check, no format change). HLC guarantees causal ordering + deterministic convergence, *not* correct ordering of concurrent writes. App #2's notes body → per-field merge strategy (CRDT door). See *Merge correctness*.
-- **OQ-6 (schema / op migration) is resolved** — OQ-2 removes history-replay (log is transport); migration = local DB migration + read-time upcasting of immutable cross-version batches. Stable opaque field/op IDs (renames are non-events; removed IDs reserved), data-model version in the encrypted header, and opaque pass-through of unknown field IDs so old apps stay snapshot-safe. v1 ships only the seams (stable IDs, opaque-unknown store, version header, identity `upcast` hook). See *Merge correctness*.
-- **OQ-7 (merge/HLC test harness) is resolved** — a deterministic, seeded multi-device simulator (controllable clocks; partition/reorder/dup/drop transport) with property-based schedules + shrinking (kotest-property, KMP `commonTest`) + named scenarios. Asserts SEC / order-independence / idempotence, LWW single-winner + bounded-loss (*not* real-time correctness), reorder `keyBetween`/membership/convergent-order, no-resurrection, and snapshot subsumption. Layer 1 gates step 4; plug + crypto layers follow at steps 5/6. Requires OQ-4's jitter RNG to be seedable. See *Merge correctness*.
-- **OQ-8 (shared-key threat model) is resolved** — identity = one 256-bit symmetric root (no keypair); v1 pairing = single QR carrying the root (physical-trust model), fully symmetric so OQ-10's API-gating is moot. Accepted gaps (documented): no revocation, no forward secrecy, lost device = full compromise — FS/revocation are ~incompatible with membership-less + offline-convergence. Only response to loss = manual "nuclear" rotation (fans out per app × device under federation). Door-opener built in v1: a `keyGen` id in the batch header so clients hold a set of roots. See *Crypto, identity & privacy*.
-- **OQ-9 (relay metadata leakage) is resolved** — enumerated inherent leaks (size, timing, volume, IP, cross-app linkage) and name-derived leaks (`type`, `deviceId`, `hlc range` = operation wall-clock times); the random salt means `hash` leaks nothing (no dedup). Full OQ-3 name kept — device-count + timestamp leaks accepted for enumeration efficiency (honest-but-curious relay, OQ-8). Size-padding / per-app creds / pseudonymous `deviceId` deferred, no format change. See *Crypto, identity & privacy*.
-- **OQ-11 (recovery UX + at-rest) is resolved** — recovery key reframed as *key* not *data* recovery (durability = 2nd device or backend); no setup ceremony, a contextual nudge at the durability moment, mechanism = words + QR/file + copy (password-manager-primary); passphrase recovery deferred. At rest: OS sandbox + FBE for DB/op-log, hardware-backed KeyStore-wrapped root blob (root stays exportable); SQLCipher deferred (no native in v1). See *Crypto, identity & privacy*.
-- **OQ-10 (crypto library + scheme) is resolved** — **cryptography-kotlin** (whyoleg) behind `core/crypto` (KMP, vetted providers, swappable/vendorable); **Tink rejected** (is Google, JVM-only). Scheme: 256-bit symmetric root; per-batch `HKDF-SHA256(root, salt)` → AES-256-GCM (fresh key ⇒ no nonce reuse), SHA-256 content address, BIP39 recovery. Data path symmetric-only (no asymmetric needed to encrypt); X25519/Ed25519 deferred to OQ-8 with an Android API-level-gating caveat. See *Crypto, identity & privacy*.
+Three were resolved early and folded directly into the architecture above — no separate block below:
 
-### Architecture forks (resolve early — costly to retrofit)
+- **OQ-1** (one store vs. per-app) → per-app data stores + shared identity via federation — see *Coherence across apps*, *Identity, pairing & recovery*.
+- **OQ-2** (log compaction / GC) → merge is convergent, so the log is transport, not history; remote growth bounded by membership-free snapshots; deletes are LWW tombstones — see *Log retention & snapshots*.
+- **OQ-3** (dumb-store plug contract) → append-only `put`/`list`/`get` with immutable, content-addressed, typed names, so distinct writes never collide and no second merge layer forms — see *Plug contract*.
 
-*(OQ-3 resolved — see the resolved list above and *Backend "plugs"* → *Plug contract*.)*
-
-### Merge correctness
+### Merge correctness — OQ-4–7 (resolved)
 
 - **OQ-4 (reorder within a list) is resolved — position is one LWW fractional-index field.**
   Reorder ships in v1 as an ordinary per-field LWW value, honoring the retention constraint (a position *field*, never replayed move-ops — move-ops are non-convergent and would reintroduce the hard OQ-2 GC). Design:
@@ -186,7 +176,7 @@ Stable IDs so we can tackle these one by one; numbering is kept stable as items 
 
 - **OQ-5 (wrong-clock / silent LWW loss) is resolved — accepted for v1, pure HLC.**
   **What HLC guarantees:** (1) *causality* — if edit A was visible when B was written (A → B), then `HLC(A) < HLC(B)`, so causally-ordered edits merge in intended order (the common case where you did sync recently); (2) `pt` tracks the max wall-clock actually observed, so it can't diverge purely logically and stamps stay roughly wall-clock-meaningful; (3) `(pt, c, deviceId)` is a deterministic total order → every device converges on the same winner.
-  **What it does NOT give:** any *correct* ordering of **concurrent** writes (neither device saw the other). LWW linearizes those by wall clock, so a fast-clock device wins every concurrent conflict — and in a rarely-syncing suite, edits between syncs *are* concurrent by definition, so the conflicts that occur are predominantly the class HLC can't order. HLC linearizes concurrent writes; it does not make that linearization correct. No timestamp scheme can — only a partial-order clock (version vectors) or a non-LWW per-field merge would.
+  **What it does NOT give:** any *correct* ordering of **concurrent** writes (neither device saw the other). LWW linearizes those by wall clock, so a fast-clock device wins every concurrent conflict — and in a rarely-syncing suite, edits between syncs *are* concurrent by definition, so the conflicts that occur are predominantly the class HLC can't order. It linearizes concurrent writes but cannot make that ordering *correct* — no timestamp scheme can; only a partial-order clock (version vectors) or a non-LWW per-field merge would.
   **v1 decision — accept silent per-field loss.** No ToDo field is catastrophic to lose (`done` re-toggles, title/notes are retyped, scalars are scalars). Conflict *detection* would need per-field version vectors, whose per-device metadata + dead-device pruning **undo OQ-2's membership-free retention** — not worth paying in v1. The loser is discarded and, after compaction, unrecoverable. This is a bounded, documented acceptance.
   **v1 keeps pure HLC — no max-drift clamp.** A pathologically wrong clock (set far in the future) therefore dominates permanently; also accepted for v1. The clamp — peers reject a batch whose `pt` exceeds local `now()` by more than a bound (~1h–1d) — is a known, cheap mitigation deferred behind the ingest path: a check at merge time, no data-format change, addable the day a bad clock shows up in the wild.
   **Door for app #2 (a notes body, where LWW loss *is* unacceptable):** a per-field merge strategy behind `merge()` (CRDT/3-way for that one field) — the already-parked CRDT door, not a clock fix. OQ-4's `position` field inherits this same accepted loss.
@@ -210,7 +200,7 @@ Stable IDs so we can tackle these one by one; numbering is kept stable as items 
   - *Plug contract (OQ-3), once the real adapter is wrapped:* (12) concurrent puts → distinct objects, no clobber; `list` returns only fully-published names.
   **Layering:** Layer 1 (pure merge/HLC, inv 1–11) lands *at step 4* as the gate on the LWW reducer, before manual sync; Layer 2 (wrap the real plug, inv 12) with step 5; Layer 3 (encrypted batches still converge — crypto is transparent to merge) with step 6.
 
-### Crypto, identity & privacy
+### Crypto, identity & privacy — OQ-8–11 (resolved)
 
 - **OQ-8 (shared-key threat model) is resolved — one symmetric root, gaps accepted and documented.**
   **Identity = a single 256-bit symmetric root secret** (no asymmetric keypair). v1 pairing rides a **single self-contained QR that carries the root** (+ checksum); recovery key is the camera-less fallback. This keeps v1 fully symmetric — no X25519/Ed25519 — so OQ-10's Android JCA API-gating is moot.
@@ -238,7 +228,7 @@ Stable IDs so we can tackle these one by one; numbering is kept stable as items 
 - **OQ-10 (crypto library + scheme) is resolved — cryptography-kotlin, symmetric AEAD data path, Tink rejected.**
   **Library:** **cryptography-kotlin** (whyoleg) behind the `core/crypto` interface — a KMP abstraction over vetted platform providers (JDK/Conscrypt on Android), clean misuse-resistant API, keeps the KMP door open. Dependency risk (younger, single-maintainer) is bounded: Apache-2 (vendorable) and swappable behind `core/crypto`. **Tink is rejected** — FOSS/F-Droid-legal but *is* Google, against the no-Google spirit, and JVM-only; equally-vetted non-Google options exist, so the exception isn't worth spending. **libsodium** (native `.so`) is the fallback if a primitive gap or misuse-resistance need appears.
   **Scheme (library-agnostic by design):**
-  - **Root:** a 256-bit symmetric **group secret** = identity, shared via QR/recovery. The data path is **symmetric-only** — a shared-key AEAD gives confidentiality + integrity + intra-group authenticity, so no asymmetric crypto is required to encrypt batches. (Whether identity *also* carries an X25519/Ed25519 keypair for pairing is deferred to OQ-8; the docs' "identity is a keypair" wording is reconciled there.)
+  - **Root:** a 256-bit symmetric **group secret** = identity, shared via QR/recovery. The data path is **symmetric-only** — a shared-key AEAD gives confidentiality + integrity + intra-group authenticity, so no asymmetric crypto is required to encrypt batches. (Identity is the symmetric root; pairing is symmetric too — see OQ-8.)
   - **Per-batch:** random 256-bit `salt` → `K = HKDF-SHA256(root, salt, "msuite-batch-v1")` → `AEAD_Encrypt(K, fixed nonce, plaintext, aad = header)`. A fresh per-batch key makes **nonce reuse impossible regardless of AEAD nonce width**, decoupling correctness from the library's cipher choice. The header (`salt` + OQ-6 data-model version + OQ-8 `keyGen` id) is authenticated as AAD.
   - **AEAD:** AES-256-GCM (hardware-accelerated on modern Android); ChaCha20-Poly1305 acceptable alt.
   - **KDF:** HKDF-SHA-256. **Content address (OQ-3):** SHA-256 over the ciphertext object.
@@ -257,7 +247,7 @@ Stable IDs so we can tackle these one by one; numbering is kept stable as items 
   - **Root secret:** stored as a **hardware-backed KeyStore-wrapped blob** (Jetpack Security / `EncryptedSharedPreferences`). The root stays *exportable* (OQ-8) — the KeyStore key only wraps the resting blob; export remains a user-authorized path. A device-local at-rest key *can* be non-exportable KeyStore precisely because it is never shared, unlike the root.
   - **Deferred:** **SQLCipher** DB encryption (resists rooted/extraction attacks) — opt-in later behind the storage layer; skipped in v1 to avoid a native `.so`, consistent with OQ-10's no-native lean.
 
-### Scope & product
+### Scope & product — OQ-12–15 (open)
 
 - **OQ-12 — KMP `js` target while web is deferred = tax for nothing.**
   `core/storage` is annotated `js` but web is deferred; KMP + SQLDelight JS/wasm + crypto-in-JS is ongoing friction against an unshipped target. Options: go pure Kotlin/Android now and extract KMP later, or at least drop `js` from v1 targets.
