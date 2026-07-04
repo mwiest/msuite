@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500px" height="500px">
+  <defs>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="250.346" y1="0.818" x2="250.346" y2="499.732" id="gradient-0" gradientTransform="matrix(0.947105, -0.331126, 0.347697, 0.991965, 4.321766, 84.631993)">
+      <stop offset="0" style="stop-color: rgb(47, 99, 162);"/>
+      <stop offset="1" style="stop-color: rgb(40, 58, 92);"/>
+    </linearGradient>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="249.919" y1="208.155" x2="249.919" y2="374.394" id="gradient-1" gradientTransform="matrix(1.217982, 0, 0, 1.217982, -26.445281, -80.319689)">
+      <stop offset="0" style="stop-color: rgb(68, 100, 170);"/>
+      <stop offset="1" style="stop-color: rgb(54, 82, 116);"/>
+    </linearGradient>
+  </defs>
+  <rect width="500" height="500" style="fill: url(&quot;#gradient-0&quot;); stroke-width: 2.482;" id="object-0" transform="matrix(1, 0, 0, 1, 0, 1.1368683772161603e-13)"/>
+  <path fill="#FFFFFF" d="M 100.176 70.55 C 118.586 70.703 139.024 91.103 149.118 100 L 247.143 176.041 L 345.425 100 C 356.653 90.408 376.871 71.629 390.555 71.793 C 417.867 72.12 440.008 93.987 440.008 121.369 L 440.008 381.656 C 440.008 409.037 417.869 431.234 390.555 431.234 L 103.734 431.234 C 76.424 431.234 54.281 409.037 54.281 381.656 L 54.281 121.369 C 54.281 93.987 72.867 70.323 100.176 70.55 Z" style="stroke-width: 2.482;" id="object-1" transform="matrix(1, 0, 0, 1, 0, 1.1368683772161603e-13)"/>
+  <path d="M 234.872 375.686 L 148.712 289.525 L 178.867 259.368 L 234.872 315.373 L 377.036 173.209 L 407.191 203.365 L 234.872 375.686 Z" style="stroke-width: 0.025; fill: url(&quot;#gradient-1&quot;); transform-box: fill-box; transform-origin: 50% 50%;" transform="matrix(0.998851, 0.047925, -0.047925, 0.998851, 0, -0.000001)"/>
+</svg>
