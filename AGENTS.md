@@ -96,10 +96,29 @@ Monorepo, Gradle multi-module. Full module map + build rationale in
 
 **CI:** GitHub Actions (repo is `github.com/mwiest/msuite`) — runs the kotest merge/HLC harness on `jvm`, Spotless + detekt, debug-APK assembly, relay-jar build. This is a dev quality gate, **not** the release pipeline (F-Droid does its own reproducible builds from metadata). **Renovate** keeps deps current (first-class `libs.versions.toml` support).
 
-No build system is wired up yet. Once it is, document the real commands here
-(Gradle module builds, per-app `applicationId`, `kotest-property` merge/HLC
-simulator in `commonTest` on the `jvm` target — OQ-7). Per-app release tags use a
-prefix (`todo-v*`); `versionCode` is monotonic per `applicationId`.
+**Toolchain (pinned in `gradle/libs.versions.toml`):** Gradle **8.13**, AGP **8.13.2**, Kotlin **2.2.20**, Compose Multiplatform **1.9.3**.
+
+**Prerequisites:** JDK 21 (Android Studio's bundled JBR works); Android SDK with **platform 36** + build-tools 36.x. Point AGP at the SDK via `local.properties` (`sdk.dir=…`, git-ignored) or `ANDROID_HOME`.
+
+**Commands** (from repo root; use `./gradlew`):
+
+| Task | Command |
+|---|---|
+| Build all modules + debug APK | `./gradlew assembleDebug` |
+| App APK only → `apps/todo/build/outputs/apk/debug/todo-debug.apk` | `./gradlew :apps:todo:assembleDebug` |
+| All tests (KMP targets) | `./gradlew allTests` |
+| JVM/Android unit tests | `./gradlew test` |
+| Merge/HLC harness only (OQ-7, runs on `jvm`) | `./gradlew :core:sync:jvmTest` |
+| Run the relay (placeholder `main` for now) | `./gradlew :server:run` |
+| Relay jar | `./gradlew :server:jar` |
+
+**Module layout:** `core/{model,storage,sync,crypto}` are KMP (`android` + `jvm`); `core/design` is KMP Compose Multiplatform (`android` only for now, source in `commonMain`); `apps/todo` is an Android application; `server` is a Kotlin/JVM app. Per-app release tags use a prefix (`todo-v*`); `versionCode` is monotonic per `applicationId`.
+
+**Skeleton stubs — wire these when implementing** (pinned in the catalog, not yet on the compile classpath): SQLDelight (`core/storage`), cryptography-kotlin (`core/crypto`), Ktor server (`server`), Navigation Compose + multiplatform-settings + Kermit (`apps/todo`). Each has a `// TODO` at its use site.
+
+**Pending build tasks** (decided, not yet wired — kept out to keep the skeleton green):
+- Extract per-module `compileSdk/minSdk/jvmTarget` (search `// TODO: build-logic`) into `build-logic` convention plugins; register it as an included build.
+- Wire **Spotless(ktlint) + detekt** (Decision 8) and the **GitHub Actions** workflow + **Renovate** config.
 
 ## Dev environment
 
