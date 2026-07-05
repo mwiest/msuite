@@ -16,7 +16,7 @@ A coherent set of FOSS, local-first mobile apps — small "handy helper" utiliti
 | Material 3 | Consistent design system across apps. |
 | No proprietary Google deps | No GMS/FCM/ML-Kit/Maps → clean F-Droid publishing. |
 
-**The wedge:** not out-featuring incumbents (impossible solo) but *coherence + a shared, serverless sync layer* across a suite — which no one has nailed.
+**The thesis (this is a proof-of-concept, not a product play):** not out-featuring incumbents (impossible solo, and not the goal) but proving that *coherence + a shared, serverless sync layer* across a privacy-first FOSS suite with good UX is buildable by a solo dev — which no one has nailed. Success = a working demonstration of the architecture + UX, **not adoption** (see *Non-goals*).
 
 ## Coherence across apps
 
@@ -47,6 +47,10 @@ Fault tolerance + optional cross-device sync **without** a central server the de
 
 **Keeping the LWW→CRDT door open:** merge sits behind one `merge(local, remote)` interface; every record carries per-field `(value, HLC, deviceId)`; data format is versioned. Anti-pattern to avoid: storing only final state with no per-field metadata — that permanently forecloses smarter merging.
 
+### Batch encoding
+
+Op-batches and the export snapshot serialize via **kotlinx.serialization + ProtoBuf** (KMP-native, behind an encoder interface in `core/model`). Rationale: compact binary keeps the OQ-9 size leak small; proto **field numbers double as the OQ-6 stable opaque IDs** (renames are non-events, add/remove/type-change is the only migration surface); one encoder covers android + jvm (+ web later). We don't rely on protobuf's own unknown-field retention — OQ-6 forward-compat is modelled explicitly as first-class `(id, bytes, HLC, deviceId)` state entries — so no `.proto` schema toolchain (e.g. Square Wire) is needed. **Determinism** (same logical batch → identical bytes, for OQ-3 idempotent retry and reproducible tests) requires canonical field/map ordering, which we control. A human-readable JSON *debug* view can be added behind the same interface without changing the primary format.
+
 ### Log retention & snapshots
 
 Merge is a **pure function of per-field state** `(value, HLC, deviceId)` — convergent / state-based. Consequence: the op-log is *transport*, not permanent history. Once a delta batch is synced it collapses into state (LWW merge = take the higher HLC per field), so the local log doesn't grow unbounded and no distributed GC is needed. This holds only while merge stays convergent — so reorder must be an LWW **position field**, not replayed move-ops (see OQ-4).
@@ -70,7 +74,9 @@ Sync goes through a **backend-adapter interface**. The *user* picks and configur
 | Object storage | S3-compatible bucket (R2, B2, MinIO) | Bucket + keys |
 | Dumb relay | Bundled `server/` binary, self-host or cheap PaaS | Run binary / deploy |
 
-Self-hosted and cloud relay are the **same binary**. Free/cheap host options for those who want them: Cloudflare (Workers/R2/Durable Objects), Oracle Always-Free VM, PikaPods/Railway/Koyeb.
+The relay is a **single Ktor (Kotlin/JVM) binary** — same artifact for self-host and cloud — reusing the OQ-3 name-grammar + contract types from `core` so the wire never drifts. Free/cheap host options: Oracle Always-Free VM, PikaPods / Railway / Koyeb / fly.io. **Cloudflare needs no relay** — R2 is S3-compatible, so those users point the *Object-storage plug* at R2 directly (a JVM binary can't run on Workers anyway).
+
+**Reflection-averse by design (keeps the GraalVM-native door cheap):** the relay avoids runtime reflection so a future GraalVM native image (smaller, fast cold-start, low memory) stays config-not-rewrite — Ktor **CIO** engine + programmatic `embeddedServer` (no HOCON module-by-FQN loading), **filesystem** blob storage (no JDBC / native SQLite), manual wiring (no reflection DI), and kotlinx.serialization (compile-time codegen — already chosen). Any residual reflection is covered by GraalVM reachability metadata + a tracing-agent pass in CI. The native image itself is a **deferred optimization** — a plain JVM jar validates step 8; go native only if hosting footprint bites.
 
 #### Plug contract (resolves OQ-3)
 
@@ -93,8 +99,20 @@ v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}
 
 - `v{fmt}` — naming-scheme version (migration door). `type` — `d` (delta) | `s` (snapshot). `deviceId` — **one writer per batch**. `hlcLo..hlcHi` — the HLC span covered (drives snapshot subsumption). `hash` — over the **ciphertext**, giving content-addressing + integrity + dedup + idempotent put.
 - Charset `[A-Z0-9_]`, `_`-separated (no `:` or `/`) — valid as an S3 key, a WebDAV path segment, and a FAT/ext4/SAF filename, well under 255 chars.
+- **Binary fields are encoded to fit the charset:** `hash` (SHA-256) and `deviceId` are encoded as **unpadded uppercase base32** (RFC 4648 `[A-Z2-7]` ⊂ `[A-Z0-9]`; fixed lengths → no `=` padding). Full SHA-256 → 52 chars, so no truncation needed. All-uppercase also prevents collisions on **case-insensitive** stores (FAT/exFAT/Windows, some WebDAV servers), where two names differing only by case would clash.
 
 Because distinct writes get distinct names, two devices writing concurrently produce two objects — never a clobber, never a `.sync-conflict`. The storage layer never merges; the app's LWW merge is the only merge layer. `put` is never issued as an overwrite, so create-only and overwrite backends behave identically. **Retry-idempotency:** a batch's ciphertext is computed *once* (its OQ-10 random salt fixed at creation, bytes cached) so a retried `put` re-sends identical bytes to the same name. Note the salt means two devices with semantically identical content still produce *different* objects — fine for merge (LWW converges) and good for privacy (no cross-device dedup; see OQ-9).
+
+**Per-plug realization** — the same flat set of immutable, uniquely-named ciphertext blobs everywhere, differing only in physical container and atomic-create technique:
+
+| Plug | One batch is… | Atomic publish | Create-only | `list(prefix)` |
+|---|---|---|---|---|
+| Synced folder (SAF) | a file, filename = name | temp-write + rename; temp uses a non-matching name (`.tmp_*`) so `list` never sees it; the sync client (Syncthing/Nextcloud/Dropbox) also rename-on-complete across devices | unique by construction; a retry re-sends identical bytes | list dir children, filter prefix |
+| WebDAV | a resource, path segment = name | server `PUT` atomically visible, or `PUT`-temp + `MOVE` for stubborn servers | `If-None-Match: *` | `PROPFIND Depth:1` (minimal props) + prefix filter |
+| Object storage (S3/R2/B2/MinIO) | an object, key = name | **native** — atomic put + strong read-after-write | `If-None-Match: *` (else moot — identical-content retry is harmless) | `ListObjectsV2(prefix)` — native |
+| Dumb relay | a file on disk (filesystem storage — keeps GraalVM-native easy; a pure-Kotlin KV is an option) | relay **enforces** it (temp+rename) | relay rejects an existing name and verifies body-vs-`hash` | relay returns names by prefix (may add a cursor later — the only backend that can) |
+
+In every row, distinct names mean concurrent writers produce distinct blobs — no clobber, no `.sync-conflict`, no server-side merge or lock. `delete` (capability-gated) maps to file delete / WebDAV `DELETE` / `DeleteObject` / relay delete on all four, which is what makes snapshot pruning viable on real backends (unlike the manual plug, which relies on client-side compaction instead). Readers may re-verify a fetched body against the name's `hash` as belt-and-suspenders against truncation.
 
 **Two plug shapes over the same interface:**
 
@@ -132,7 +150,7 @@ msuite/                        (one git repo)
 ├─ gradle/libs.versions.toml   single version catalog
 ├─ core/
 │  ├─ model/                   shared domain types + op definitions
-│  ├─ storage/                 op-log, local persistence   (KMP: android, jvm, js)
+│  ├─ storage/                 op-log, local persistence   (KMP: android, jvm — js dropped, OQ-12)
 │  ├─ sync/                    HLC, LWW merge, backend-plug interface + adapters
 │  ├─ crypto/                  E2E, symmetric root secret, QR pairing
 │  └─ design/                  Material 3 theme, shared Compose components
@@ -151,10 +169,11 @@ msuite/                        (one git repo)
 - Running/maintaining any backend or hosted service for users.
 - Accounts, logins, or proprietary SDKs.
 - Monetization — solo hobby project, unfunded. Donations optional, never required.
+- Adoption / user growth as a success metric — this is a proof-of-concept; success is a working demonstration of the architecture + UX. Reminders and other app-polish features are deferred on that basis (they exercise none of the shared-layer thesis), not scheduled against a growth plan.
 
 ## Decisions & open questions
 
-OQ numbers stay stable as items resolve. **OQ-1–11 are resolved; OQ-12–15 remain open.**
+OQ numbers stay stable as items resolve. **OQ-1–15 are all resolved.**
 
 Three were resolved early and folded directly into the architecture above — no separate block below:
 
@@ -247,16 +266,48 @@ Three were resolved early and folded directly into the architecture above — no
   - **Root secret:** stored as a **hardware-backed KeyStore-wrapped blob** (Jetpack Security / `EncryptedSharedPreferences`). The root stays *exportable* (OQ-8) — the KeyStore key only wraps the resting blob; export remains a user-authorized path. A device-local at-rest key *can* be non-exportable KeyStore precisely because it is never shared, unlike the root.
   - **Deferred:** **SQLCipher** DB encryption (resists rooted/extraction attacks) — opt-in later behind the storage layer; skipped in v1 to avoid a native `.so`, consistent with OQ-10's no-native lean.
 
-### Scope & product — OQ-12–15 (open)
+### Scope & product — OQ-12–15 (resolved)
 
-- **OQ-12 — KMP `js` target while web is deferred = tax for nothing.**
-  `core/storage` is annotated `js` but web is deferred; KMP + SQLDelight JS/wasm + crypto-in-JS is ongoing friction against an unshipped target. Options: go pure Kotlin/Android now and extract KMP later, or at least drop `js` from v1 targets.
+These four are strategic, not mechanical. **Framing (locks the others):** this is a **proof-of-concept hobby project with no adoption goal** — success is a working demonstration of the architecture + UX (see *Non-goals* and *the thesis*, above). So "adoption risk / acquisition wedge / adoption gate" language from earlier drafts is retired: OQ-13's wedge question dissolves, OQ-14 defers reminders simply because they prove none of the thesis, and OQ-15 keeps infra-first because the shared layer *is* the deliverable. OQ-12 additionally enforces **web-capable library choices** even though the `js` target isn't built.
 
-- **OQ-13 — Is "suite coherence" a user-visible wedge, or an engineering aesthetic?**
-  Bring-your-own-backend E2E sync is well-trodden (Joplin, Standard Notes, KeePass, Obsidian+Syncthing). The novel claim — one shared sync layer across a suite — is *developer*-facing. Users install app #2 because it's good and pairs once, not because sync internals match. The real wedge is likely "**pair once, all msuite apps sync**" + consistent feel — now delivered mechanically by federation (pair once per device; see *Identity, pairing & recovery*). Remaining open part: is that enough of a wedge, or is per-app quality what actually drives adoption? Don't over-invest in suite infra before a single app earns its keep.
+- **OQ-12 (KMP `js` while web is deferred) is resolved — don't build the `js`/`wasm` target in v1, but keep every library choice web-capable.**
+  Two separate things: *building* a web target now (pure tax — SQLDelight JS/wasm + crypto-in-JS friction against an unshipped target) vs. *choosing libs that can reach web later*. Drop the former; enforce the latter (per the steer: prefer web-capable libs wherever possible, so re-adding `js` is config, not a rewrite). Going *fully* pure-Android would also over-correct — the OQ-7 kotest harness wants to run as fast JVM unit tests, and a clean `commonMain` + web-capable libs is the cheap door-opener.
+  - **v1 KMP targets = `android` + `jvm`.** `jvm` earns its place now (the harness runs there); `js`/`wasm` build isn't worth it until web is real. `core/storage` is annotated `(android, jvm)` accordingly.
+  - **Core libs are already web-ready — nothing currently listed needs replacing:**
 
-- **OQ-14 — Reminders/notifications strategy (deferred, but load-bearing).**
-  A ToDo without reminders barely validates the *product*, and reminders on Android-without-FCM is itself hard (exact-alarm permission Android 12+/14, OEM battery-killers). v1 validates the tech, not adoption — fine, but be explicit that it tests ~0% of "will anyone adopt app #2." Strategy: AlarmManager/WorkManager, OEM caveats.
+    | Core lib | Web path | Friction to watch |
+    |---|---|---|
+    | SQLDelight (`storage`) | sql.js (SQLite→wasm) worker driver, persisted to IndexedDB/OPFS | **the main watch-item** — the wasmJs driver is the least mature piece |
+    | cryptography-kotlin (`crypto`) | **WebCrypto provider** — AES-256-GCM, HKDF-SHA-256, SHA-256 all in browser SubtleCrypto | none; symmetric-only path also sidesteps the X25519/Ed25519 API-gating caveat (OQ-10) |
+    | Compose MP / Material 3 (`design`) | Compose for Web (wasmJs, Canvas) | rendering backend differs; theme tokens/components port |
+    | Ktor client (HTTP plugs — WebDAV/S3/relay) | JS/fetch engine | **CORS** on S3/WebDAV/relay from a browser origin |
+    | kotest-property (test) | test-only, KMP-capable | irrelevant to shipping |
 
-- **OQ-15 — Solo-maintainer scope realism.**
-  Infra + multiple apps + relay + F-Droid + crypto, unfunded and solo, front-loads maximum cost before any single app ships. Consider what the cheapest path to a *product* signal is (possibly a local-only app first) vs. the current infra-first sequence.
+  - **The web-*incompatible* bits are all inherently platform-specific and already live behind interfaces (app/platform layer, never `core`)** — so web is writing platform impls, not swapping core libs:
+
+    | Android bit | Why not web | Web impl |
+    |---|---|---|
+    | SAF ("synced folder" plug) | no SAF in browser | File System Access API (`showDirectoryPicker`, Chromium) for folders; file up/download for the manual export/import plug |
+    | KeyStore / EncryptedSharedPreferences (root at rest, OQ-11) | no hardware KeyStore in browser | WebCrypto **non-extractable** wrapping key in IndexedDB wraps the resting root blob — sandbox-backed, *weaker than hardware*; a documented web at-rest gap |
+    | ZXing / zxing-cpp (QR scan, OQ-8 pairing) | native/camera | `BarcodeDetector` API or a JS QR lib + `getUserMedia` |
+    | AlarmManager / WorkManager (reminders — deferred, OQ-14) | no reliable background alarms when tab closed | Notifications API + Service Worker; genuinely limited on web |
+
+  - **Conclusion:** dropping the `js` build from v1 costs nothing architecturally — the interface discipline (IdentityProvider, backend-plug, and by extension QR-scan / at-rest / filesystem seams) already isolates every non-portable dependency. Keep choosing web-capable libs; add the `js` target when web is real.
+
+- **OQ-13 (is "suite coherence" a user-visible wedge?) is resolved — the question dissolves: no adoption goal, so coherence isn't a go-to-market wedge, it's the *thesis being proven*.**
+  Bring-your-own-backend E2E sync is well-trodden (Joplin, Standard Notes, KeePass, Obsidian+Syncthing); "one shared sync layer across a suite" is the novel, *developer*-facing part. Since this is a PoC, not a product play:
+  - The value is the **demonstration itself** — that a solo dev can build a coherent, privacy-first, good-UX FOSS suite with serverless E2E sync. Judged on **engineering + UX quality**, not installs.
+  - Coherence still has real *engineering* payoff — federation ("pair once, all msuite apps sync"; see *Identity, pairing & recovery*) + a shared design language make the suite cohere, which is exactly what the PoC shows off. But there's no "wedge"/"multiplier" claim to defend because there's no market to win.
+  - **Upshot:** the point of the exercise is the shared layer + UX quality, so building it *is* the deliverable — which is why infra-first (OQ-15) is coherent with the goal rather than in tension with it.
+
+- **OQ-14 (reminders/notifications) is resolved — deferred from v1 because they prove none of the tech thesis, not for any adoption-timing reason.**
+  Reminders are the core ToDo job-to-be-done and are genuinely hard on FOSS Android (exact-alarm permission Android 12+/14, OEM battery-killers, no FCM). But:
+  - **Out of v1** simply because they exercise none of the shared-layer thesis (sync / E2E / pairing) — pure app-feature surface. No adoption signal is sought or claimed (there is no adoption goal — OQ-13).
+  - **A natural later feature** if the suite is ever used for real — not a scheduled "gate."
+  - **Strategy (documented, not built):** `AlarmManager` (`USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM`, Android 12+/14) for time-critical fires, `WorkManager` for inexact, a per-device "allow exact alarms" nudge, documented OEM battery-killer caveats (Xiaomi/Samsung/Huawei). No FCM (F-Droid rule). On web: Notifications API + Service Worker (limited — OQ-12).
+
+- **OQ-15 (solo-maintainer scope realism) is resolved — keep infra-first; the concern is *finishing the PoC*, not product signal.**
+  Infra + relay + F-Droid + crypto, unfunded and solo, is a lot — but since the shared layer *is* the deliverable (OQ-13), building it first is building the point, not deferring a product.
+  - **Keep the current build order (`msuite-v1.md` steps 1–9 unchanged).** The OQ-7-gated de-risking sequence retires the hard engineering unknowns — *does serverless E2E suite sync actually work?* — in dependency order, each step proving one thing.
+  - **Scope contained by discipline:** that sequence + **strict v1 minimalism** — a thin ToDo with everything non-essential deferred (reminders, subtasks, recurrence, attachments, web, CRDT, snapshots, revocation). v1 builds *only* the door-openers, never the deferred machinery.
+  - **No product-signal framing** — there is no adoption risk to retire because adoption isn't a goal; the only risk that matters is whether the architecture + UX come together into a working demonstration.
