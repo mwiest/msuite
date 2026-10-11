@@ -7,6 +7,7 @@ A coherent set of **FOSS, local-first** mobile apps — small "handy helper" uti
 - **Local-first** — your data lives on your device and works fully offline.
 - **No registration** — no accounts, ever. Your identity is a key on your device.
 - **No mandatory backend** — sync is optional, end-to-end encrypted, and uses a backend *you* choose (a synced folder, your own server, a cheap bucket…). We host nothing.
+- **No telemetry** — no analytics, no crash-reporting SDKs.
 - **FOSS & F-Droid-friendly** — open source, no proprietary Google dependencies.
 - **Good, simple UX** — Material 3, opinionated defaults, no clutter.
 
@@ -22,12 +23,12 @@ A coherent set of **FOSS, local-first** mobile apps — small "handy helper" uti
 
 ## Status
 
-Early development. Not yet released.
+Early development; a proof of concept. Not yet released.
 
 ## License
 
-Apps and shared libraries: **GPL-3.0-or-later**. Sync relay server: **AGPL-3.0-or-later**.
+**GPL-3.0-or-later** for everything, including the sync relay server.
 
 ---
 
-Design and architecture notes: [`msuite.md`](msuite.md) · v1 plan: [`msuite-v1.md`](msuite-v1.md)
+What msuite is: [`docs/product.md`](docs/product.md) · Architecture: [`docs/architecture.md`](docs/architecture.md) · Roadmap: [`docs/roadmap.md`](docs/roadmap.md)
