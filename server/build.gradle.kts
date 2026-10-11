@@ -1,19 +1,5 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    application
-}
-
-// Build on JDK 21 (toolchain), emit 17 bytecode — consistent with the app/core.
-java {
-    toolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-
-kotlin {
-    compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
+    id("msuite.jvm-app")
 }
 
 application {
