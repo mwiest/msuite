@@ -1,6 +1,6 @@
 # 0003: Backend plugs are append-only put/list/get with content-addressed names
 
-Date: 2026-07-05. Status: accepted. Formerly OQ-3.
+Date: 2026-07-05. Status: accepted; name grammar replaced by 0029. Formerly OQ-3.
 
 ## Context
 

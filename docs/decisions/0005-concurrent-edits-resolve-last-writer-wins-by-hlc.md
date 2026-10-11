@@ -1,6 +1,6 @@
 # 0005: Concurrent edits resolve last-writer-wins by HLC; the loss is accepted
 
-Date: 2026-07-05. Status: accepted. Formerly OQ-5.
+Date: 2026-07-05. Status: accepted; "no max-drift clamp" replaced by 0040. Formerly OQ-5.
 
 ## Context
 

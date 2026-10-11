@@ -1,6 +1,6 @@
 # 0007: Merge is gated by a seeded, property-based multi-device simulator
 
-Date: 2026-07-05. Status: accepted. Formerly OQ-7.
+Date: 2026-07-05. Status: accepted; test location replaced by 0038, step numbers by 0034. Formerly OQ-7.
 
 ## Context
 

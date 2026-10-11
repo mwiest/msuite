@@ -26,16 +26,16 @@ success is a working demonstration of the architecture and UX, not adoption. Wha
 | Relay server | Ktor CIO, programmatic config, filesystem storage | Netty, HOCON module loading, JDBC / native SQLite |
 | QR scan | ZXing / zxing-cpp | Google ML Kit |
 | UI | Compose Multiplatform + Material 3 | AndroidX Compose (Android-only) |
-| Navigation | Navigation Compose, type-safe routes | a hand-rolled back stack |
+| Navigation | Navigation Compose Multiplatform (`org.jetbrains.androidx.navigation`), type-safe routes | a hand-rolled back stack |
 | Dependency injection | Manual constructor injection, one composition root per app (Koin in the app layer only if wiring grows) | Hilt / Dagger; any reflection DI in the relay |
 | Date and time | kotlinx-datetime | `java.time` |
 | UUID | `kotlin.uuid.Uuid` | benasher44/uuid |
 | Logging | Kermit (the relay uses Ktor's SLF4J) | - |
 | Non-secret settings | multiplatform-settings, **never** backend credentials | AndroidX DataStore |
-| Tests | kotest + kotest-property in `commonTest`, run on `jvm` | - |
+| Tests | kotest + kotest-property in `jvmTest`, logic in `commonMain` | - |
 | Format / lint | Spotless (ktlint), detekt | - |
 
-Reasons: decisions 0010, 0012, 0016 to 0020, 0026.
+Reasons: decisions 0010, 0012, 0016 to 0020, 0026, 0037, 0038.
 
 ## Hard constraints
 
@@ -49,7 +49,8 @@ Not to be broken without a new decision record.
 - **Keep libraries web-capable**, but don't build the `js`/`wasm` target yet (decision 0012).
 - **All merge stays in the client.** Backends are dumb, interchangeable stores of ciphertext; never
   a second merge layer below the app's (decisions 0003, 0028).
-- **Apps depend on `core/*`, never on each other.**
+- **Apps depend on `core/*`, never on each other** (`apps/<a>/*` never on `apps/<b>/*`).
+  App code lives in the KMP module `apps/<app>/shared`; `apps/<app>/android` is a thin shell (decision 0037).
 - **Don't roll your own crypto**: compose primitives from cryptography-kotlin only.
 - **No telemetry**: no analytics or crash-reporting SDKs (decision 0024).
 - Don't reopen a recorded decision without cause: read its "Rejected" section first.

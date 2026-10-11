@@ -1,6 +1,6 @@
 # 0010: Crypto is cryptography-kotlin, per-batch HKDF into AES-256-GCM
 
-Date: 2026-07-05. Status: accepted. Formerly OQ-10.
+Date: 2026-07-05. Status: accepted; AAD extended by 0029. Formerly OQ-10.
 
 ## Context
 

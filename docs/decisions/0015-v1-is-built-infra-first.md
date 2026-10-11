@@ -1,6 +1,6 @@
 # 0015: v1 is built infra-first, in de-risking order
 
-Date: 2026-07-05. Status: accepted. Formerly OQ-15.
+Date: 2026-07-05. Status: replaced by 0034. Formerly OQ-15.
 
 ## Context
 

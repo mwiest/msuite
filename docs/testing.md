@@ -10,17 +10,17 @@ How msuite is tested: kotest on the JVM, and the merge/HLC simulator that gates 
 ./gradlew :core:sync:jvmTest     # the sync tests and simulator only
 ```
 
-Tests run on the `jvm` target (decision 0012). The stack is kotest (runner on JUnit 5, assertions,
-kotest-property). Today kotest is a `jvmTest` dependency of `core/sync` only, because the JUnit 5
-runner is JVM-only; running kotest from `commonTest` would need kotest's multiplatform setup. There
-is one smoke test, `core/sync/src/jvmTest/.../SyncSmokeTest.kt`, proving the stack runs.
+Logic lives in `commonMain`; its tests live in `jvmTest` and run with kotest on JUnit 5
+(decision 0038). The stack is kotest (runner, assertions, kotest-property). Today kotest is wired
+into `core/sync` only, with one smoke test, `core/sync/src/jvmTest/.../SyncSmokeTest.kt`, proving
+the stack runs.
 
 Work is test-first: each feature or change gets at least one test, or a stated reason why none
 applies.
 
 ## Merge/HLC simulator
 
-Planned for v1 step 4 (decision 0007). A seeded, in-memory simulation of N devices:
+Planned for v1 step 2 (decisions 0007, 0034). A seeded, in-memory simulation of N devices:
 
 - each device has a controllable clock (offset, drift, jumps mid-run);
 - the transport can partition, reorder, duplicate and drop batches;
@@ -57,17 +57,32 @@ Snapshots (decision 0002; the v1 manual plug path):
 11. `merge(deltas)` equals `merge(snapshot_of(deltas))`, and `local ⊕ latest snapshot` equals
     `local ⊕ folded deltas`.
 
-Plug contract (decision 0003):
+Plug contract (decisions 0003, 0029):
 12. Concurrent puts give distinct objects, never a clobber; `list` returns only fully published
-    names.
+    keys.
+
+Clock clamp (decision 0040):
+13. A batch with `hlcHi.pt` more than 24 h ahead of a device's clock is not merged there, and is
+    merged once that clock catches up; no device's HLC runs more than 24 h ahead of its wall
+    clock.
+
+ToDo rules (decisions 0031, 0032, 0033):
+14. A task whose list is deleted is hidden on every device, whatever the merge order; a later move
+    to a live list makes it visible again.
+15. Devices that each created the default list on first run end with exactly one.
+16. A device that joins with existing data keeps all of it, and the group converges to the union.
+
+Envelope (decision 0029, Layer 3):
+17. A batch renamed or moved to another key fails to decrypt and is not merged.
 
 ### Layers
 
 | Layer | Lands with | Covers |
 |---|---|---|
-| 1 | v1 step 4, gating the LWW reducer | pure merge and HLC, invariants 1 to 11 |
+| 1 | v1 step 2, gating the LWW merge | pure merge and HLC, invariants 1 to 11 and 13 |
+| 1 + ToDo rules | v1 step 4, with the ToDo app's projection | invariants 14 to 16 |
 | 2 | v1 step 5 | the real plug wrapped in, invariant 12 |
-| 3 | v1 step 6 | encrypted batches still converge |
+| 3 | v1 step 6 | encrypted batches still converge, invariant 17 |
 
 ## Formatting and static analysis
 

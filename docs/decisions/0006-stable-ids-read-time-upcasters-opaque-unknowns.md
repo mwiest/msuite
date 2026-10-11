@@ -1,6 +1,6 @@
 # 0006: Schema changes use stable IDs, read-time upcasters and opaque unknown fields
 
-Date: 2026-07-05. Status: accepted. Formerly OQ-6.
+Date: 2026-07-05. Status: accepted; storage layout replaced by 0035. Formerly OQ-6.
 
 ## Context
 

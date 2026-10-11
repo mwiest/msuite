@@ -13,8 +13,8 @@ does" as its step in [`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
 | Module | Kind | Holds (intended) | Today |
 |---|---|---|---|
 | `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `DATA_MODEL_VERSION` constant |
-| `core/storage` | KMP (android, jvm) | SQLDelight database: op-log store, materialized per-field state `(value, HLC, deviceId)` including opaque unknown field IDs (decision 0006) | Placeholder |
-| `core/sync` | KMP (android, jvm) | HLC, op-log append and merge, LWW reducer behind `merge()`, backend-plug interface (`put`/`list`/`get`), batch naming, plug adapters | Placeholder, kotest smoke test |
+| `core/storage` | KMP (android, jvm) | SQLDelight database: the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | Placeholder |
+| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | Placeholder, kotest smoke test |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo` | Android application `com.msuite.todo` | The ToDo app and its composition root (decision 0019) | Empty `MainActivity` |
@@ -58,17 +58,33 @@ in the client.
 
 ### Data and merge
 
-- Every record field is stored as `(value, HLC, deviceId)`. Deletes are an ordinary LWW `deleted`
-  field (tombstone).
-- An edit is an op, `set field X = Y @ HLC on device D`. Ops are grouped into batches.
-- `merge(local, remote)` is per-field last-writer-wins on the total order `(pt, c, deviceId)` of
-  the Hybrid Logical Clock (decision 0005). It is a pure function of state, so merge is convergent
-  and order-independent.
-- The op-log is transport: a synced batch collapses into state (decision 0002). v1 keeps all
-  batches anyway.
+- All synced state is one generic table in `core/storage`, the same for every app (decision 0035):
+
+  ```
+  field_state(record_id, field_id, value BLOB, hlc, device_id)   primary key (record_id, field_id)
+  ```
+
+  `value` is encoded with the batch encoder. The record type is an ordinary field with a reserved
+  ID. Apps read typed models through their own projection code.
+- Deletes are an ordinary LWW `deleted` field (tombstone).
+- `merge(local, remote)` in `core/sync` is per-cell last-writer-wins on the total order
+  `(pt, c, deviceId)` of the Hybrid Logical Clock (decision 0005). It is a pure function of
+  state, so merge is convergent and order-independent, and it knows nothing about the app.
+- HLC: 48-bit millisecond `pt`, 16-bit counter `c`. Ingest defers batches whose `hlcHi.pt` is more
+  than 24 h ahead of the local clock, and the local HLC never runs more than 24 h ahead of the
+  wall clock (decision 0040).
+- No local op-log (decision 0036). An outgoing delta is every cell with an HLC newer than the
+  plug's local watermark. The device also keeps the set of batch names it has ingested.
+- Unknown field IDs from newer app versions are rows the app doesn't read; they are merged and
+  written out like any other (decisions 0006, 0035).
 - Manual order is a `position` field holding a fractional-index string with a random suffix; lists
   sort by `(position, itemId)` (decision 0004).
-- Unknown field IDs from newer app versions are kept opaquely and written back out (decision 0006).
+- Records that exist once per app (the default list) have constant IDs in code (decision 0031).
+
+### Read-time rules (ToDo)
+
+- A task whose list is deleted is hidden everywhere; deleting a list writes only the list's
+  `deleted` field (decision 0032).
 
 ### Batch encoding
 
@@ -77,52 +93,62 @@ field numbers are the stable IDs. Encoding is deterministic: canonical field and
 
 ### Batch envelope (encryption)
 
-Planned for v1 step 6 (decision 0010):
+Planned for v1 step 6 (decisions 0010, 0029):
 
 ```
-header (authenticated as AAD): salt (256 bit random), data-model version, keyGen id
-key:        K = HKDF-SHA256(root, salt, "msuite-batch-v1")
-ciphertext: AES-256-GCM(K, fixed nonce, encoded batch, aad = header)
+header:     salt (256 bit random), data-model version, keyGen id
+key:        K   = HKDF-SHA256(root, salt, "msuite-batch-v1")
+aad:        header + object key without the hash ({namespace}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi})
+ciphertext: AES-256-GCM(K, fixed nonce, encoded batch, aad)
 ```
 
+A reader rebuilds the AAD from the key it fetched, so a renamed or moved batch fails to decrypt.
 The ciphertext of a batch is computed once and cached, so retries resend identical bytes.
 
 ### Backend plugs
 
-One append-only interface (decision 0003): `put(name, bytes)` (create-only, atomic),
-`list(prefix)` (names only), `get(name)`. `delete` and a capability descriptor arrive with
+One append-only interface (decision 0003): `put(key, bytes)` (create-only, atomic),
+`list(prefix)` (keys only), `get(key)`. `delete` and a capability descriptor arrive with
 snapshots and the relay.
 
-Batch names, charset `[A-Z0-9_]`:
+Object keys (decision 0029):
 
 ```
-v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}
+{namespace}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}
 ```
 
+- `namespace`: first 128 bits of `HKDF-SHA256(root, "msuite-ns-v1:" + appId)`, one opaque segment
+  per app and group.
 - `v{fmt}`: naming-scheme version. `type`: `d` (delta) or `s` (snapshot).
-- `deviceId`: the single writer, unpadded uppercase base32.
-- `hlcLo`..`hlcHi`: the HLC span covered.
-- `hash`: SHA-256 over the ciphertext, unpadded uppercase base32 (52 chars).
+- `deviceId`: the single writer.
+- `hlcLo`..`hlcHi`: the HLC span covered, 64 bits each.
+- `hash`: SHA-256 over the ciphertext.
+- Binary fields are unpadded uppercase base32hex (`0-9A-V`), fixed width, so they sort in value
+  order. The name charset is `[A-Z0-9_]`.
 
-Syncing is list-and-diff: `list(prefix)` minus the names already ingested, then `get` the rest.
+Syncing is list-and-diff: `list(namespace)` minus the keys already ingested, then `get` the rest.
 
-| Plug | One batch is | Atomic publish | Create-only | `list(prefix)` |
-|---|---|---|---|---|
-| Manual (v1) | the whole full-state snapshot, one file | file write | each export is a fresh compacted snapshot | - |
-| Synced folder (SAF) | a file | write `.tmp_*`, then rename | unique names; a retry resends identical bytes | list children, filter |
-| WebDAV | a resource | `PUT`, or `PUT` temp + `MOVE` | `If-None-Match: *` | `PROPFIND Depth:1`, filter |
-| Object storage (S3, R2, B2, MinIO) | an object | native | `If-None-Match: *` | `ListObjectsV2(prefix)` |
-| Relay | a file on disk | relay does temp + rename | relay rejects existing names and checks the hash | relay filters by prefix |
+| Plug | One batch is | Namespace is | Atomic publish | Create-only | `list` |
+|---|---|---|---|---|---|
+| Manual (v1) | the whole full-state snapshot, one file | - | file write | each export is a fresh compacted snapshot | - |
+| Synced folder (SAF) | a file | a subfolder | write `.tmp_*`, then rename | unique names; a retry resends identical bytes | list children |
+| WebDAV | a resource | a collection | `PUT`, or `PUT` temp + `MOVE` | `If-None-Match: *` | `PROPFIND Depth:1` |
+| Object storage (S3, R2, B2, MinIO) | an object | a key prefix | native | `If-None-Match: *` | `ListObjectsV2(prefix)` |
+| Relay | a file on disk | a directory | relay does temp + rename | relay rejects existing names and checks the hash | relay lists the namespace |
 
 The manual plug is a single-file export/import holding one full-state snapshot. Importing merges
 `local ⊕ snapshot`; a snapshot is a delta over every field, so this exercises the same reducer.
-The multi-object naming is first used at runtime by the folder and relay plugs.
+Until encryption lands (step 6) the export is plaintext and debug-only; after that it is
+encrypted. The multi-object keys are first used at runtime by the relay plug.
 
 ### Relay
 
 `server/`: one Ktor CIO binary, filesystem blob storage, manual wiring, no reflection (decision
-0017). It implements the plug contract over HTTP and reuses the naming and contract types from
-`core`. Cloudflare users need no relay: R2 works with the object-storage plug.
+0017). It implements the plug contract over HTTP and reuses the key and contract types from
+`core`. Access per namespace (decision 0030): the client sends
+`HKDF-SHA256(root, "msuite-relay-auth-v1:" + appId)` as a bearer token; the relay stores only its
+SHA-256, registered by the first `put` to the namespace. The operator can restrict registration and
+cap namespace size. Cloudflare users need no relay: R2 works with the object-storage plug.
 
 ## Identity, pairing and recovery
 
@@ -131,6 +157,9 @@ The multi-object naming is first used at runtime by the folder and relay plugs.
   decision 0001).
 - Pairing: one QR code carrying the root plus a checksum. Recovery: the root as BIP39 words, QR or
   file (decision 0011).
+- A joining device keeps its data: it switches to the group's root, keeps its `deviceId`, and
+  publishes its full state into the group's namespace (decision 0033).
 - Clients hold a set of roots keyed by `keyGen`, so rotation can come later without a format change.
-- At rest: database under the OS sandbox and file-based encryption; the root as a KeyStore-wrapped
-  blob (decision 0011).
+- At rest: database under the OS sandbox and file-based encryption. The root is wrapped with a
+  non-exportable AES-256-GCM key in the Android KeyStore and stored in a private file (decision
+  0039).

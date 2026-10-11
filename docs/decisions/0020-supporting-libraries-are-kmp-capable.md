@@ -1,6 +1,6 @@
 # 0020: Supporting libraries are KMP-capable
 
-Date: 2026-07-05. Status: accepted.
+Date: 2026-07-05. Status: accepted; navigation artifact narrowed by 0037, test location by 0038.
 
 ## Context
 

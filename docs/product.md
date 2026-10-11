@@ -43,8 +43,9 @@ Planned; nothing is built yet. Architecture in `architecture.md`.
 - Sync is optional. The user picks a backend: none (export/import a file), a synced folder
   (Syncthing, Nextcloud, Dropbox), WebDAV, an S3-compatible bucket, or the self-hostable msuite
   relay. All of them see only ciphertext.
-- A new device joins by scanning one QR code from a paired device. A recovery key (words, QR or
-  file) is the fallback when no device is left. There is no password reset.
+- A new device joins by scanning one QR code from a paired device. If it already holds lists and
+  tasks, they are kept and shared with the other devices. A recovery key
+  (words, QR or file) is the fallback when no device is left. There is no password reset.
 - When two devices edit the same field while apart, the later edit wins and the other is lost
   (decision 0005).
 

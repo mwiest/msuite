@@ -1,6 +1,6 @@
 # 0011: Recovery is a nudged key backup; data at rest relies on the OS and KeyStore
 
-Date: 2026-07-05. Status: accepted. Formerly OQ-11.
+Date: 2026-07-05. Status: accepted; root-at-rest mechanism replaced by 0039. Formerly OQ-11.
 
 ## Context
 

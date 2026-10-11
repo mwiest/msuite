@@ -24,17 +24,18 @@ After v1, roughly in this order:
 
 - A machine without any JDK 21 can't build: the daemon is pinned to 21 and no toolchain download
   is configured. Gradle 8.13 itself can't run on JDK 25.
-- Tests are in `jvmTest`, while decisions 0007 and 0012 say `commonTest`.
 - CI has not run yet (nothing pushed since it was added).
 
 ## Ideas
 
 Deferred, each addable later without a format change unless noted:
 
-- Max-drift clamp on incoming HLCs, once a bad clock shows up (decision 0005).
+- Tell the user when a device's batches are deferred for a clock far ahead (decision 0040).
+- Sync through two plugs at once, which needs per-plug change tracking (decision 0036).
+- Undelete for lists; their hidden tasks would reappear (decision 0032).
 - Key rotation after device loss, using the `keyGen` id (decision 0008).
-- Metadata mitigations: size buckets, per-app credentials, pseudonymous rotating `deviceId`
-  (decision 0009).
+- Metadata mitigations: size buckets, pseudonymous rotating `deviceId` (decision 0009; per-app
+  namespaces are already in, decision 0029).
 - Passphrase-based recovery with Argon2id (decision 0011).
 - SQLCipher at rest, opt-in (decision 0011; needs a native `.so`).
 - Reminders: `AlarmManager` / `WorkManager`, no FCM (decision 0014).
