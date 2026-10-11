@@ -16,11 +16,12 @@ Three gaps in the batch names of 0003:
 
 ## Decision
 
-A batch is stored under the object key `{namespace}/{name}`.
+A batch is stored under the object key `{appId}/{groupId}/{name}`; `{appId}/{groupId}` is the
+namespace.
 
-- `namespace` = the first 128 bits of `HKDF-SHA256(root, info = "msuite-ns-v1:" + appId)`, 26
-  characters. It is one opaque path segment per app and group: it reveals neither the app nor the
-  root, and two apps of the same user don't share a visible identifier.
+- `appId` is the app's short lowercase name, a constant in code (`todo`, `notes`, ...).
+- `groupId` = the first 128 bits of `HKDF-SHA256(root, info = "msuite-group-v1")`, 26 characters.
+  It is the same for all apps of a group and reveals nothing about the root.
 - `name` = `v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}`, as before.
 - All binary fields (`deviceId`, HLCs, `hash`) are uppercase **base32hex** (RFC 4648 extended hex,
   `0-9A-V`), unpadded and fixed width, so they sort in value order. An HLC is 64 bits
@@ -28,16 +29,19 @@ A batch is stored under the object key `{namespace}/{name}`.
 - The AAD is the batch header (`salt`, data-model version, `keyGen`) plus the whole object key
   except `hash`, which is computed over the ciphertext and can't be inside it. A reader rebuilds
   the AAD from the key it fetched, so a renamed or moved batch fails to decrypt.
-- Plugs map `namespace` to their container: a subfolder in the synced folder, a key prefix in S3, a
-  path segment in WebDAV and on the relay.
+- Plugs map the namespace to their container: nested subfolders in the synced folder, a key prefix
+  in S3, path segments in WebDAV and on the relay.
 
 ## Rejected
 
-- `{appId}/{groupId}/`: names the app in clear text and links a user's apps.
+- One opaque segment per app and group (`HKDF(root, "msuite-ns-v1:" + appId)`): hides which app a
+  namespace belongs to and doesn't link a user's apps, but keys are harder to read when inspecting
+  or debugging a backend. Readability won.
 - Checking name fields against a copy inside the plaintext: the same protection with more code.
 
 ## Consequences
 
-Renaming, moving or replaying a batch into another namespace is detected. A new root (rotation,
-0008) means a new namespace, which matches "abandon the old ciphertext". The namespace still leaks
-that one group uses one app (0009 accepts that).
+Renaming, moving or replaying a batch into another namespace, including another app's, is
+detected. A new root (rotation, 0008) means a new `groupId`, which matches "abandon the old
+ciphertext". A backend sees which apps a group uses and that they belong together (0009 accepts
+this kind of metadata); per-app opaque namespaces remain a possible mitigation.

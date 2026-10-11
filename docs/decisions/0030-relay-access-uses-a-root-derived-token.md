@@ -9,7 +9,7 @@ read every namespace's metadata with `list`, and later use `delete`. Accounts ar
 
 ## Decision
 
-- Each namespace (0029) has an access token
+- Each namespace `{appId}/{groupId}` (0029) has an access token
   `HKDF-SHA256(root, info = "msuite-relay-auth-v1:" + appId)`, sent as a bearer token over TLS.
 - The relay stores only `SHA-256(token)` per namespace. The first `put` to an unknown namespace
   registers it (trust on first use); afterwards every request to that namespace must present the

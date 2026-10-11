@@ -5,10 +5,11 @@ reordered 2026-10-11 (decision 0034).
 
 ## Goal
 
-**Two devices, paired by QR, syncing todos through a self-hosted relay that sees only
-ciphertext.** That validates the suite's thesis (decision 0013). The ToDo features are almost
-incidental: v1 is the thinnest app that exercises the whole shared layer (sync, E2E, pairing) end
-to end. Optimised for tech validation, not users. No web app.
+**Two devices, paired by QR, syncing todos through a synced folder that holds only ciphertext**
+(decision 0042); the relay follows after the milestone. That validates the suite's thesis
+(decision 0013). The ToDo features are almost incidental: v1 is the thinnest app that exercises
+the whole shared layer (sync, E2E, pairing) end to end. Optimised for tech validation, not
+users. No web app.
 
 ## Decisions
 
@@ -63,11 +64,15 @@ Each step may take several commits; a step that grows big gets its own plan.
    (decision 0029); the manual export becomes encrypted; root at rest via KeyStore (decision
    0039); simulator Layer 3. Proves: data is opaque to any server.
 7. [ ] **QR pairing and recovery key.** One QR carrying the root; a joining device merges its data
-   (decision 0033); BIP39 recovery. Proves: key distribution without accounts.
-8. [ ] **Relay and relay plug.** `server/` as a Ktor CIO binary with namespace tokens (decision
-   0030), plus the plug that talks to it; the multi-object keys are first used here. Proves: live
-   self-hosted sync.
-9. [ ] **Cloud deploy template for the relay.** Proves: a non-technical hosting path exists.
+   (decision 0033); BIP39 recovery; a copied key is marked sensitive and cleared after 60 s
+   (decision 0041). Proves: key distribution without accounts.
+8. [ ] **Synced-folder plug (milestone).** SAF plug writing the multi-object keys (decision 0029)
+   into a folder that Syncthing, Nextcloud or Dropbox syncs; its logic behind a file-system
+   interface; simulator Layer 2 with invariant 12 on plain files (decision 0042). Proves: live
+   multi-device sync through a backend that sees only ciphertext.
+9. [ ] **Relay and relay plug.** `server/` as a Ktor CIO binary with namespace tokens (decision
+   0030), plus the plug that talks to it. Proves: live self-hosted sync without a sync tool.
+10. [ ] **Cloud deploy template for the relay.** Proves: a non-technical hosting path exists.
 
 ## Open questions
 
@@ -78,6 +83,7 @@ Each step may take several commits; a step that grows big gets its own plan.
 
 ## How to verify
 
-The goal scenario on two real devices: pair by QR, edit on both (including while offline), sync
-through a self-hosted relay, and both show the same lists. The relay's storage holds only
-ciphertext, under keys per decision 0029. The simulator (all three layers) is green in CI.
+The milestone on two real devices: pair by QR, edit on both (including while offline), sync
+through a folder shared by Syncthing, and both show the same lists. The folder holds only
+ciphertext, under keys per decision 0029. Steps 9 and 10 repeat this through a self-hosted relay.
+The simulator (all three layers) is green in CI.

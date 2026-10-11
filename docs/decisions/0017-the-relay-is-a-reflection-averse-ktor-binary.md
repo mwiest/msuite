@@ -1,6 +1,6 @@
 # 0017: The relay is one reflection-averse Ktor CIO binary, in this repo
 
-Date: 2026-07-05. Status: accepted; access control added by 0030.
+Date: 2026-07-05. Status: accepted; access control added by 0030; its v1 step moved by 0042.
 
 ## Context
 

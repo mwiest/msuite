@@ -81,7 +81,7 @@ Envelope (decision 0029, Layer 3):
 |---|---|---|
 | 1 | v1 step 2, gating the LWW merge | pure merge and HLC, invariants 1 to 11 and 13 |
 | 1 + ToDo rules | v1 step 4, with the ToDo app's projection | invariants 14 to 16 |
-| 2 | v1 step 5 | the real plug wrapped in, invariant 12 |
+| 2 | v1 step 5 (manual plug), step 8 (synced-folder plug on plain files) | the real plug wrapped in; invariant 12 with the folder plug |
 | 3 | v1 step 6 | encrypted batches still converge, invariant 17 |
 
 ## Formatting and static analysis

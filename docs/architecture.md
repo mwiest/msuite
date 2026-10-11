@@ -98,7 +98,7 @@ Planned for v1 step 6 (decisions 0010, 0029):
 ```
 header:     salt (256 bit random), data-model version, keyGen id
 key:        K   = HKDF-SHA256(root, salt, "msuite-batch-v1")
-aad:        header + object key without the hash ({namespace}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi})
+aad:        header + object key without the hash ({appId}/{groupId}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi})
 ciphertext: AES-256-GCM(K, fixed nonce, encoded batch, aad)
 ```
 
@@ -114,11 +114,12 @@ snapshots and the relay.
 Object keys (decision 0029):
 
 ```
-{namespace}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}
+{appId}/{groupId}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}
 ```
 
-- `namespace`: first 128 bits of `HKDF-SHA256(root, "msuite-ns-v1:" + appId)`, one opaque segment
-  per app and group.
+- `appId`: the app's short lowercase name (`todo`). `groupId`: first 128 bits of
+  `HKDF-SHA256(root, "msuite-group-v1")`, the same for all apps of a group. Together they are the
+  namespace.
 - `v{fmt}`: naming-scheme version. `type`: `d` (delta) or `s` (snapshot).
 - `deviceId`: the single writer.
 - `hlcLo`..`hlcHi`: the HLC span covered, 64 bits each.
@@ -126,20 +127,23 @@ Object keys (decision 0029):
 - Binary fields are unpadded uppercase base32hex (`0-9A-V`), fixed width, so they sort in value
   order. The name charset is `[A-Z0-9_]`.
 
-Syncing is list-and-diff: `list(namespace)` minus the keys already ingested, then `get` the rest.
+Syncing is list-and-diff: `list({appId}/{groupId}/)` minus the keys already ingested, then `get`
+the rest.
 
 | Plug | One batch is | Namespace is | Atomic publish | Create-only | `list` |
 |---|---|---|---|---|---|
 | Manual (v1) | the whole full-state snapshot, one file | - | file write | each export is a fresh compacted snapshot | - |
-| Synced folder (SAF) | a file | a subfolder | write `.tmp_*`, then rename | unique names; a retry resends identical bytes | list children |
-| WebDAV | a resource | a collection | `PUT`, or `PUT` temp + `MOVE` | `If-None-Match: *` | `PROPFIND Depth:1` |
+| Synced folder (SAF) | a file | nested subfolders | write `.tmp_*`, then rename | unique names; a retry resends identical bytes | list children |
+| WebDAV | a resource | nested collections | `PUT`, or `PUT` temp + `MOVE` | `If-None-Match: *` | `PROPFIND Depth:1` |
 | Object storage (S3, R2, B2, MinIO) | an object | a key prefix | native | `If-None-Match: *` | `ListObjectsV2(prefix)` |
-| Relay | a file on disk | a directory | relay does temp + rename | relay rejects existing names and checks the hash | relay lists the namespace |
+| Relay | a file on disk | nested directories | relay does temp + rename | relay rejects existing names and checks the hash | relay lists the namespace |
 
 The manual plug is a single-file export/import holding one full-state snapshot. Importing merges
 `local ⊕ snapshot`; a snapshot is a delta over every field, so this exercises the same reducer.
 Until encryption lands (step 6) the export is plaintext and debug-only; after that it is
-encrypted. The multi-object keys are first used at runtime by the relay plug.
+encrypted. The multi-object keys are first used at runtime by the synced-folder plug, the v1
+milestone (decision 0042). Its logic sits behind a small file-system interface, so the simulator
+runs it on `jvm` with plain files.
 
 ### Relay
 
@@ -159,6 +163,7 @@ cap namespace size. Cloudflare users need no relay: R2 works with the object-sto
   file (decision 0011).
 - A joining device keeps its data: it switches to the group's root, keeps its `deviceId`, and
   publishes its full state into the group's namespace (decision 0033).
+- Copying the recovery key marks the clip sensitive and clears it after 60 s (decision 0041).
 - Clients hold a set of roots keyed by `keyGen`, so rotation can come later without a format change.
 - At rest: database under the OS sandbox and file-based encryption. The root is wrapped with a
   non-exportable AES-256-GCM key in the Android KeyStore and stored in a private file (decision

@@ -14,7 +14,7 @@ After v1, roughly in this order:
   (decision 0001).
 - A per-field merge (CRDT or 3-way) for fields where LWW loss is unacceptable, e.g. a notes body
   (decision 0005).
-- More plugs: synced folder (SAF), WebDAV, object storage (S3, R2, B2, MinIO).
+- More plugs: WebDAV, object storage (S3, R2, B2, MinIO).
 - Snapshots with pruning, `delete` and a plug capability descriptor (decisions 0002, 0003).
 - Contacts, then Calendar.
 - First F-Droid release of ToDo, with a privacy policy, release docs and store metadata.
@@ -34,8 +34,8 @@ Deferred, each addable later without a format change unless noted:
 - Sync through two plugs at once, which needs per-plug change tracking (decision 0036).
 - Undelete for lists; their hidden tasks would reappear (decision 0032).
 - Key rotation after device loss, using the `keyGen` id (decision 0008).
-- Metadata mitigations: size buckets, pseudonymous rotating `deviceId` (decision 0009; per-app
-  namespaces are already in, decision 0029).
+- Metadata mitigations: size buckets, opaque per-app namespaces, pseudonymous rotating `deviceId`
+  (decisions 0009, 0029).
 - Passphrase-based recovery with Argon2id (decision 0011).
 - SQLCipher at rest, opt-in (decision 0011; needs a native `.so`).
 - Reminders: `AlarmManager` / `WorkManager`, no FCM (decision 0014).

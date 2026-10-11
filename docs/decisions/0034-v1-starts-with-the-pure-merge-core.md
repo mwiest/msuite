@@ -1,6 +1,6 @@
 # 0034: v1 starts with the pure merge core
 
-Date: 2026-10-11. Status: accepted. Replaces 0015.
+Date: 2026-10-11. Status: accepted; steps 8 and 9 replaced by 0042. Replaces 0015.
 
 ## Context
 
