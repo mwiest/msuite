@@ -4,6 +4,9 @@ plugins {
 }
 
 kotlin {
+    android {
+        namespace = "com.msuite.core.model"
+    }
     sourceSets {
         commonMain.dependencies {
             // Batch/snapshot encoding via kotlinx.serialization + ProtoBuf (decision 0016)
@@ -12,8 +15,4 @@ kotlin {
             implementation(libs.kotlinx.datetime)
         }
     }
-}
-
-android {
-    namespace = "com.msuite.core.model"
 }

@@ -1,8 +1,7 @@
-// An apps/* module: Android application with Compose.
+// An Android application shell (apps/<app>/android). Kotlin is built into AGP 9.
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
     id("msuite.quality")
@@ -10,7 +9,6 @@ plugins {
 
 android {
     msuiteAndroidDefaults()
-    defaultConfig.targetSdk = MsuiteBuild.TARGET_SDK
     buildFeatures { compose = true }
 }
 

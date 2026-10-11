@@ -3,6 +3,9 @@ plugins {
 }
 
 kotlin {
+    android {
+        namespace = "com.msuite.core.crypto"
+    }
     sourceSets {
         commonMain.dependencies {
             implementation(project(":core:model"))
@@ -10,8 +13,4 @@ kotlin {
             //       E2E of batches, single-QR pairing, BIP39 recovery (decision 0008, decision 0010)
         }
     }
-}
-
-android {
-    namespace = "com.msuite.core.crypto"
 }

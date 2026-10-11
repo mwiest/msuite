@@ -3,6 +3,9 @@ plugins {
 }
 
 kotlin {
+    android {
+        namespace = "com.msuite.core.sync"
+    }
     sourceSets {
         commonMain.dependencies {
             implementation(project(":core:model"))
@@ -16,8 +19,4 @@ kotlin {
             implementation(libs.kotest.runner.junit5)
         }
     }
-}
-
-android {
-    namespace = "com.msuite.core.sync"
 }

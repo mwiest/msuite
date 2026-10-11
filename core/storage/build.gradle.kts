@@ -3,6 +3,9 @@ plugins {
 }
 
 kotlin {
+    android {
+        namespace = "com.msuite.core.storage"
+    }
     sourceSets {
         commonMain.dependencies {
             implementation(project(":core:model"))
@@ -10,8 +13,4 @@ kotlin {
             //       per-field state store with opaque unknown-field retention (decision 0002, decision 0006)
         }
     }
-}
-
-android {
-    namespace = "com.msuite.core.storage"
 }
