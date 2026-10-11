@@ -8,5 +8,5 @@ package com.msuite.server
  * reflection-averse for a cheap GraalVM-native build (decision 0017).
  */
 fun main() {
-    println("msuite relay skeleton — Ktor CIO server pending (see docs/plans/v1-todo.md, step 8).")
+    println("msuite relay skeleton — Ktor CIO server pending (see docs/plans/v1-todo.md, step 9).")
 }
