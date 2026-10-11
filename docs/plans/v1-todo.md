@@ -1,7 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **slice 0 (build housekeeping) in progress; steps 1 to 9 not started.** Started
-2026-07-02.
+Status: **slice 0 (build housekeeping) done; steps 1 to 9 not started.** Started 2026-07-02.
 
 ## Goal
 
@@ -36,9 +35,11 @@ to end. Optimised for tech validation, not users. No web app.
 
 Each step may take several commits; a step that grows big gets its own plan.
 
-0. [ ] **Build housekeeping.** Docs moved into `docs/` (Voclet layout); `build-logic` convention
-   plugins; Spotless and detekt; GitHub Actions and Renovate. Checked by a green
-   `./gradlew check assembleDebug :server:jar` locally and in CI. After it lands: `<commit>`.
+0. [x] **Build housekeeping.** Docs moved into `docs/` (Voclet layout); `build-logic` convention
+   plugins; daemon pinned to JDK 21; Spotless and detekt; GitHub Actions and Renovate. Checked by a
+   green `./gradlew spotlessCheck detekt allTests assembleDebug :server:jar` locally; CI not run
+   yet. Landed: `241a9ea`, `b7a0d47`, `95e7b67`, `8f985ba`, `3840a9b`, plus the follow-up commit
+   that ticks this box.
 1. [ ] **Data layer.** `core/model` and `core/storage`: SQLDelight database, op-log, materialized
    per-field state with opaque unknown fields, ProtoBuf encoder. Proves: the data layer works.
 2. [ ] **Single-device ToDo app.** The feature set above on top of step 1, offline. Decide the UI

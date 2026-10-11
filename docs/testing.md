@@ -10,9 +10,10 @@ How msuite is tested: kotest on the JVM, and the merge/HLC simulator that gates 
 ./gradlew :core:sync:jvmTest     # the sync tests and simulator only
 ```
 
-Tests live in `commonTest` where possible and run on the `jvm` target (decision 0012). The stack is
-kotest (runner on JUnit 5, assertions, kotest-property). Today there is one smoke test,
-`core/sync/src/jvmTest/.../SyncSmokeTest.kt`, proving the stack runs.
+Tests run on the `jvm` target (decision 0012). The stack is kotest (runner on JUnit 5, assertions,
+kotest-property). Today kotest is a `jvmTest` dependency of `core/sync` only, because the JUnit 5
+runner is JVM-only; running kotest from `commonTest` would need kotest's multiplatform setup. There
+is one smoke test, `core/sync/src/jvmTest/.../SyncSmokeTest.kt`, proving the stack runs.
 
 Work is test-first: each feature or change gets at least one test, or a stated reason why none
 applies.

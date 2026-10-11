@@ -66,9 +66,10 @@ Not to be broken without a new decision record.
 
 ## Building (confirming the change builds)
 
-Needs JDK 21 (Gradle 8.13 can't run on JDK 25, which recent Android Studio bundles as its JBR) and
+Needs a JDK 21 installed (the daemon is pinned to it, so `JAVA_HOME` may point at a newer JDK) and
 an Android SDK with platform 36. Point at the SDK with `local.properties` (`sdk.dir=...`,
-git-ignored) or `ANDROID_HOME`.
+git-ignored) or `ANDROID_HOME`. Shared build settings live in the `build-logic` convention plugins
+(`docs/architecture.md` -> Build).
 
 ```bash
 ./gradlew assembleDebug          # all modules + debug APK (apps/todo/build/outputs/apk/debug/)
@@ -82,7 +83,7 @@ git-ignored) or `ANDROID_HOME`.
 ./gradlew allTests               # all tests on all KMP targets
 ./gradlew :core:sync:jvmTest     # sync tests and the merge/HLC simulator
 ./gradlew spotlessApply          # fix formatting
-./gradlew spotlessCheck detekt   # what CI checks
+./gradlew spotlessCheck detekt   # lint, as CI runs it (`check` would add Android lint too)
 ```
 
 More in `docs/testing.md`.

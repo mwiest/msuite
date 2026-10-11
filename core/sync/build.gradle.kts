@@ -9,7 +9,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
         }
-        // Merge/HLC simulator harness (OQ-7) runs on the jvm target.
+        // Merge/HLC simulator harness (decision 0007) runs on the jvm target.
         jvmTest.dependencies {
             implementation(libs.kotest.property)
             implementation(libs.kotest.assertions.core)

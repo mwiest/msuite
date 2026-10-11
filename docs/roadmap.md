@@ -22,8 +22,10 @@ After v1, roughly in this order:
 
 ## Known problems
 
-- With Android Studio's bundled JDK 25 as `JAVA_HOME`, the Gradle 8.13 build fails with only
-  "25.0.3" as the message. Use JDK 21 (decision 0022).
+- A machine without any JDK 21 can't build: the daemon is pinned to 21 and no toolchain download
+  is configured. Gradle 8.13 itself can't run on JDK 25.
+- Tests are in `jvmTest`, while decisions 0007 and 0012 say `commonTest`.
+- CI has not run yet (nothing pushed since it was added).
 
 ## Ideas
 

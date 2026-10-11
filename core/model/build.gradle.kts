@@ -6,7 +6,7 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // Batch/snapshot encoding via kotlinx.serialization + ProtoBuf (see msuite.md -> Batch encoding)
+            // Batch/snapshot encoding via kotlinx.serialization + ProtoBuf (decision 0016)
             implementation(libs.kotlinx.serialization.core)
             implementation(libs.kotlinx.serialization.protobuf)
             implementation(libs.kotlinx.datetime)
