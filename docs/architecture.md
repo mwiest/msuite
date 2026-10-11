@@ -17,7 +17,8 @@ does" as its step in [`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | Placeholder, kotest smoke test |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
-| `apps/todo` | Android application `com.msuite.todo` | The ToDo app and its composition root (decision 0019) | Empty `MainActivity` |
+| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo app: screens, view logic, projection over `field_state`, composition root (decisions 0019, 0037) | `TodoApp()` showing a placeholder |
+| `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `MainActivity` calling `TodoApp()` |
 | `server` | Kotlin/JVM application | The dumb relay, a Ktor CIO binary (decision 0017) | `main` printing a line |
 | `web/` | Not a module | Deferred web app; see `web/README.md` | - |
 
@@ -32,21 +33,29 @@ KeyStore, camera QR, alarms) stays behind interfaces in the app layer, never in 
   plugin in a module would clash with the build-logic classpath.
 - `build-logic/` is an included build (`pluginManagement { includeBuild("build-logic") }`) that
   reads the same catalog. Shared levels are in `build-logic/src/main/kotlin/MsuiteBuild.kt`
-  (decision 0022: `minSdk` 26, `compileSdk`/`targetSdk` 36, JDK 21 toolchain, Java 17 bytecode).
+  (decision 0022: `minSdk` 26, `compileSdk`/`targetSdk` 37, JDK 21 toolchain, Java 17 bytecode).
   Module build files hold only plugins, namespace and their own dependencies.
+- Toolchain (2026-10-11): Gradle 9.8, AGP 9.4, Kotlin 2.4, Compose Multiplatform 1.12. The exact
+  versions are in the catalog and the wrapper.
+- KMP modules use AGP's `com.android.kotlin.multiplatform.library`: the namespace is set in
+  `kotlin { android { namespace = "..." } }`, and there is no top-level `android {}` block. The
+  application module uses AGP's built-in Kotlin, so `org.jetbrains.kotlin.android` is not applied.
+- Compose dependencies come from the catalog (`libs.compose.*`), not the deprecated `compose.*`
+  accessors.
 
 | Convention plugin | Sets up | Used by |
 |---|---|---|
-| `msuite.kmp-library` | KMP + Android library, targets `androidTarget` and `jvm`, JUnit Platform | `core/{model,storage,sync,crypto}` |
-| `msuite.compose-library` | KMP + Android library + Compose Multiplatform, android target only | `core/design` |
-| `msuite.android-app` | Android application, Kotlin, Compose, `targetSdk` | `apps/todo` |
+| `msuite.kmp-library` | KMP + AGP KMP library, targets `android` and `jvm`, JUnit Platform | `core/{model,storage,sync,crypto}` |
+| `msuite.compose-library` | KMP + AGP KMP library + Compose Multiplatform, android target only | `core/design`, `apps/todo/shared` |
+| `msuite.android-app` | Android application with built-in Kotlin, Compose, `targetSdk` | `apps/todo/android` |
 | `msuite.jvm-app` | Kotlin/JVM `application`, JDK 21 toolchain, Java 17 bytecode | `server` |
 | `msuite.serialization` | the kotlinx.serialization compiler plugin | `core/model` |
 | `msuite.quality` | Spotless (ktlint, rules in `.editorconfig`) and detekt (`config/detekt/detekt.yml`), applied by all of the above and the root project | everything |
 
 - `gradle/gradle-daemon-jvm.properties` pins the Gradle daemon to JDK 21, so a newer `JAVA_HOME`
   (e.g. Android Studio's JDK 25) works as long as a JDK 21 is installed where Gradle finds it. No
-  toolchain download is configured.
+  toolchain download is configured. Gradle itself runs on JDK 25; the pin is needed because
+  detekt 1.23 doesn't.
 - `.gitattributes` forces LF (CRLF only for `*.bat`); Spotless fails on CRLF files.
 - CI (decision 0025): `.github/workflows/ci.yml` runs lint, tests, then the debug APK and relay
   jar. Renovate (`renovate.json`) groups Kotlin and Compose Multiplatform updates.

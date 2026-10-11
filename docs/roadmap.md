@@ -22,8 +22,11 @@ After v1, roughly in this order:
 
 ## Known problems
 
-- A machine without any JDK 21 can't build: the daemon is pinned to 21 and no toolchain download
-  is configured. Gradle 8.13 itself can't run on JDK 25.
+- A machine without any JDK 21 can't build: the daemon is pinned to 21 (detekt 1.23 fails on
+  JDK 25) and no toolchain download is configured. Drop the pin once detekt 2 is stable.
+- `TodoApp()` shows a hard-coded placeholder text, against decision 0027, until the UI is built in
+  v1 step 4.
+- Android-only Compose modules log "commonTest was configured but not added to any compilation".
 - CI has not run yet (nothing pushed since it was added).
 
 ## Ideas

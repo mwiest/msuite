@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **step 0 done, step 1 (toolchain and KMP app module) in progress.** Started 2026-07-02;
+Status: **steps 0 and 1 done; step 2 (merge core) next.** Started 2026-07-02;
 reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -45,9 +45,10 @@ Each step may take several commits; a step that grows big gets its own plan.
    plugins; daemon pinned to JDK 21; Spotless and detekt; GitHub Actions and Renovate. Checked by a
    green `./gradlew spotlessCheck detekt allTests assembleDebug :server:jar` locally; CI not run
    yet. Landed: `241a9ea`, `b7a0d47`, `95e7b67`, `8f985ba`, `3840a9b`, `3fe8207`.
-1. [ ] **Toolchain and KMP app module.** Latest stable Gradle, AGP 9 (KMP Android plugin, built-in
-   Kotlin), Kotlin, Compose Multiplatform, kotest and the unwired pins; `apps/todo` split into
-   `shared` and `android`; multiplatform navigation pinned. Checked by the same green build.
+1. [x] **Toolchain and KMP app module.** Gradle 9.8, AGP 9.4 (KMP Android plugin, built-in
+   Kotlin), Kotlin 2.4, Compose Multiplatform 1.12, kotest 6, compileSdk 37 and the unwired pins at
+   their latest stable; `apps/todo` split into `shared` and `android`; multiplatform navigation
+   pinned. Checked by the same green build. Landed: `282f4c9`, `f6e2e16`, `8ea7bc2`.
 2. [ ] **Merge core** (`core/model`, `core/sync`, pure Kotlin). Stable field IDs; HLC with the
    24 h clamp (decision 0040); `keyBetween` with injectable jitter; the generic cell type; LWW
    `merge()`; the ProtoBuf encoder; simulator Layer 1 as the gate (`testing.md`). Proves:
@@ -78,6 +79,9 @@ Each step may take several commits; a step that grows big gets its own plan.
 
 - UI text mechanism: the UI is in `commonMain` (decision 0037), so Compose Multiplatform resources
   is the natural fit and Android `strings.xml` is out. Confirm when step 4 starts.
+- Where the ToDo projection and its tests live: `apps/todo/shared` is android-only, but tests run
+  on `jvm` (decision 0038). Either add a `jvm` target to `shared`, or put the non-UI logic in its
+  own KMP module (android + jvm). Decide when step 4 starts.
 - Whether the pairing QR also carries the backend configuration, or the joining device sets it up
   itself. Decide at step 7.
 

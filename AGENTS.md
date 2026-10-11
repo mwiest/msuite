@@ -12,7 +12,7 @@ success is a working demonstration of the architecture and UX, not adoption. Wha
 
 - Kotlin Multiplatform, Gradle multi-module monorepo. Targets `android` and `jvm` (`jvm` runs the
   tests); the web target is not built yet.
-- Android: `minSdk` 26, `compileSdk`/`targetSdk` latest stable (36). Build on JDK 21, emit Java 17
+- Android: `minSdk` 26, `compileSdk`/`targetSdk` latest stable (37). Build on JDK 21, emit Java 17
   bytecode.
 - Compose Multiplatform with Material 3; shared theme and components in `core/design`.
 - Relay: Ktor (CIO engine) on the JVM.
@@ -68,12 +68,12 @@ Not to be broken without a new decision record.
 ## Building (confirming the change builds)
 
 Needs a JDK 21 installed (the daemon is pinned to it, so `JAVA_HOME` may point at a newer JDK) and
-an Android SDK with platform 36. Point at the SDK with `local.properties` (`sdk.dir=...`,
+an Android SDK with platform 37. Point at the SDK with `local.properties` (`sdk.dir=...`,
 git-ignored) or `ANDROID_HOME`. Shared build settings live in the `build-logic` convention plugins
 (`docs/architecture.md` -> Build).
 
 ```bash
-./gradlew assembleDebug          # all modules + debug APK (apps/todo/build/outputs/apk/debug/)
+./gradlew assembleDebug          # all modules + debug APK (apps/todo/android/build/outputs/apk/debug/todo-debug.apk)
 ./gradlew :server:jar            # relay jar
 ./gradlew :server:run            # run the relay (placeholder main for now)
 ```
