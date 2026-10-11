@@ -8,4 +8,6 @@ dependencies {
     implementation(libs.kotlin.serialization.gradlePlugin)
     implementation(libs.compose.compiler.gradlePlugin)
     implementation(libs.compose.gradlePlugin)
+    implementation(libs.spotless.gradlePlugin)
+    implementation(libs.detekt.gradlePlugin)
 }
