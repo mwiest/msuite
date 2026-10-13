@@ -1,8 +1,7 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 and 1 done; step 2 (merge core) in progress: HLC (`8677b8d`), LWW
-`merge()` (`53b6a7f`), `keyBetween` (`5d1ddae`) and the encoder done; the simulator is next.**
-Started 2026-07-02; reordered 2026-10-11 (decision 0034).
+Status: **steps 0 to 2 done; step 3 (storage) next.** Started 2026-07-02; reordered 2026-10-11
+(decision 0034).
 
 ## Goal
 
@@ -50,10 +49,11 @@ Each step may take several commits; a step that grows big gets its own plan.
    Kotlin), Kotlin 2.4, Compose Multiplatform 1.12, kotest 6, compileSdk 37 and the unwired pins at
    their latest stable; `apps/todo` split into `shared` and `android`; multiplatform navigation
    pinned. Checked by the same green build. Landed: `282f4c9`, `f6e2e16`, `8ea7bc2`.
-2. [ ] **Merge core** (`core/model`, `core/sync`, pure Kotlin). Stable field IDs; HLC with the
+2. [x] **Merge core** (`core/model`, `core/sync`, pure Kotlin). Stable field IDs; HLC with the
    24 h clamp (decision 0040); `keyBetween` with injectable jitter; the generic cell type; LWW
    `merge()`; the ProtoBuf encoder; simulator Layer 1 as the gate (`testing.md`). Proves:
-   deterministic merge, robust to clock skew, property-tested.
+   deterministic merge, robust to clock skew, property-tested. Landed: `8677b8d`, `53b6a7f`,
+   `5d1ddae`, `7c3c330`, `bd2c043`; decisions 0043 to 0045.
 3. [ ] **Storage.** SQLDelight in `core/storage`: `field_state`, ingested batch keys, per-plug
    watermarks. Proves: state persists and merges through the database.
 4. [ ] **Single-device ToDo app.** The feature set above in `apps/todo/shared`: projection over

@@ -4,7 +4,7 @@ How the code is organised, and the sync design it is being built towards. What t
 user is in `product.md`; why it is built this way is in `decisions/`. A change in structure updates
 this file in the same commit.
 
-**Status (2026-10-13):** the module skeleton builds; the merge core (v1 step 2) is being built, the
+**Status (2026-10-13):** the merge core (v1 step 2) is code in `core/model` and `core/sync`; the
 other modules are placeholders. The sections from "Sync" on describe the agreed design; parts that
 are code say so. Each part becomes "what the code does" as its step in
 [`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
