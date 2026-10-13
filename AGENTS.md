@@ -35,7 +35,7 @@ success is a working demonstration of the architecture and UX, not adoption. Wha
 | Tests | kotest + kotest-property in `jvmTest`, logic in `commonMain` | - |
 | Format / lint | Spotless (ktlint), detekt | - |
 
-Reasons: decisions 0010, 0012, 0016 to 0020, 0026, 0037, 0038.
+Reasons: decisions 0010, 0012, 0016 to 0020, 0026, 0037, 0038, 0046.
 
 ## Hard constraints
 

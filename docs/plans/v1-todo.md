@@ -54,8 +54,12 @@ Each step may take several commits; a step that grows big gets its own plan.
    `merge()`; the ProtoBuf encoder; simulator Layer 1 as the gate (`testing.md`). Proves:
    deterministic merge, robust to clock skew, property-tested. Landed: `8677b8d`, `53b6a7f`,
    `5d1ddae`, `7c3c330`, `bd2c043`; decisions 0043 to 0045.
-3. [ ] **Storage.** SQLDelight in `core/storage`: `field_state`, ingested batch keys, per-plug
-   watermarks. Proves: state persists and merges through the database.
+3. [ ] **Storage.** SQLDelight in `core/storage` (decision 0046; sqlite-jdbc for `jvmTest` only):
+   `field_state`, ingested batch keys, per-plug watermarks. Keys and positions compare bytewise
+   (binary collation, decision 0044). Start the `HlcClock` from the highest stored HLC, so a restart
+   after the wall clock went back can't reuse HLCs; serialize writes through it (it isn't
+   thread-safe), e.g. inside the write transaction. Proves: state persists and merges through the
+   database.
 4. [ ] **Single-device ToDo app.** The feature set above in `apps/todo/shared`: projection over
    `field_state`, the read-time rules, screens. UI text mechanism first (see Open questions).
    Simulator invariants 14 to 16. Proves: a usable offline app exists.
@@ -83,6 +87,11 @@ Each step may take several commits; a step that grows big gets its own plan.
 - Where the ToDo projection and its tests live: `apps/todo/shared` is android-only, but tests run
   on `jvm` (decision 0038). Either add a `jvm` target to `shared`, or put the non-UI logic in its
   own KMP module (android + jvm). Decide when step 4 starts.
+- What ingest does with a batch from a *newer* data-model version: decision 0006 only upcasts older
+  ones, and `ingest` ignores the version today. Holding it back like a far-future batch (decision
+  0040) is the likely answer. Decide by step 5, when batches first travel between app versions.
+- Where the data-model version lives once the envelope exists: today it is in the encoded batch
+  (decision 0045), and the envelope header of step 6 must not repeat it. Decide at step 6.
 - Whether the pairing QR also carries the backend configuration, or the joining device sets it up
   itself. Decide at step 7.
 
