@@ -13,9 +13,9 @@ are code say so. Each part becomes "what the code does" as its step in
 
 | Module | Kind | Holds (intended) | Today |
 |---|---|---|---|
-| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `DATA_MODEL_VERSION` |
+| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database: the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | Placeholder |
-| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock` |
+| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo app: screens, view logic, projection over `field_state`, composition root (decisions 0019, 0037) | `TodoApp()` showing a placeholder |
@@ -77,9 +77,11 @@ in the client.
   `value` is encoded with the batch encoder. The record type is an ordinary field with a reserved
   ID. Apps read typed models through their own projection code.
 - Deletes are an ordinary LWW `deleted` field (tombstone).
-- `merge(local, remote)` in `core/sync` is per-cell last-writer-wins on the total order
-  `(pt, c, deviceId)` of the Hybrid Logical Clock (decision 0005). It is a pure function of
-  state, so merge is convergent and order-independent, and it knows nothing about the app.
+- `merge(local, remote)` in `core/sync` (code) is per-cell last-writer-wins on the total order
+  `(pt, c, deviceId)` of the Hybrid Logical Clock (decision 0005), held in a `Stamp`. It is a pure
+  function of state, so merge is convergent and order-independent, and it knows nothing about the
+  app. It returns the remote cells that win, which is what storage writes. If a device ever reuses
+  a stamp for two values, the higher value (bytes compared unsigned) wins, so devices still agree.
 - HLC (code: `Hlc` in `core/model`, `HlcClock` in `core/sync`): 48-bit millisecond `pt`, 16-bit
   counter `c`, packed into 64 bits and ordered unsigned; a full counter carries into `pt`. Ingest
   defers batches whose `hlcHi.pt` is more than 24 h ahead of the local clock (`HlcClock.accepts`),
