@@ -14,5 +14,10 @@ kotlin {
             implementation(libs.kotlinx.serialization.protobuf)
             implementation(libs.kotlinx.datetime)
         }
+        jvmTest.dependencies {
+            implementation(libs.kotest.property)
+            implementation(libs.kotest.assertions.core)
+            implementation(libs.kotest.runner.junit5)
+        }
     }
 }

@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 and 1 done; step 2 (merge core) next.** Started 2026-07-02;
+Status: **steps 0 and 1 done; step 2 (merge core) in progress: HLC done.** Started 2026-07-02;
 reordered 2026-10-11 (decision 0034).
 
 ## Goal

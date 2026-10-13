@@ -4,17 +4,18 @@ How the code is organised, and the sync design it is being built towards. What t
 user is in `product.md`; why it is built this way is in `decisions/`. A change in structure updates
 this file in the same commit.
 
-**Status (2026-10-11):** the module skeleton builds; every module is still a placeholder. The
-sections from "Sync" on describe the agreed design, not code. Each part becomes "what the code
-does" as its step in [`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
+**Status (2026-10-13):** the module skeleton builds; the merge core (v1 step 2) is being built, the
+other modules are placeholders. The sections from "Sync" on describe the agreed design; parts that
+are code say so. Each part becomes "what the code does" as its step in
+[`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
 
 ## Modules
 
 | Module | Kind | Holds (intended) | Today |
 |---|---|---|---|
-| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `DATA_MODEL_VERSION` constant |
+| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database: the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | Placeholder |
-| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | Placeholder, kotest smoke test |
+| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo app: screens, view logic, projection over `field_state`, composition root (decisions 0019, 0037) | `TodoApp()` showing a placeholder |
@@ -79,9 +80,12 @@ in the client.
 - `merge(local, remote)` in `core/sync` is per-cell last-writer-wins on the total order
   `(pt, c, deviceId)` of the Hybrid Logical Clock (decision 0005). It is a pure function of
   state, so merge is convergent and order-independent, and it knows nothing about the app.
-- HLC: 48-bit millisecond `pt`, 16-bit counter `c`. Ingest defers batches whose `hlcHi.pt` is more
-  than 24 h ahead of the local clock, and the local HLC never runs more than 24 h ahead of the
-  wall clock (decision 0040).
+- HLC (code: `Hlc` in `core/model`, `HlcClock` in `core/sync`): 48-bit millisecond `pt`, 16-bit
+  counter `c`, packed into 64 bits and ordered unsigned; a full counter carries into `pt`. Ingest
+  defers batches whose `hlcHi.pt` is more than 24 h ahead of the local clock (`HlcClock.accepts`),
+  so the local HLC never runs more than 24 h ahead of the wall clock (decision 0040). The wall
+  clock is an injected `kotlin.time.Clock`.
+- `deviceId` is a random 64-bit value, ordered unsigned; field IDs are `Int`s (decision 0043).
 - No local op-log (decision 0036). An outgoing delta is every cell with an HLC newer than the
   plug's local watermark. The device also keeps the set of batch names it has ingested.
 - Unknown field IDs from newer app versions are rows the app doesn't read; they are merged and

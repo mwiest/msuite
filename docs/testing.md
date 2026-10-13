@@ -12,8 +12,7 @@ How msuite is tested: kotest on the JVM, and the merge/HLC simulator that gates 
 
 Logic lives in `commonMain`; its tests live in `jvmTest` and run with kotest on JUnit 5
 (decision 0038). The stack is kotest (runner, assertions, kotest-property). Today kotest is wired
-into `core/sync` only, with one smoke test, `core/sync/src/jvmTest/.../SyncSmokeTest.kt`, proving
-the stack runs.
+into `core/model` and `core/sync`.
 
 Work is test-first: each feature or change gets at least one test, or a stated reason why none
 applies.
