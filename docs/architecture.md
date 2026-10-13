@@ -13,7 +13,7 @@ are code say so. Each part becomes "what the code does" as its step in
 
 | Module | Kind | Holds (intended) | Today |
 |---|---|---|---|
-| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `DATA_MODEL_VERSION` |
+| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `FractionalIndex`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database: the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | Placeholder |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
@@ -93,7 +93,8 @@ in the client.
 - Unknown field IDs from newer app versions are rows the app doesn't read; they are merged and
   written out like any other (decisions 0006, 0035).
 - Manual order is a `position` field holding a fractional-index string with a random suffix; lists
-  sort by `(position, itemId)` (decision 0004).
+  sort by `(position, itemId)` (decision 0004). Code: `FractionalIndex.keyBetween` in `core/model`,
+  base62 keys with a 2-character suffix (decision 0044). Keys compare bytewise.
 - Records that exist once per app (the default list) have constant IDs in code (decision 0031).
 
 ### Read-time rules (ToDo)
