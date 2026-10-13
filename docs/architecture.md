@@ -15,7 +15,7 @@ are code say so. Each part becomes "what the code does" as its step in
 |---|---|---|---|
 | `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database: the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | Placeholder |
-| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()` |
+| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, simulator Layer 1 |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo app: screens, view logic, projection over `field_state`, composition root (decisions 0019, 0037) | `TodoApp()` showing a placeholder |
@@ -89,7 +89,9 @@ in the client.
   clock is an injected `kotlin.time.Clock`.
 - `deviceId` is a random 64-bit value, ordered unsigned; field IDs are `Int`s (decision 0043).
 - No local op-log (decision 0036). An outgoing delta is every cell with an HLC newer than the
-  plug's local watermark. The device also keeps the set of batch names it has ingested.
+  plug's local watermark. The device also keeps the set of batch names it has ingested. Code:
+  `buildDelta` and `ingest` in `core/sync`; `ingest` defers a batch beyond the 24 h bound
+  (`IngestResult.Deferred`) or merges it and advances the HLC.
 - Unknown field IDs from newer app versions are rows the app doesn't read; they are merged and
   written out like any other (decisions 0006, 0035).
 - Manual order is a `position` field holding a fractional-index string with a random suffix; lists

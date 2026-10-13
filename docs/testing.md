@@ -19,14 +19,23 @@ applies.
 
 ## Merge/HLC simulator
 
-Planned for v1 step 2 (decisions 0007, 0034). A seeded, in-memory simulation of N devices:
+Decisions 0007 and 0034. Layer 1 is `core/sync/src/jvmTest/.../Simulation.kt`, driven by
+`SimulatorTest.kt`. It is a seeded, in-memory simulation of 2 to 4 devices sharing an append-only
+store of batches, through the real `ingest`, `buildDelta` and `merge`:
 
-- each device has a controllable clock (offset, drift, jumps mid-run);
-- the transport can partition, reorder, duplicate and drop batches;
-- a generated schedule of `Op` / `Tick` / `Push` / `Pull` / `Deliver` steps runs, then a quiescence
-  phase connects everyone and syncs to a fixpoint;
-- property-based with shrinking (kotest-property), plus named regression scenarios;
-- everything is seeded, including the `keyBetween` jitter RNG and the clocks.
+- each device has its own wall clock: an offset (one device may be days ahead), uneven ticks, and
+  jumps forward or back mid-run;
+- a push can fail (retried by a later push), a device can go offline, and a pull fetches a random
+  subset of the unseen batches in random order and re-fetches some it has seen;
+- a generated schedule of `Write` / `Tick` / `Jump` / `Push` / `Pull` / `Toggle` steps runs, then a
+  quiescence phase connects everyone, moves every clock past the 24 h bound, and syncs to a
+  fixpoint;
+- property-based (kotest-property, 1000 schedules, shrinking the step list), plus named
+  scenarios: a faster clock wins a conflict, a causal edit wins on a slower clock, a delete beats
+  an older edit, a far-future batch is held back and merged later;
+- everything is seeded, including the `keyBetween` jitter and the clocks.
+
+Invariant 7 is property-tested on its own in `core/model` (`FractionalIndexTest`).
 
 ### Invariants
 
@@ -62,8 +71,9 @@ Plug contract (decisions 0003, 0029):
 
 Clock clamp (decision 0040):
 13. A batch with `hlcHi.pt` more than 24 h ahead of a device's clock is not merged there, and is
-    merged once that clock catches up; no device's HLC runs more than 24 h ahead of its wall
-    clock.
+    merged once that clock catches up; merging never moves a device's HLC more than 24 h past the
+    latest wall-clock time it has seen. (A wall clock set back can leave the HLC further ahead,
+    since an HLC never goes back.)
 
 ToDo rules (decisions 0031, 0032, 0033):
 14. A task whose list is deleted is hidden on every device, whatever the merge order; a later move
@@ -78,7 +88,7 @@ Envelope (decision 0029, Layer 3):
 
 | Layer | Lands with | Covers |
 |---|---|---|
-| 1 | v1 step 2, gating the LWW merge | pure merge and HLC, invariants 1 to 11 and 13 |
+| 1 | v1 step 2 (landed), gating the LWW merge | pure merge and HLC, invariants 1 to 11 and 13 |
 | 1 + ToDo rules | v1 step 4, with the ToDo app's projection | invariants 14 to 16 |
 | 2 | v1 step 5 (manual plug), step 8 (synced-folder plug on plain files) | the real plug wrapped in; invariant 12 with the folder plug |
 | 3 | v1 step 6 | encrypted batches still converge, invariant 17 |

@@ -87,7 +87,7 @@ class MergeTest : StringSpec({
         checkAll(arbCells, arbCells) { a, b ->
             val merged = state(a).mergedWith(b)
             val expected = (a + b).groupBy { it.key }.mapValues { (_, cells) ->
-                cells.maxWith(compareBy<Cell> { it.stamp }.thenComparator { x, y -> compareUnsigned(x.value, y.value) })
+                cells.maxWith(LWW_ORDER)
             }
             merged shouldBe expected
         }
@@ -118,11 +118,3 @@ class MergeTest : StringSpec({
         }
     }
 })
-
-private fun compareUnsigned(a: ByteArray, b: ByteArray): Int {
-    for (i in 0 until minOf(a.size, b.size)) {
-        val d = (a[i].toInt() and 0xFF) - (b[i].toInt() and 0xFF)
-        if (d != 0) return d
-    }
-    return a.size - b.size
-}
