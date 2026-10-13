@@ -4,3 +4,8 @@ naming:
   FunctionNaming:
     # Composables are PascalCase.
     ignoreAnnotated: ['Composable']
+
+style:
+  MagicNumber:
+    # Annotation arguments such as @ProtoNumber(3) are the protocol, not magic.
+    ignoreAnnotation: true

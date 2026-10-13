@@ -13,7 +13,7 @@ are code say so. Each part becomes "what the code does" as its step in
 
 | Module | Kind | Holds (intended) | Today |
 |---|---|---|---|
-| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `FractionalIndex`, `DATA_MODEL_VERSION` |
+| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database: the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | Placeholder |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
@@ -104,8 +104,11 @@ in the client.
 
 ### Batch encoding
 
-kotlinx.serialization ProtoBuf behind an encoder interface in `core/model` (decision 0016). Proto
-field numbers are the stable IDs. Encoding is deterministic: canonical field and map order.
+kotlinx.serialization ProtoBuf behind the `BatchEncoder` interface in `core/model` (code:
+`ProtoBatchEncoder`, decision 0016). Proto field numbers are the stable IDs. A batch is the
+data-model version plus its cells sorted by `(recordId, fieldId)`, so encoding is deterministic.
+A cell's value is a typed one-field ProtoBuf message (`Value`, `ValueCodec`); a type the reader
+doesn't know decodes as absent. Layout and field numbers: decision 0045.
 
 ### Batch envelope (encryption)
 
