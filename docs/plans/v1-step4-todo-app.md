@@ -38,7 +38,7 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
    (`74de47a`). Landed: `33e017c`.
 4. [x] **Simulator invariants 14 to 16.** The ToDo rules under random schedules (`testing.md`).
    The harness moved into `core/sync-testing` first (decision 0057, `f1317df`); the commands take
-   an ID source (`d2a97ad`); edits are guarded against wrong IDs (`0e45c4d`).
+   an ID source (`d2a97ad`); edits are guarded against wrong IDs (`0e45c4d`). Landed: `8ece7f2`.
 5. [ ] **App wiring.** The shell creates the driver and the `Replica` with a stable device ID and
    passes it into the app root; the UI observes the projection. See Open questions.
 6. [ ] **Screens.** Tasks of a list (checkbox, star, FAB), the task editor, list management,
