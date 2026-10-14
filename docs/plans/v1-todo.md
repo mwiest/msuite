@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 2 done; step 3 (storage) next.** Started 2026-07-02; reordered 2026-10-11
+Status: **steps 0 to 3 done; step 4 (single-device ToDo app) next.** Started 2026-07-02; reordered 2026-10-11
 (decision 0034).
 
 ## Goal
@@ -54,12 +54,13 @@ Each step may take several commits; a step that grows big gets its own plan.
    `merge()`; the ProtoBuf encoder; simulator Layer 1 as the gate (`testing.md`). Proves:
    deterministic merge, robust to clock skew, property-tested. Landed: `8677b8d`, `53b6a7f`,
    `5d1ddae`, `7c3c330`, `bd2c043`; decisions 0043 to 0045.
-3. [ ] **Storage.** SQLDelight in `core/storage` (decision 0046; sqlite-jdbc for `jvmTest` only):
-   `field_state`, ingested batch keys, per-plug watermarks. Keys and positions compare bytewise
-   (binary collation, decision 0044). Start the `HlcClock` from the highest stored HLC, so a restart
-   after the wall clock went back can't reuse HLCs; serialize writes through it (it isn't
-   thread-safe), e.g. inside the write transaction. Proves: state persists and merges through the
-   database.
+3. [x] **Storage.** SQLDelight in `core/storage` (decision 0046; sqlite-jdbc for `jvmTest` only):
+   `field_state`, ingested batch keys and watermarks per plug ID, HLCs stored sign-flipped so SQL
+   compares them unsigned; `Replica` in `core/sync` starts the `HlcClock` from the highest stored
+   HLC and runs every operation under a `Mutex` in one transaction. Text columns use SQLite's
+   default binary collation; positions sit inside value blobs, so step 4 sorts them in Kotlin
+   (decision 0044). Proves: state persists and merges through the database. Landed: `0f1b455`,
+   `e351d69`.
 4. [ ] **Single-device ToDo app.** The feature set above in `apps/todo/shared`: projection over
    `field_state`, the read-time rules, screens. UI text mechanism first (see Open questions).
    Simulator invariants 14 to 16. Proves: a usable offline app exists.
