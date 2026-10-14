@@ -35,7 +35,7 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
 3. [x] **Commands.** Create, rename, delete and reorder lists; create, edit, complete, star, delete
    and reorder tasks; each a `Replica.write`. Tested against the projection. New tasks go to the
    top; clearing a field writes an empty value (decision 0056); malformed values decode as absent
-   (`74de47a`).
+   (`74de47a`). Landed: `33e017c`.
 4. [ ] **Simulator invariants 14 to 16.** The ToDo rules under random schedules (`testing.md`).
 5. [ ] **App wiring.** The shell creates the driver and the `Replica` with a stable device ID and
    passes it into the app root; the UI observes the projection. See Open questions.
