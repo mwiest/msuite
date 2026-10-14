@@ -4,8 +4,8 @@ How the code is organised, and the sync design it is being built towards. What t
 user is in `product.md`; why it is built this way is in `decisions/`. A change in structure updates
 this file in the same commit.
 
-**Status (2026-10-13):** the merge core (v1 step 2) is code in `core/model` and `core/sync`; the
-other modules are placeholders. The sections from "Sync" on describe the agreed design; parts that
+**Status (2026-10-14):** the merge core (v1 step 2) is code in `core/model` and `core/sync`, and
+storage (step 3) in `core/storage`; the other modules are placeholders. The sections from "Sync" on describe the agreed design; parts that
 are code say so. Each part becomes "what the code does" as its step in
 [`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
 
@@ -15,7 +15,7 @@ are code say so. Each part becomes "what the code does" as its step in
 |---|---|---|---|
 | `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | `LocalStore` over all three tables (see Sync → Data and merge) |
-| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, simulator Layer 1 |
+| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, simulator Layer 1 |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo app: screens, view logic, projection over `field_state`, composition root (decisions 0019, 0037) | `TodoApp()` showing a placeholder |
@@ -82,6 +82,12 @@ in the client.
   by a plug ID string. It knows no merge or HLC rules. HLCs are stored as the packed value with
   its sign bit flipped, so SQL compares them unsigned like `Hlc`. The platform creates the
   `SqlDriver` with `LocalStore.Schema`; JVM tests use sqlite-jdbc (decision 0046).
+- `Replica` in `core/sync` (code) is the device's state: a `LocalStore` plus the `HlcClock`, which
+  starts from the store's highest HLC, so writes after a restart order after everything stored
+  even if the wall clock went back. A local write stamps all its cells with one fresh HLC. Ingest
+  skips a batch key already ingested from that plug, and writes the winners and marks the key in
+  one transaction. A delta is built from the plug's watermark, which moves on `pushed`. Every
+  operation holds a coroutine `Mutex` and runs in one transaction.
 - Deletes are an ordinary LWW `deleted` field (tombstone).
 - `merge(local, remote)` in `core/sync` (code) is per-cell last-writer-wins on the total order
   `(pt, c, deviceId)` of the Hybrid Logical Clock (decision 0005), held in a `Stamp`. It is a pure
