@@ -18,7 +18,8 @@ are code say so. Each part becomes "what the code does" as its step in
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, simulator Layer 1 |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
-| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo app: screens, view logic, projection over `field_state`, composition root (decisions 0019, 0037) | `TodoApp()` showing a placeholder string from its resources |
+| `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()` |
+| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp()` showing a placeholder string from its resources |
 | `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `MainActivity` calling `TodoApp()` |
 | `server` | Kotlin/JVM application | The dumb relay, a Ktor CIO binary (decision 0017) | `main` printing a line |
 | `web/` | Not a module | Deferred web app; see `web/README.md` | - |
@@ -49,7 +50,7 @@ KeyStore, camera QR, alarms) stays behind interfaces in the app layer, never in 
 
 | Convention plugin | Sets up | Used by |
 |---|---|---|
-| `msuite.kmp-library` | KMP + AGP KMP library, targets `android` and `jvm`, JUnit Platform | `core/{model,storage,sync,crypto}` |
+| `msuite.kmp-library` | KMP + AGP KMP library, targets `android` and `jvm`, JUnit Platform | `core/{model,storage,sync,crypto}`, `apps/todo/domain` |
 | `msuite.compose-library` | KMP + AGP KMP library + Compose Multiplatform, android target only | `core/design`, `apps/todo/shared` |
 | `msuite.android-app` | Android application with built-in Kotlin, Compose, `targetSdk` | `apps/todo/android` |
 | `msuite.jvm-app` | Kotlin/JVM `application`, JDK 21 toolchain, Java 17 bytecode | `server` |
@@ -123,8 +124,14 @@ in the client.
 
 ### Read-time rules (ToDo)
 
+Code: `projectTodos()` in `apps/todo/domain`, which reads cells into sorted lists and tasks.
+
 - A task whose list is deleted is hidden everywhere; deleting a list writes only the list's
-  `deleted` field (decision 0032).
+  `deleted` field (decision 0032). This holds for "My Tasks" too.
+- A record without a known `TYPE` is not shown (its creation may not have synced yet), nor is a
+  task without a live list. A value of an unexpected type reads as absent.
+- Lists and tasks sort by `(position, id)`; positions compare by code unit, which for base62 keys
+  is bytewise (decision 0044).
 
 ### Batch encoding
 

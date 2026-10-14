@@ -1,6 +1,6 @@
 # Plan: v1 step 4, the single-device ToDo app
 
-Status: **slice 1 done; slice 2 (domain module and projection) next.** Started 2026-10-14.
+Status: **slices 1 and 2 done; slice 3 (commands) next.** Started 2026-10-14.
 Part of [`v1-todo.md`](v1-todo.md) step 4.
 
 ## Goal
@@ -26,9 +26,12 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
    placeholder text moves into `strings.xml`, English and German. No test for the text: `shared`
    has no test target (decision 0051); the APK was checked to carry both string files. Landed:
    `674ab59`.
-2. [ ] **Domain module and projection.** `apps/todo/domain` with ToDo field IDs, the fixed
+2. [x] **Domain module and projection.** `apps/todo/domain` with ToDo field IDs, the fixed
    "My Tasks" ID (decision 0031), and the projection from cells to typed lists and tasks, sorted
-   by `(position, id)`, hiding tasks of deleted lists (decision 0032). Tested in `jvmTest`.
+   by `(position, id)`, hiding tasks of deleted lists (decision 0032). Tested in `jvmTest`. First
+   run writes "My Tasks" with its title in the device language; deleting it is honoured like any
+   list (decided 2026-10-14). Value types `Date`, `Ref` and the reserved core fields came first:
+   `94d07a8`, `93f239a`.
 3. [ ] **Commands.** Create, rename, delete and reorder lists; create, edit, complete, star, delete
    and reorder tasks; each a `Replica.write`. Tested against the projection.
 4. [ ] **Simulator invariants 14 to 16.** The ToDo rules under random schedules (`testing.md`).

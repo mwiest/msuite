@@ -25,7 +25,8 @@ include(":core:crypto")
 include(":core:design")
 
 // app modules (com.msuite.<app>)
-include(":apps:todo:shared") // app code, KMP
+include(":apps:todo:domain") // app logic, KMP without Compose
+include(":apps:todo:shared") // app UI, Compose Multiplatform
 include(":apps:todo:android") // thin Android shell
 
 // dumb relay (Ktor/Kotlin)

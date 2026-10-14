@@ -12,7 +12,7 @@ kotlin {
             // Batch/snapshot encoding via kotlinx.serialization + ProtoBuf (decision 0016)
             implementation(libs.kotlinx.serialization.core)
             implementation(libs.kotlinx.serialization.protobuf)
-            implementation(libs.kotlinx.datetime)
+            api(libs.kotlinx.datetime)
         }
         jvmTest.dependencies {
             implementation(libs.kotest.property)

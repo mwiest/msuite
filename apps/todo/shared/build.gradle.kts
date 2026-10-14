@@ -11,7 +11,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":core:design"))
-            implementation(project(":core:model"))
+            implementation(project(":apps:todo:domain"))
 
             api(libs.compose.runtime)
             implementation(libs.compose.foundation)
