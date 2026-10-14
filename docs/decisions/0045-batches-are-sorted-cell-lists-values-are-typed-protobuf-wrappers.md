@@ -1,6 +1,6 @@
 # 0045: A batch is a sorted list of cells; a value is a typed ProtoBuf wrapper
 
-Date: 2026-10-13. Status: accepted; value types extended by 0052. Details the encoding of 0016.
+Date: 2026-10-13. Status: accepted; value types extended by 0052 and 0053. Details the encoding of 0016.
 
 ## Context
 

@@ -13,7 +13,7 @@ are code say so. Each part becomes "what the code does" as its step in
 
 | Module | Kind | Holds (intended) | Today |
 |---|---|---|---|
-| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `PlugId`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
+| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `CoreFields`, `Stamp`, `Cell`, `PlugId`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | `LocalStore` over all three tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, simulator Layer 1 |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
@@ -80,6 +80,9 @@ in the client.
 
   `value` is encoded with the batch encoder. The record type is an ordinary field with a reserved
   ID. Apps read typed models through their own projection code.
+- Field IDs 1 to 9 are reserved for every app (code: `CoreFields` in `core/model`, decision 0054):
+  `TYPE = 1` holds the app's `Int64` record type ID, `DELETED = 2` the tombstone. App fields start
+  at 10.
 - Storage (code: `LocalStore` in `core/storage`, schema in `src/commonMain/sqldelight`): SQLite
   tables `field_state`, `ingested_batch(plug, batch_key)` and `plug_watermark(plug, hlc)`, keyed
   by `PlugId` (a stable name per configured plug). It knows no merge or HLC rules. HLCs are stored
@@ -129,8 +132,8 @@ kotlinx.serialization ProtoBuf behind the `BatchEncoder` interface in `core/mode
 `ProtoBatchEncoder`, decision 0016). Proto field numbers are the stable IDs. A batch is the
 data-model version plus its cells sorted by `(recordId, fieldId)`, so encoding is deterministic.
 A cell's value is a typed one-field ProtoBuf message (`Value`, `ValueCodec`); a type the reader
-doesn't know decodes as absent. Value types: `Text`, `Bool`, `Int64` and `Date` (a `LocalDate` as
-epoch days, decision 0052). Layout and field numbers: decision 0045.
+doesn't know decodes as absent. Value types: `Text`, `Bool`, `Int64`, `Date` (a `LocalDate` as
+epoch days, decision 0052) and `Ref` (a record's `Uuid`, decision 0053). Layout and field numbers: decision 0045.
 
 ### Batch envelope (encryption)
 

@@ -3,6 +3,7 @@ package com.msuite.core.sync
 import com.msuite.core.model.Batch
 import com.msuite.core.model.Cell
 import com.msuite.core.model.CellKey
+import com.msuite.core.model.CoreFields
 import com.msuite.core.model.DeviceId
 import com.msuite.core.model.FieldId
 import com.msuite.core.model.FractionalIndex
@@ -47,7 +48,7 @@ enum class SimField(val id: FieldId) {
     TITLE(FieldId(10)),
     DONE(FieldId(11)),
     POSITION(FieldId(12)),
-    DELETED(FieldId(2)),
+    DELETED(CoreFields.DELETED),
 }
 
 class SimDevice(val id: DeviceId, wallMillis: Long, seed: Long, backend: SimBackend) {

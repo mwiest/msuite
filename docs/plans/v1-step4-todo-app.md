@@ -16,6 +16,8 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
 - The UI re-reads on change ticks from `Replica` (decision 0049).
 - The Android shell creates the SQLite driver (decision 0050).
 - Due dates are `Value.Date`, a `LocalDate` stored as epoch days (decision 0052).
+- A task's list is a `Value.Ref` (decision 0053). Record types are `Int64` IDs in the reserved
+  `CoreFields.TYPE`, next to `DELETED` (decision 0054).
 
 ## Slices
 
