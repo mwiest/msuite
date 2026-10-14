@@ -15,6 +15,7 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
 - Logic in `apps/todo/domain` (android + jvm, no Compose), UI in `apps/todo/shared` (decision 0051).
 - The UI re-reads on change ticks from `Replica` (decision 0049).
 - The Android shell creates the SQLite driver (decision 0050).
+- Due dates are `Value.Date`, a `LocalDate` stored as epoch days (decision 0052).
 
 ## Slices
 
@@ -38,7 +39,6 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
 
 - Where the device ID lives: a row in the database (survives with the data it stamped), or
   multiplatform-settings. Decide before slice 5.
-- Due dates: kotlinx-datetime `LocalDate` encoded as what `Value` type. Decide in slice 2.
 
 ## How to verify
 

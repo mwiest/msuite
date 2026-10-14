@@ -129,7 +129,8 @@ kotlinx.serialization ProtoBuf behind the `BatchEncoder` interface in `core/mode
 `ProtoBatchEncoder`, decision 0016). Proto field numbers are the stable IDs. A batch is the
 data-model version plus its cells sorted by `(recordId, fieldId)`, so encoding is deterministic.
 A cell's value is a typed one-field ProtoBuf message (`Value`, `ValueCodec`); a type the reader
-doesn't know decodes as absent. Layout and field numbers: decision 0045.
+doesn't know decodes as absent. Value types: `Text`, `Bool`, `Int64` and `Date` (a `LocalDate` as
+epoch days, decision 0052). Layout and field numbers: decision 0045.
 
 ### Batch envelope (encryption)
 
