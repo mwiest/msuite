@@ -14,7 +14,7 @@ are code say so. Each part becomes "what the code does" as its step in
 | Module | Kind | Holds (intended) | Today |
 |---|---|---|---|
 | `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
-| `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | Placeholder |
+| `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | `LocalStore` over all three tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, simulator Layer 1 |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
@@ -51,6 +51,7 @@ KeyStore, camera QR, alarms) stays behind interfaces in the app layer, never in 
 | `msuite.android-app` | Android application with built-in Kotlin, Compose, `targetSdk` | `apps/todo/android` |
 | `msuite.jvm-app` | Kotlin/JVM `application`, JDK 21 toolchain, Java 17 bytecode | `server` |
 | `msuite.serialization` | the kotlinx.serialization compiler plugin | `core/model` |
+| `msuite.sqldelight` | the SQLDelight plugin; the module declares its database | `core/storage` |
 | `msuite.quality` | Spotless (ktlint, rules in `.editorconfig`) and detekt (`config/detekt/detekt.yml`), applied by all of the above and the root project | everything |
 
 - `gradle/gradle-daemon-jvm.properties` pins the Gradle daemon to JDK 21, so a newer `JAVA_HOME`
@@ -76,6 +77,11 @@ in the client.
 
   `value` is encoded with the batch encoder. The record type is an ordinary field with a reserved
   ID. Apps read typed models through their own projection code.
+- Storage (code: `LocalStore` in `core/storage`, schema in `src/commonMain/sqldelight`): SQLite
+  tables `field_state`, `ingested_batch(plug, batch_key)` and `plug_watermark(plug, hlc)`, keyed
+  by a plug ID string. It knows no merge or HLC rules. HLCs are stored as the packed value with
+  its sign bit flipped, so SQL compares them unsigned like `Hlc`. The platform creates the
+  `SqlDriver` with `LocalStore.Schema`; JVM tests use sqlite-jdbc (decision 0046).
 - Deletes are an ordinary LWW `deleted` field (tombstone).
 - `merge(local, remote)` in `core/sync` (code) is per-cell last-writer-wins on the total order
   `(pt, c, deviceId)` of the Hybrid Logical Clock (decision 0005), held in a `Stamp`. It is a pure

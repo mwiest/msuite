@@ -10,4 +10,5 @@ dependencies {
     implementation(libs.compose.gradlePlugin)
     implementation(libs.spotless.gradlePlugin)
     implementation(libs.detekt.gradlePlugin)
+    implementation(libs.sqldelight.gradlePlugin)
 }

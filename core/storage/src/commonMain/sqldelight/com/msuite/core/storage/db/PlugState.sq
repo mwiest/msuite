@@ -1,0 +1,23 @@
+-- Local bookkeeping per backend plug (decision 0036). hlc is sign-flipped as in field_state.
+CREATE TABLE ingested_batch (
+    plug TEXT NOT NULL,
+    batch_key TEXT NOT NULL,
+    PRIMARY KEY (plug, batch_key)
+) WITHOUT ROWID;
+
+CREATE TABLE plug_watermark (
+    plug TEXT NOT NULL PRIMARY KEY,
+    hlc INTEGER NOT NULL
+);
+
+isIngested:
+SELECT COUNT(*) > 0 FROM ingested_batch WHERE plug = ? AND batch_key = ?;
+
+markIngested:
+INSERT OR IGNORE INTO ingested_batch VALUES (?, ?);
+
+watermark:
+SELECT hlc FROM plug_watermark WHERE plug = ?;
+
+setWatermark:
+INSERT OR REPLACE INTO plug_watermark VALUES (?, ?);

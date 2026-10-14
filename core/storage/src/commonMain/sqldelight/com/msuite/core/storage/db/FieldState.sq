@@ -1,0 +1,27 @@
+-- All synced state, one row per cell (decision 0035). hlc holds the packed HLC with its sign bit
+-- flipped, so SQL compares it unsigned like Hlc does.
+CREATE TABLE field_state (
+    record_id BLOB NOT NULL,
+    field_id INTEGER NOT NULL,
+    value BLOB NOT NULL,
+    hlc INTEGER NOT NULL,
+    device_id INTEGER NOT NULL,
+    PRIMARY KEY (record_id, field_id)
+) WITHOUT ROWID;
+
+CREATE INDEX field_state_hlc ON field_state (hlc);
+
+cell:
+SELECT * FROM field_state WHERE record_id = ? AND field_id = ?;
+
+cells:
+SELECT * FROM field_state;
+
+cellsAbove:
+SELECT * FROM field_state WHERE hlc > ?;
+
+maxHlc:
+SELECT MAX(hlc) AS hlc FROM field_state;
+
+upsert:
+INSERT OR REPLACE INTO field_state VALUES ?;

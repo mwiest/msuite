@@ -1,5 +1,6 @@
 plugins {
     id("msuite.kmp-library")
+    id("msuite.sqldelight")
 }
 
 kotlin {
@@ -8,9 +9,22 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":core:model"))
-            // TODO: SQLDelight (libs.sqldelight.runtime + plugin) — op-log + materialized
-            //       per-field state store with opaque unknown-field retention (decision 0002, decision 0006)
+            api(project(":core:model"))
+            implementation(libs.sqldelight.runtime)
+        }
+        jvmTest.dependencies {
+            implementation(libs.sqldelight.sqlite.driver)
+            implementation(libs.kotest.property)
+            implementation(libs.kotest.assertions.core)
+            implementation(libs.kotest.runner.junit5)
+        }
+    }
+}
+
+sqldelight {
+    databases {
+        create("MsuiteDatabase") {
+            packageName.set("com.msuite.core.storage.db")
         }
     }
 }
