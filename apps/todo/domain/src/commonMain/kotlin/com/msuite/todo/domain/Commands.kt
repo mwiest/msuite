@@ -11,8 +11,12 @@ import kotlinx.datetime.LocalDate
 import kotlin.random.Random
 import kotlin.uuid.Uuid
 
-/** List edits, each one [Replica.write]. [random] is the position jitter (decision 0004). */
-class ListCommands(private val replica: Replica, private val random: Random = Random.Default) {
+/** List edits, each one [Replica.write]. [random] is the position jitter (decision 0004), [newId] makes record IDs. */
+class ListCommands(
+    private val replica: Replica,
+    private val random: Random = Random.Default,
+    private val newId: () -> Uuid = Uuid::random,
+) {
     /**
      * Creates "My Tasks" with [title] (the device language, decision 0055) unless the record has
      * any cell, e.g. from a sync or a delete elsewhere. Returns whether it wrote.
@@ -24,7 +28,7 @@ class ListCommands(private val replica: Replica, private val random: Random = Ra
     }
 
     /** Appends a list at the end. */
-    suspend fun create(title: String): Uuid = Uuid.random().also { replica.write(it, newList(title)) }
+    suspend fun create(title: String): Uuid = newId().also { replica.write(it, newList(title)) }
 
     suspend fun rename(id: Uuid, title: String) =
         replica.edit(id, TodoTypes.LIST, TodoFields.TITLE to Value.Text(title))
@@ -51,14 +55,18 @@ class ListCommands(private val replica: Replica, private val random: Random = Ra
     private suspend fun state() = projectTodos(replica.cells())
 }
 
-/** Task edits, each one [Replica.write]. [random] is the position jitter (decision 0004). */
-class TaskCommands(private val replica: Replica, private val random: Random = Random.Default) {
+/** Task edits, each one [Replica.write]. [random] is the position jitter (decision 0004), [newId] makes record IDs. */
+class TaskCommands(
+    private val replica: Replica,
+    private val random: Random = Random.Default,
+    private val newId: () -> Uuid = Uuid::random,
+) {
     /** Creates a task at the top of the live list [listId]. */
     suspend fun create(listId: Uuid, title: String): Uuid {
         val state = projectTodos(replica.cells())
         require(state.lists.any { it.id == listId }) { "list $listId isn't live" }
         val position = positionAt(state.tasks(listId).map { it.position }, 0, random)
-        return Uuid.random().also {
+        return newId().also {
             replica.write(
                 it,
                 CoreFields.TYPE to Value.Int64(TodoTypes.TASK),

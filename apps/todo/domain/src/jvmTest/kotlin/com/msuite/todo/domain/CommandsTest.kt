@@ -166,4 +166,14 @@ class CommandsTest : StringSpec({
         todo.tasks.setDone(task, true)
         todo.replica.cells(task).any { it.key.fieldId == TodoFields.DONE } shouldBe true
     }
+
+    "new IDs come from the injected source" {
+        val todo = Todo()
+        val ids = generateSequence(1L) { it + 1 }.map { Uuid.fromLongs(7, it) }.iterator()
+        val lists = ListCommands(todo.replica, Random(1), ids::next)
+        val tasks = TaskCommands(todo.replica, Random(2), ids::next)
+        val list = lists.create("L")
+        list shouldBe Uuid.fromLongs(7, 1)
+        tasks.create(list, "t") shouldBe Uuid.fromLongs(7, 2)
+    }
 })
