@@ -1,6 +1,7 @@
 # Plan: v1 step 4, the single-device ToDo app
 
-Status: **slice 1 done; slice 2 (domain module and projection) next.** Started 2026-10-14. Part of [`v1-todo.md`](v1-todo.md) step 4.
+Status: **slice 1 done; slice 2 (domain module and projection) next.** Started 2026-10-14.
+Part of [`v1-todo.md`](v1-todo.md) step 4.
 
 ## Goal
 
@@ -20,7 +21,8 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
 1. [x] **Change ticks and UI text.** `Replica.changes` ticks after each committed write or ingest
    that changed state (tested). Compose Multiplatform resources wired into `shared`; the
    placeholder text moves into `strings.xml`, English and German. No test for the text: `shared`
-   has no test target (decision 0051); the APK was checked to carry both string files.
+   has no test target (decision 0051); the APK was checked to carry both string files. Landed:
+   `674ab59`.
 2. [ ] **Domain module and projection.** `apps/todo/domain` with ToDo field IDs, the fixed
    "My Tasks" ID (decision 0031), and the projection from cells to typed lists and tasks, sorted
    by `(position, id)`, hiding tasks of deleted lists (decision 0032). Tested in `jvmTest`.
