@@ -91,6 +91,9 @@ Each step may take several commits; a step that grows big gets its own plan.
 - What ingest does with a batch from a *newer* data-model version: decision 0006 only upcasts older
   ones, and `ingest` ignores the version today. Holding it back like a far-future batch (decision
   0040) is the likely answer. Decide by step 5, when batches first travel between app versions.
+- What a plug does with a batch that fails to decode (`ProtoBatchEncoder.decode` throws on malformed
+  bytes, like the value decoder did): skip it and retry later, or mark it ingested and log. Decide
+  at step 5, when batches first come from files.
 - Where the data-model version lives once the envelope exists: today it is in the encoded batch
   (decision 0045), and the envelope header of step 6 must not repeat it. Decide at step 6.
 - Whether the pairing QR also carries the backend configuration, or the joining device sets it up

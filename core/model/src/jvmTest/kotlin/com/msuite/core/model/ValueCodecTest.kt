@@ -52,4 +52,10 @@ class ValueCodecTest : StringSpec({
     "a reference that isn't 16 bytes decodes to null" {
         ValueCodec.decode(byteArrayOf(0x2a, 0x02, 0x01, 0x02)).shouldBeNull()
     }
+
+    "malformed bytes decode to null instead of throwing" {
+        ValueCodec.decode(byteArrayOf(0x0a, 0x05, 0x68)).shouldBeNull() // text claims 5 bytes, has 1
+        ValueCodec.decode(byteArrayOf(0x18)).shouldBeNull() // int64 tag without its varint
+        ValueCodec.decode(byteArrayOf(-1, -1, -1, -1, -1, -1)).shouldBeNull() // no valid tag
+    }
 })

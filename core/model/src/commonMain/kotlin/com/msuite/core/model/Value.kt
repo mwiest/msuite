@@ -39,9 +39,11 @@ object ValueCodec {
         },
     )
 
-    /** `null` for a type this app version doesn't know. */
+    /** `null` for a type this app version doesn't know, or for malformed bytes. */
     fun decode(bytes: ByteArray): Value? {
-        val proto = ProtoBuf.decodeFromByteArray<ValueProto>(bytes)
+        // Malformed bytes (another device's bug, a damaged file) must not crash the reader; the
+        // decoder throws more than SerializationException for them.
+        val proto = runCatching { ProtoBuf.decodeFromByteArray<ValueProto>(bytes) }.getOrNull() ?: return null
         return proto.text?.let(Value::Text)
             ?: proto.bool?.let(Value::Bool)
             ?: proto.int64?.let(Value::Int64)
