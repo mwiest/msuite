@@ -67,7 +67,8 @@ Each step may take several commits; a step that grows big gets its own plan.
    `e351d69`.
 4. [ ] **Single-device ToDo app.** The feature set above: projection over `field_state`, the
    read-time rules and commands in `apps/todo/domain`, screens in `apps/todo/shared`. Simulator
-   invariants 14 to 16. Proves: a usable offline app exists.
+   invariants 14 to 16. Proves: a usable offline app exists. Plan:
+   [`v1-step4-todo-app.md`](v1-step4-todo-app.md).
 5. [ ] **Backend-plug interface and the manual plug.** `put`/`list`/`get`; export/import of one
    full-state snapshot (plaintext, debug-only); simulator Layer 2. Proves: merge across two
    devices.

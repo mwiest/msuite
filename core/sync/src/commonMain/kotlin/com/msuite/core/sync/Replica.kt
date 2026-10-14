@@ -9,6 +9,10 @@ import com.msuite.core.model.Hlc
 import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.LocalStore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
@@ -23,11 +27,18 @@ class Replica(driver: SqlDriver, private val deviceId: DeviceId, wallClock: Cloc
     private val store = LocalStore(driver)
     private val clock = HlcClock(wallClock, store.maxHlc() ?: Hlc.ZERO)
     private val mutex = Mutex()
+    private val ticks = MutableStateFlow(0L)
+
+    /** Ticks after each committed write or ingest that changed state (decision 0049). */
+    val changes: StateFlow<Long> = ticks.asStateFlow()
 
     /** A local edit: every value gets the same fresh HLC. Returns the stored cells. */
-    suspend fun write(values: Map<CellKey, ByteArray>): List<Cell> = serialized {
-        val stamp = Stamp(clock.now(), deviceId)
-        values.map { (key, value) -> Cell(key, value, stamp) }.also(store::write)
+    suspend fun write(values: Map<CellKey, ByteArray>): List<Cell> {
+        if (values.isEmpty()) return emptyList()
+        return serialized {
+            val stamp = Stamp(clock.now(), deviceId)
+            values.map { (key, value) -> Cell(key, value, stamp) }.also(store::write)
+        }.also { tick() }
     }
 
     /** Merges [batch], fetched from [plug] under [batchKey]; a key ingested before is skipped. */
@@ -39,7 +50,7 @@ class Replica(driver: SqlDriver, private val deviceId: DeviceId, wallClock: Cloc
                 store.markIngested(plug, batchKey)
             }
         }
-    }
+    }.also { if (it is IngestResult.Merged && it.changes.isNotEmpty()) tick() }
 
     /** What [plug] hasn't been sent yet, or `null`; after a successful put, call [pushed]. */
     suspend fun delta(plug: PlugId): Batch? = serialized {
@@ -55,6 +66,8 @@ class Replica(driver: SqlDriver, private val deviceId: DeviceId, wallClock: Cloc
     suspend fun cells(): List<Cell> = serialized { store.cells() }
 
     override fun close() = store.close()
+
+    private fun tick() = ticks.update { it + 1 }
 
     private suspend fun <R> serialized(block: () -> R): R = mutex.withLock { store.transaction(block) }
 }

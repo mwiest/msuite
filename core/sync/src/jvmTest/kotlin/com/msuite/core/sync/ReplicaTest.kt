@@ -137,4 +137,19 @@ class ReplicaTest : StringSpec({
         written.map { it.stamp.hlc }.distinct() shouldHaveSize 50
         replica.cells() shouldContainExactlyInAnyOrder written
     }
+
+    "local writes and ingests that change state tick, nothing else does" {
+        val replica = Replica(driver(), deviceA, TestClock(1_000))
+        replica.changes.value shouldBe 0
+        replica.write(mapOf(key(1) to byteArrayOf(1)))
+        replica.changes.value shouldBe 1
+        replica.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(2, 500))))
+        replica.changes.value shouldBe 2
+        replica.ingest(folder, "k2", Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500))))
+        replica.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(3, 500))))
+        replica.ingest(folder, "k3", Batch(Model.DATA_MODEL_VERSION, listOf(remote(3, 1_000 + dayMs + 1))))
+        replica.write(emptyMap())
+        replica.pushed(folder, replica.delta(folder).shouldNotBeNull())
+        replica.changes.value shouldBe 2
+    }
 })

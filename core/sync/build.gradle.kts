@@ -10,7 +10,7 @@ kotlin {
         commonMain.dependencies {
             api(project(":core:model"))
             api(project(":core:storage"))
-            implementation(libs.kotlinx.coroutines.core)
+            api(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
         }
         // Merge/HLC simulator harness (decision 0007) runs on the jvm target.

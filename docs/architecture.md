@@ -18,7 +18,7 @@ are code say so. Each part becomes "what the code does" as its step in
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, simulator Layer 1 |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
-| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo app: screens, view logic, projection over `field_state`, composition root (decisions 0019, 0037) | `TodoApp()` showing a placeholder |
+| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo app: screens, view logic, projection over `field_state`, composition root (decisions 0019, 0037) | `TodoApp()` showing a placeholder string from its resources |
 | `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `MainActivity` calling `TodoApp()` |
 | `server` | Kotlin/JVM application | The dumb relay, a Ktor CIO binary (decision 0017) | `main` printing a line |
 | `web/` | Not a module | Deferred web app; see `web/README.md` | - |
@@ -43,6 +43,9 @@ KeyStore, camera QR, alarms) stays behind interfaces in the app layer, never in 
   application module uses AGP's built-in Kotlin, so `org.jetbrains.kotlin.android` is not applied.
 - Compose dependencies come from the catalog (`libs.compose.*`), not the deprecated `compose.*`
   accessors.
+- UI text (decision 0047): `src/commonMain/composeResources/values/strings.xml` and `values-de/`,
+  read through the generated `Res` (`com.msuite.<app>.resources`). A KMP library only packages
+  them into the APK with `androidResources.enable = true` in its `android {}` target.
 
 | Convention plugin | Sets up | Used by |
 |---|---|---|
@@ -90,7 +93,8 @@ in the client.
   that plug, and writes the winners and marks the key in one transaction. A delta is built from
   the plug's watermark, which moves on `pushed`. Every operation holds a coroutine `Mutex` and
   runs in one transaction. The app opens one replica per database and writes only through it;
-  the mutex doesn't cover a second one.
+  the mutex doesn't cover a second one. `changes`, a `StateFlow`, ticks after each committed write
+  or ingest that changed state; the UI re-reads on a tick (decision 0049).
 - Deletes are an ordinary LWW `deleted` field (tombstone).
 - `merge(local, remote)` in `core/sync` (code) is per-cell last-writer-wins on the total order
   `(pt, c, deviceId)` of the Hybrid Logical Clock (decision 0005), held in a `Stamp`. It is a pure
