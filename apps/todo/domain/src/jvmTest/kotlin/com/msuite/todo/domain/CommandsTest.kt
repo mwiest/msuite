@@ -140,4 +140,30 @@ class CommandsTest : StringSpec({
         todo.tasks.move(a, 0)
         todo.state().tasks(list).map { it.id } shouldContainExactly listOf(a, b, c)
     }
+
+    "edits refuse an ID that isn't a record of their kind" {
+        val todo = Todo()
+        val list = todo.lists.create("L")
+        val task = todo.tasks.create(list, "t")
+        for (wrong in listOf(list, Uuid.random())) {
+            shouldThrow<IllegalArgumentException> { todo.tasks.setTitle(wrong, "x") }
+            shouldThrow<IllegalArgumentException> { todo.tasks.setDue(wrong, null) }
+            shouldThrow<IllegalArgumentException> { todo.tasks.delete(wrong) }
+            shouldThrow<IllegalArgumentException> { todo.tasks.move(wrong, 0) }
+        }
+        for (wrong in listOf(task, Uuid.random())) {
+            shouldThrow<IllegalArgumentException> { todo.lists.rename(wrong, "x") }
+            shouldThrow<IllegalArgumentException> { todo.lists.delete(wrong) }
+            shouldThrow<IllegalArgumentException> { todo.lists.move(wrong, 0) }
+        }
+    }
+
+    "a hidden task can still be edited" {
+        val todo = Todo()
+        val list = todo.lists.create("L")
+        val task = todo.tasks.create(list, "t")
+        todo.lists.delete(list)
+        todo.tasks.setDone(task, true)
+        todo.replica.cells(task).any { it.key.fieldId == TodoFields.DONE } shouldBe true
+    }
 })

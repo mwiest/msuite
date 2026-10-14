@@ -17,6 +17,9 @@ SELECT * FROM field_state WHERE record_id = ? AND field_id = ?;
 cells:
 SELECT * FROM field_state;
 
+recordCells:
+SELECT * FROM field_state WHERE record_id = ?;
+
 cellsAbove:
 SELECT * FROM field_state WHERE hlc > ?;
 

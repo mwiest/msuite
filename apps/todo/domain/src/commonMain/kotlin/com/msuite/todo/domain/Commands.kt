@@ -18,7 +18,7 @@ class ListCommands(private val replica: Replica, private val random: Random = Ra
      * any cell, e.g. from a sync or a delete elsewhere. Returns whether it wrote.
      */
     suspend fun createMyTasksIfMissing(title: String): Boolean {
-        if (replica.cells().any { it.key.recordId == TodoIds.MY_TASKS }) return false
+        if (replica.cells(TodoIds.MY_TASKS).isNotEmpty()) return false
         replica.write(TodoIds.MY_TASKS, newList(title))
         return true
     }
@@ -26,16 +26,18 @@ class ListCommands(private val replica: Replica, private val random: Random = Ra
     /** Appends a list at the end. */
     suspend fun create(title: String): Uuid = Uuid.random().also { replica.write(it, newList(title)) }
 
-    suspend fun rename(id: Uuid, title: String) = replica.write(id, TodoFields.TITLE to Value.Text(title))
+    suspend fun rename(id: Uuid, title: String) =
+        replica.edit(id, TodoTypes.LIST, TodoFields.TITLE to Value.Text(title))
 
     /** Writes only the tombstone; the list's tasks are hidden at read time (decision 0032). */
     suspend fun delete(id: Uuid) {
         require(id != TodoIds.MY_TASKS) { "My Tasks can't be deleted" }
-        replica.write(id, CoreFields.DELETED to Value.Bool(true))
+        replica.edit(id, TodoTypes.LIST, CoreFields.DELETED to Value.Bool(true))
     }
 
     /** Moves the list to [toIndex] in the order shown. */
     suspend fun move(id: Uuid, toIndex: Int) {
+        replica.requireType(id, TodoTypes.LIST)
         val others = state().lists.filter { it.id != id }.map { it.position }
         replica.write(id, TodoFields.POSITION to Value.Text(positionAt(others, toIndex, random)))
     }
@@ -67,29 +69,58 @@ class TaskCommands(private val replica: Replica, private val random: Random = Ra
         }
     }
 
-    suspend fun setTitle(id: Uuid, title: String) = replica.write(id, TodoFields.TITLE to Value.Text(title))
+    suspend fun setTitle(id: Uuid, title: String) = replica.edit(
+        id,
+        TodoTypes.TASK,
+        TodoFields.TITLE to Value.Text(title),
+    )
 
-    suspend fun setNotes(id: Uuid, notes: String) = replica.write(id, TodoFields.NOTES to Value.Text(notes))
+    suspend fun setNotes(id: Uuid, notes: String) = replica.edit(
+        id,
+        TodoTypes.TASK,
+        TodoFields.NOTES to Value.Text(notes),
+    )
 
     /** `null` clears the due date. */
-    suspend fun setDue(id: Uuid, due: LocalDate?) = replica.write(id, TodoFields.DUE to due?.let(Value::Date))
+    suspend fun setDue(id: Uuid, due: LocalDate?) = replica.edit(
+        id,
+        TodoTypes.TASK,
+        TodoFields.DUE to due?.let(Value::Date),
+    )
 
-    suspend fun setStarred(id: Uuid, starred: Boolean) = replica.write(id, TodoFields.STARRED to Value.Bool(starred))
+    suspend fun setStarred(id: Uuid, starred: Boolean) = replica.edit(
+        id,
+        TodoTypes.TASK,
+        TodoFields.STARRED to Value.Bool(starred),
+    )
 
-    suspend fun setDone(id: Uuid, done: Boolean) = replica.write(id, TodoFields.DONE to Value.Bool(done))
+    suspend fun setDone(id: Uuid, done: Boolean) = replica.edit(id, TodoTypes.TASK, TodoFields.DONE to Value.Bool(done))
 
-    suspend fun delete(id: Uuid) = replica.write(id, CoreFields.DELETED to Value.Bool(true))
+    suspend fun delete(id: Uuid) = replica.edit(id, TodoTypes.TASK, CoreFields.DELETED to Value.Bool(true))
 
-    /** Moves the task to [toIndex] within its list, in the order shown. */
+    /** Moves the visible task to [toIndex] within its list, in the order shown. */
     suspend fun move(id: Uuid, toIndex: Int) {
+        replica.requireType(id, TodoTypes.TASK)
         val state = projectTodos(replica.cells())
-        val task = state.lists.flatMap { state.tasks(it.id) }.single { it.id == id }
+        val task =
+            requireNotNull(state.lists.flatMap { state.tasks(it.id) }.find { it.id == id }) { "task $id is hidden" }
         val others = state.tasks(task.listId).filter { it.id != id }.map { it.position }
         replica.write(id, TodoFields.POSITION to Value.Text(positionAt(others, toIndex, random)))
     }
 }
 
 private suspend fun Replica.write(id: Uuid, vararg fields: Pair<FieldId, Value?>) = write(id, fields.asList())
+
+/** Writes [fields] to an existing record of [type], hidden or not; any other ID is a caller bug. */
+private suspend fun Replica.edit(id: Uuid, type: Long, vararg fields: Pair<FieldId, Value?>) {
+    requireType(id, type)
+    write(id, fields.asList())
+}
+
+private suspend fun Replica.requireType(id: Uuid, type: Long) {
+    val typeCell = cells(id).find { it.key.fieldId == CoreFields.TYPE }
+    require(typeCell != null && ValueCodec.decode(typeCell.value) == Value.Int64(type)) { "$id isn't of type $type" }
+}
 
 private suspend fun Replica.write(id: Uuid, fields: List<Pair<FieldId, Value?>>) {
     write(fields.associate { (field, value) -> CellKey(id, field) to ValueCodec.encode(value) })

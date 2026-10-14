@@ -86,7 +86,8 @@ in the client.
   at 10.
 - Storage (code: `LocalStore` in `core/storage`, schema in `src/commonMain/sqldelight`): SQLite
   tables `field_state`, `ingested_batch(plug, batch_key)` and `plug_watermark(plug, hlc)`, keyed
-  by `PlugId` (a stable name per configured plug). It knows no merge or HLC rules. HLCs are stored
+  by `PlugId` (a stable name per configured plug); the last two sit behind `LocalStore.plugs`. It
+  knows no merge or HLC rules. HLCs are stored
   as the packed value with its sign bit flipped, so SQL compares them unsigned like `Hlc`. The
   platform creates the `SqlDriver` with `LocalStore.Schema`; JVM tests use sqlite-jdbc (decision
   0046).
@@ -128,7 +129,8 @@ in the client.
 
 Code: `projectTodos()` in `apps/todo/domain`, which reads cells into sorted lists and tasks. Edits
 are `ListCommands` and `TaskCommands` there, each one `Replica.write`: a new list goes to the end,
-a new task to the top of its list, and a move places the item at an index of the shown order.
+a new task to the top of its list, and a move places the item at an index of the shown order. An
+edit checks that its ID is a record of the right type (hidden ones included) and throws otherwise.
 
 - A task whose list is deleted is hidden everywhere; deleting a list writes only the list's
   `deleted` field (decision 0032). This holds for "My Tasks" too (decision 0055).

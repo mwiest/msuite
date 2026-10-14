@@ -78,7 +78,7 @@ class ReplicaTest : StringSpec({
         val batch = Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500), remote(2, 500)))
         replica.ingest(folder, "k1", batch) shouldBe IngestResult.Merged(listOf(remote(2, 500)))
         store.cells() shouldContainExactlyInAnyOrder listOf(local, remote(2, 500))
-        store.isIngested(folder, "k1") shouldBe true
+        store.plugs.isIngested(folder, "k1") shouldBe true
     }
 
     "a batch already ingested from a plug is skipped" {
@@ -99,7 +99,7 @@ class ReplicaTest : StringSpec({
         val batch = Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 1_000 + dayMs + 1)))
         replica.ingest(folder, "k1", batch) shouldBe IngestResult.Deferred
         store.cells().shouldBeEmpty()
-        store.isIngested(folder, "k1") shouldBe false
+        store.plugs.isIngested(folder, "k1") shouldBe false
     }
 
     "a delta holds what wasn't pushed to that plug yet" {
@@ -151,5 +151,13 @@ class ReplicaTest : StringSpec({
         replica.write(emptyMap())
         replica.pushed(folder, replica.delta(folder).shouldNotBeNull())
         replica.changes.value shouldBe 2
+    }
+
+    "a record's cells read back alone" {
+        val replica = Replica(driver(), deviceA, TestClock(1_000))
+        val written = replica.write(
+            mapOf(key(1) to byteArrayOf(1), CellKey(Uuid.random(), FieldId(1)) to byteArrayOf(2)),
+        )
+        replica.cells(record) shouldContainExactly written.filter { it.key.recordId == record }
     }
 })

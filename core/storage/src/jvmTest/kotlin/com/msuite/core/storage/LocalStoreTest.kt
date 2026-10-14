@@ -51,6 +51,14 @@ class LocalStoreTest : StringSpec({
         store.cell(CellKey(record, FieldId(2))).shouldBeNull()
     }
 
+    "a record's cells read back alone" {
+        val store = open()
+        val other = Cell(CellKey(Uuid.random(), FieldId(1)), byteArrayOf(1), Stamp(hlc(1), DeviceId(1)))
+        store.write(listOf(cell(1, hlc(1)), cell(2, hlc(2)), other))
+        store.cells(record) shouldContainExactlyInAnyOrder listOf(cell(1, hlc(1)), cell(2, hlc(2)))
+        store.cells(Uuid.random()).shouldBeEmpty()
+    }
+
     "writing a key again replaces its cell" {
         val store = open()
         store.write(listOf(cell(1, hlc(1), value = 1)))
@@ -95,20 +103,20 @@ class LocalStoreTest : StringSpec({
 
     "ingested batch keys are kept per plug" {
         val store = open()
-        store.isIngested(folder, "k1") shouldBe false
-        store.markIngested(folder, "k1")
-        store.markIngested(folder, "k1")
-        store.isIngested(folder, "k1") shouldBe true
-        store.isIngested(relay, "k1") shouldBe false
+        store.plugs.isIngested(folder, "k1") shouldBe false
+        store.plugs.markIngested(folder, "k1")
+        store.plugs.markIngested(folder, "k1")
+        store.plugs.isIngested(folder, "k1") shouldBe true
+        store.plugs.isIngested(relay, "k1") shouldBe false
     }
 
     "a watermark is kept per plug and can move" {
         val store = open()
-        store.watermark(folder).shouldBeNull()
-        store.setWatermark(folder, hlc(5))
-        store.setWatermark(folder, signBitHlc)
-        store.watermark(folder) shouldBe signBitHlc
-        store.watermark(relay).shouldBeNull()
+        store.plugs.watermark(folder).shouldBeNull()
+        store.plugs.setWatermark(folder, hlc(5))
+        store.plugs.setWatermark(folder, signBitHlc)
+        store.plugs.watermark(folder) shouldBe signBitHlc
+        store.plugs.watermark(relay).shouldBeNull()
     }
 
     "a failed transaction leaves nothing behind" {
@@ -116,12 +124,12 @@ class LocalStoreTest : StringSpec({
         shouldThrow<IllegalStateException> {
             store.transaction {
                 store.write(listOf(cell(1, hlc(1))))
-                store.markIngested(folder, "k1")
+                store.plugs.markIngested(folder, "k1")
                 error("boom")
             }
         }
         store.cells().shouldBeEmpty()
-        store.isIngested(folder, "k1") shouldBe false
+        store.plugs.isIngested(folder, "k1") shouldBe false
     }
 
     "state persists across reopening the database" {
@@ -130,14 +138,14 @@ class LocalStoreTest : StringSpec({
         val written = cell(1, signBitHlc)
         open(url).run {
             write(listOf(written))
-            markIngested(folder, "k1")
-            setWatermark(folder, hlc(7))
+            plugs.markIngested(folder, "k1")
+            plugs.setWatermark(folder, hlc(7))
             close()
         }
         open(url).run {
             cells() shouldContainExactly listOf(written)
-            isIngested(folder, "k1") shouldBe true
-            watermark(folder) shouldBe hlc(7)
+            plugs.isIngested(folder, "k1") shouldBe true
+            plugs.watermark(folder) shouldBe hlc(7)
             close()
         }
     }

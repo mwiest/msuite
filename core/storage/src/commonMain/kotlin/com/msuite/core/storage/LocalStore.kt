@@ -12,6 +12,7 @@ import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.db.Field_state
 import com.msuite.core.storage.db.MsuiteDatabase
+import com.msuite.core.storage.db.PlugStateQueries
 import kotlin.uuid.Uuid
 
 /**
@@ -33,6 +34,9 @@ class LocalStore(private val driver: SqlDriver) : AutoCloseable {
         return query.executeAsList().map { it.toCell() }
     }
 
+    fun cells(recordId: Uuid): List<Cell> =
+        db.fieldStateQueries.recordCells(recordId.toByteArray()).executeAsList().map { it.toCell() }
+
     fun maxHlc(): Hlc? = db.fieldStateQueries.maxHlc().executeAsOne().hlc?.let(::hlcFromSql)
 
     /** Writes [cells], replacing any stored cell with the same key. */
@@ -40,25 +44,29 @@ class LocalStore(private val driver: SqlDriver) : AutoCloseable {
         cells.forEach { db.fieldStateQueries.upsert(it.toRow()) }
     }
 
-    fun isIngested(plug: PlugId, batchKey: String): Boolean =
-        db.plugStateQueries.isIngested(plug.id, batchKey).executeAsOne()
-
-    fun markIngested(plug: PlugId, batchKey: String) {
-        db.plugStateQueries.markIngested(plug.id, batchKey)
-    }
-
-    /** The highest HLC pushed to [plug], or `null` if nothing was pushed yet. */
-    fun watermark(plug: PlugId): Hlc? = db.plugStateQueries.watermark(plug.id).executeAsOneOrNull()?.let(::hlcFromSql)
-
-    fun setWatermark(plug: PlugId, hlc: Hlc) {
-        db.plugStateQueries.setWatermark(plug.id, hlc.toSql())
-    }
+    /** Per-plug bookkeeping (decision 0036). */
+    val plugs = PlugBook(db.plugStateQueries)
 
     override fun close() = driver.close()
 
     companion object {
         /** For the platform driver, which creates or migrates the database. */
         val Schema: SqlSchema<QueryResult.Value<Unit>> get() = MsuiteDatabase.Schema
+    }
+}
+
+class PlugBook internal constructor(private val queries: PlugStateQueries) {
+    fun isIngested(plug: PlugId, batchKey: String): Boolean = queries.isIngested(plug.id, batchKey).executeAsOne()
+
+    fun markIngested(plug: PlugId, batchKey: String) {
+        queries.markIngested(plug.id, batchKey)
+    }
+
+    /** The highest HLC pushed to [plug], or `null` if nothing was pushed yet. */
+    fun watermark(plug: PlugId): Hlc? = queries.watermark(plug.id).executeAsOneOrNull()?.let(::hlcFromSql)
+
+    fun setWatermark(plug: PlugId, hlc: Hlc) {
+        queries.setWatermark(plug.id, hlc.toSql())
     }
 }
 

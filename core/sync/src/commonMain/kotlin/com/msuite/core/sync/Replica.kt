@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
+import kotlin.uuid.Uuid
 
 /**
  * The device's state, in the database behind [driver], with its HLC clock. The clock starts from
@@ -43,27 +44,29 @@ class Replica(driver: SqlDriver, private val deviceId: DeviceId, wallClock: Cloc
 
     /** Merges [batch], fetched from [plug] under [batchKey]; a key ingested before is skipped. */
     suspend fun ingest(plug: PlugId, batchKey: String, batch: Batch): IngestResult = serialized {
-        if (store.isIngested(plug, batchKey)) return@serialized IngestResult.Merged(emptyList())
+        if (store.plugs.isIngested(plug, batchKey)) return@serialized IngestResult.Merged(emptyList())
         ingest(batch, store::cell, clock).also { result ->
             if (result is IngestResult.Merged) {
                 store.write(result.changes)
-                store.markIngested(plug, batchKey)
+                store.plugs.markIngested(plug, batchKey)
             }
         }
     }.also { if (it is IngestResult.Merged && it.changes.isNotEmpty()) tick() }
 
     /** What [plug] hasn't been sent yet, or `null`; after a successful put, call [pushed]. */
     suspend fun delta(plug: PlugId): Batch? = serialized {
-        val watermark = store.watermark(plug)
+        val watermark = store.plugs.watermark(plug)
         buildDelta(store.cells(above = watermark), watermark)
     }
 
     suspend fun pushed(plug: PlugId, delta: Batch) {
         val hlcHi = delta.hlcHi() ?: return
-        serialized { store.setWatermark(plug, hlcHi) }
+        serialized { store.plugs.setWatermark(plug, hlcHi) }
     }
 
     suspend fun cells(): List<Cell> = serialized { store.cells() }
+
+    suspend fun cells(recordId: Uuid): List<Cell> = serialized { store.cells(recordId) }
 
     override fun close() = store.close()
 
