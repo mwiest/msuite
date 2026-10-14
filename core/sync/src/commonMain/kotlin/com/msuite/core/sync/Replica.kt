@@ -5,6 +5,7 @@ import com.msuite.core.model.Cell
 import com.msuite.core.model.CellKey
 import com.msuite.core.model.DeviceId
 import com.msuite.core.model.Hlc
+import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.LocalStore
 import kotlinx.coroutines.sync.Mutex
@@ -28,7 +29,7 @@ class Replica(private val store: LocalStore, private val deviceId: DeviceId, wal
     }
 
     /** Merges [batch], fetched from [plug] under [batchKey]; a key ingested before is skipped. */
-    suspend fun ingest(plug: String, batchKey: String, batch: Batch): IngestResult = serialized {
+    suspend fun ingest(plug: PlugId, batchKey: String, batch: Batch): IngestResult = serialized {
         if (store.isIngested(plug, batchKey)) return@serialized IngestResult.Merged(emptyList())
         ingest(batch, store::cell, clock).also { result ->
             if (result is IngestResult.Merged) {
@@ -39,12 +40,12 @@ class Replica(private val store: LocalStore, private val deviceId: DeviceId, wal
     }
 
     /** What [plug] hasn't been sent yet, or `null`; after a successful put, call [pushed]. */
-    suspend fun delta(plug: String): Batch? = serialized {
+    suspend fun delta(plug: PlugId): Batch? = serialized {
         val watermark = store.watermark(plug)
         buildDelta(store.cells(above = watermark), watermark)
     }
 
-    suspend fun pushed(plug: String, delta: Batch) = serialized {
+    suspend fun pushed(plug: PlugId, delta: Batch) = serialized {
         delta.hlcHi()?.let { store.setWatermark(plug, it) }
     }
 

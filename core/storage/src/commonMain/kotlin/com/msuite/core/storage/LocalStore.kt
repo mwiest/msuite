@@ -8,6 +8,7 @@ import com.msuite.core.model.CellKey
 import com.msuite.core.model.DeviceId
 import com.msuite.core.model.FieldId
 import com.msuite.core.model.Hlc
+import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.db.Field_state
 import com.msuite.core.storage.db.MsuiteDatabase
@@ -39,18 +40,18 @@ class LocalStore(private val driver: SqlDriver) : AutoCloseable {
         cells.forEach { db.fieldStateQueries.upsert(it.toRow()) }
     }
 
-    fun isIngested(plug: String, batchKey: String): Boolean =
-        db.plugStateQueries.isIngested(plug, batchKey).executeAsOne()
+    fun isIngested(plug: PlugId, batchKey: String): Boolean =
+        db.plugStateQueries.isIngested(plug.id, batchKey).executeAsOne()
 
-    fun markIngested(plug: String, batchKey: String) {
-        db.plugStateQueries.markIngested(plug, batchKey)
+    fun markIngested(plug: PlugId, batchKey: String) {
+        db.plugStateQueries.markIngested(plug.id, batchKey)
     }
 
     /** The highest HLC pushed to [plug], or `null` if nothing was pushed yet. */
-    fun watermark(plug: String): Hlc? = db.plugStateQueries.watermark(plug).executeAsOneOrNull()?.let(::hlcFromSql)
+    fun watermark(plug: PlugId): Hlc? = db.plugStateQueries.watermark(plug.id).executeAsOneOrNull()?.let(::hlcFromSql)
 
-    fun setWatermark(plug: String, hlc: Hlc) {
-        db.plugStateQueries.setWatermark(plug, hlc.toSql())
+    fun setWatermark(plug: PlugId, hlc: Hlc) {
+        db.plugStateQueries.setWatermark(plug.id, hlc.toSql())
     }
 
     override fun close() = driver.close()

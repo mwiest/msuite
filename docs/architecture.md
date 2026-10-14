@@ -13,7 +13,7 @@ are code say so. Each part becomes "what the code does" as its step in
 
 | Module | Kind | Holds (intended) | Today |
 |---|---|---|---|
-| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
+| `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `Stamp`, `Cell`, `PlugId`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | `LocalStore` over all three tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, simulator Layer 1 |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
@@ -79,7 +79,7 @@ in the client.
   ID. Apps read typed models through their own projection code.
 - Storage (code: `LocalStore` in `core/storage`, schema in `src/commonMain/sqldelight`): SQLite
   tables `field_state`, `ingested_batch(plug, batch_key)` and `plug_watermark(plug, hlc)`, keyed
-  by a plug ID string. It knows no merge or HLC rules. HLCs are stored as the packed value with
+  by `PlugId` (a stable name per configured plug). It knows no merge or HLC rules. HLCs are stored as the packed value with
   its sign bit flipped, so SQL compares them unsigned like `Hlc`. The platform creates the
   `SqlDriver` with `LocalStore.Schema`; JVM tests use sqlite-jdbc (decision 0046).
 - `Replica` in `core/sync` (code) is the device's state: a `LocalStore` plus the `HlcClock`, which

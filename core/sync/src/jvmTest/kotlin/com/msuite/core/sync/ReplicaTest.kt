@@ -8,6 +8,7 @@ import com.msuite.core.model.DeviceId
 import com.msuite.core.model.FieldId
 import com.msuite.core.model.Hlc
 import com.msuite.core.model.Model
+import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.LocalStore
 import io.kotest.core.spec.style.StringSpec
@@ -38,6 +39,9 @@ private fun newStore() = LocalStore(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY,
 private fun remote(field: Int, pt: Long, value: Byte = 9) =
     Cell(key(field), byteArrayOf(value), Stamp(Hlc.of(pt, 0), deviceB))
 
+private val folder = PlugId("folder")
+private val relay = PlugId("relay")
+
 class ReplicaTest : StringSpec({
     "a local write stamps its cells with one fresh HLC and stores them" {
         val store = newStore()
@@ -57,7 +61,7 @@ class ReplicaTest : StringSpec({
     "after a restart, new writes order after ingested remote cells" {
         val store = newStore()
         val ahead = remote(1, 1_000 + dayMs)
-        Replica(store, deviceA, TestClock(1_000)).ingest("folder", "k1", Batch(Model.DATA_MODEL_VERSION, listOf(ahead)))
+        Replica(store, deviceA, TestClock(1_000)).ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(ahead)))
         val after = Replica(store, deviceA, TestClock(1_000)).write(mapOf(key(2) to byteArrayOf(1))).single()
         after.stamp.hlc shouldBeGreaterThan ahead.stamp.hlc
     }
@@ -67,17 +71,17 @@ class ReplicaTest : StringSpec({
         val replica = Replica(store, deviceA, TestClock(1_000))
         val local = replica.write(mapOf(key(1) to byteArrayOf(1))).single()
         val batch = Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500), remote(2, 500)))
-        replica.ingest("folder", "k1", batch) shouldBe IngestResult.Merged(listOf(remote(2, 500)))
+        replica.ingest(folder, "k1", batch) shouldBe IngestResult.Merged(listOf(remote(2, 500)))
         store.cells() shouldContainExactlyInAnyOrder listOf(local, remote(2, 500))
-        store.isIngested("folder", "k1") shouldBe true
+        store.isIngested(folder, "k1") shouldBe true
     }
 
     "a batch already ingested from a plug is skipped" {
         val store = newStore()
         val replica = Replica(store, deviceA, TestClock(1_000))
-        replica.ingest("folder", "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500, value = 1))))
+        replica.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500, value = 1))))
         store.write(listOf(remote(1, 400, value = 2)))
-        replica.ingest("folder", "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500, value = 1)))) shouldBe
+        replica.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500, value = 1)))) shouldBe
             IngestResult.Merged(emptyList())
         store.cell(key(1)) shouldBe remote(1, 400, value = 2)
     }
@@ -86,21 +90,21 @@ class ReplicaTest : StringSpec({
         val store = newStore()
         val replica = Replica(store, deviceA, TestClock(1_000))
         val batch = Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 1_000 + dayMs + 1)))
-        replica.ingest("folder", "k1", batch) shouldBe IngestResult.Deferred
+        replica.ingest(folder, "k1", batch) shouldBe IngestResult.Deferred
         store.cells().shouldBeEmpty()
-        store.isIngested("folder", "k1") shouldBe false
+        store.isIngested(folder, "k1") shouldBe false
     }
 
     "a delta holds what wasn't pushed to that plug yet" {
         val replica = Replica(newStore(), deviceA, TestClock(1_000))
         val first = replica.write(mapOf(key(1) to byteArrayOf(1)))
-        val delta = replica.delta("folder").shouldNotBeNull()
+        val delta = replica.delta(folder).shouldNotBeNull()
         delta.cells shouldContainExactly first
-        replica.pushed("folder", delta)
-        replica.delta("folder").shouldBeNull()
+        replica.pushed(folder, delta)
+        replica.delta(folder).shouldBeNull()
         val second = replica.write(mapOf(key(2) to byteArrayOf(2)))
-        replica.delta("folder").shouldNotBeNull().cells shouldContainExactly second
-        replica.delta("relay").shouldNotBeNull().cells shouldContainExactlyInAnyOrder first + second
+        replica.delta(folder).shouldNotBeNull().cells shouldContainExactly second
+        replica.delta(relay).shouldNotBeNull().cells shouldContainExactlyInAnyOrder first + second
     }
 
     "two replicas converge through their databases" {
@@ -108,10 +112,10 @@ class ReplicaTest : StringSpec({
         val b = Replica(newStore(), deviceB, TestClock(2_000))
         a.write(mapOf(key(1) to byteArrayOf(1), key(2) to byteArrayOf(1)))
         b.write(mapOf(key(2) to byteArrayOf(2), key(3) to byteArrayOf(2)))
-        val fromA = a.delta("folder").shouldNotBeNull()
-        val fromB = b.delta("folder").shouldNotBeNull()
-        a.ingest("folder", "b1", fromB)
-        b.ingest("folder", "a1", fromA)
+        val fromA = a.delta(folder).shouldNotBeNull()
+        val fromB = b.delta(folder).shouldNotBeNull()
+        a.ingest(folder, "b1", fromB)
+        b.ingest(folder, "a1", fromA)
         a.cells() shouldContainExactlyInAnyOrder b.cells()
         a.cells().single { it.key == key(2) }.stamp.deviceId shouldBe deviceB
     }
