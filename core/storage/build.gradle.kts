@@ -10,7 +10,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":core:model"))
-            implementation(libs.sqldelight.runtime)
+            api(libs.sqldelight.runtime)
         }
         jvmTest.dependencies {
             implementation(libs.sqldelight.sqlite.driver)

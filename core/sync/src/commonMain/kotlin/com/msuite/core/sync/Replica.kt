@@ -1,5 +1,6 @@
 package com.msuite.core.sync
 
+import app.cash.sqldelight.db.SqlDriver
 import com.msuite.core.model.Batch
 import com.msuite.core.model.Cell
 import com.msuite.core.model.CellKey
@@ -13,12 +14,13 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
 
 /**
- * The device's state in [store], with its HLC clock. The clock starts from the highest stored HLC,
- * so writes after a restart order after everything stored, even if the wall clock went back.
- * Every operation runs alone (the clock isn't thread-safe) and in one transaction; use one
- * replica per database.
+ * The device's state, in the database behind [driver], with its HLC clock. The clock starts from
+ * the highest stored HLC, so writes after a restart order after everything stored, even if the
+ * wall clock went back. Every operation runs alone (the clock isn't thread-safe) and in one
+ * transaction. The replica owns the database: open one per database and write only through it.
  */
-class Replica(private val store: LocalStore, private val deviceId: DeviceId, wallClock: Clock) {
+class Replica(driver: SqlDriver, private val deviceId: DeviceId, wallClock: Clock) : AutoCloseable {
+    private val store = LocalStore(driver)
     private val clock = HlcClock(wallClock, store.maxHlc() ?: Hlc.ZERO)
     private val mutex = Mutex()
 
@@ -50,6 +52,8 @@ class Replica(private val store: LocalStore, private val deviceId: DeviceId, wal
     }
 
     suspend fun cells(): List<Cell> = serialized { store.cells() }
+
+    override fun close() = store.close()
 
     private suspend fun <R> serialized(block: () -> R): R = mutex.withLock { store.transaction(block) }
 }

@@ -12,6 +12,7 @@ import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.LocalStore
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -34,7 +35,7 @@ private val dayMs = HlcClock.MAX_AHEAD.inWholeMilliseconds
 
 private fun key(field: Int) = CellKey(record, FieldId(field))
 
-private fun newStore() = LocalStore(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY, Properties(), LocalStore.Schema))
+private fun driver(url: String = JdbcSqliteDriver.IN_MEMORY) = JdbcSqliteDriver(url, Properties(), LocalStore.Schema)
 
 private fun remote(field: Int, pt: Long, value: Byte = 9) =
     Cell(key(field), byteArrayOf(value), Stamp(Hlc.of(pt, 0), deviceB))
@@ -44,31 +45,35 @@ private val relay = PlugId("relay")
 
 class ReplicaTest : StringSpec({
     "a local write stamps its cells with one fresh HLC and stores them" {
-        val store = newStore()
-        val replica = Replica(store, deviceA, TestClock(1_000))
+        val driver = driver()
+        val store = LocalStore(driver)
+        val replica = Replica(driver, deviceA, TestClock(1_000))
         val written = replica.write(mapOf(key(1) to byteArrayOf(1), key(2) to byteArrayOf(2)))
         written.map { it.stamp }.distinct() shouldContainExactly listOf(Stamp(Hlc.of(1_000, 0), deviceA))
         store.cells() shouldContainExactlyInAnyOrder written
     }
 
     "after a restart with the wall clock set back, new writes still order after stored ones" {
-        val store = newStore()
-        val before = Replica(store, deviceA, TestClock(5_000)).write(mapOf(key(1) to byteArrayOf(1))).single()
-        val after = Replica(store, deviceA, TestClock(1_000)).write(mapOf(key(1) to byteArrayOf(2))).single()
-        after.stamp.hlc shouldBeGreaterThan before.stamp.hlc
+        val url = "jdbc:sqlite:${tempfile(suffix = ".db").absolutePath}"
+        val before = Replica(driver(url), deviceA, TestClock(5_000)).use { it.write(mapOf(key(1) to byteArrayOf(1))) }
+        val after = Replica(driver(url), deviceA, TestClock(1_000)).use { it.write(mapOf(key(1) to byteArrayOf(2))) }
+        after.single().stamp.hlc shouldBeGreaterThan before.single().stamp.hlc
     }
 
     "after a restart, new writes order after ingested remote cells" {
-        val store = newStore()
+        val url = "jdbc:sqlite:${tempfile(suffix = ".db").absolutePath}"
         val ahead = remote(1, 1_000 + dayMs)
-        Replica(store, deviceA, TestClock(1_000)).ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(ahead)))
-        val after = Replica(store, deviceA, TestClock(1_000)).write(mapOf(key(2) to byteArrayOf(1))).single()
-        after.stamp.hlc shouldBeGreaterThan ahead.stamp.hlc
+        Replica(driver(url), deviceA, TestClock(1_000)).use {
+            it.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(ahead)))
+        }
+        val after = Replica(driver(url), deviceA, TestClock(1_000)).use { it.write(mapOf(key(2) to byteArrayOf(1))) }
+        after.single().stamp.hlc shouldBeGreaterThan ahead.stamp.hlc
     }
 
     "ingest writes the winning cells and marks the batch ingested" {
-        val store = newStore()
-        val replica = Replica(store, deviceA, TestClock(1_000))
+        val driver = driver()
+        val store = LocalStore(driver)
+        val replica = Replica(driver, deviceA, TestClock(1_000))
         val local = replica.write(mapOf(key(1) to byteArrayOf(1))).single()
         val batch = Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500), remote(2, 500)))
         replica.ingest(folder, "k1", batch) shouldBe IngestResult.Merged(listOf(remote(2, 500)))
@@ -77,8 +82,9 @@ class ReplicaTest : StringSpec({
     }
 
     "a batch already ingested from a plug is skipped" {
-        val store = newStore()
-        val replica = Replica(store, deviceA, TestClock(1_000))
+        val driver = driver()
+        val store = LocalStore(driver)
+        val replica = Replica(driver, deviceA, TestClock(1_000))
         replica.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500, value = 1))))
         store.write(listOf(remote(1, 400, value = 2)))
         replica.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500, value = 1)))) shouldBe
@@ -87,8 +93,9 @@ class ReplicaTest : StringSpec({
     }
 
     "a deferred batch writes nothing and stays unmarked" {
-        val store = newStore()
-        val replica = Replica(store, deviceA, TestClock(1_000))
+        val driver = driver()
+        val store = LocalStore(driver)
+        val replica = Replica(driver, deviceA, TestClock(1_000))
         val batch = Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 1_000 + dayMs + 1)))
         replica.ingest(folder, "k1", batch) shouldBe IngestResult.Deferred
         store.cells().shouldBeEmpty()
@@ -96,7 +103,7 @@ class ReplicaTest : StringSpec({
     }
 
     "a delta holds what wasn't pushed to that plug yet" {
-        val replica = Replica(newStore(), deviceA, TestClock(1_000))
+        val replica = Replica(driver(), deviceA, TestClock(1_000))
         val first = replica.write(mapOf(key(1) to byteArrayOf(1)))
         val delta = replica.delta(folder).shouldNotBeNull()
         delta.cells shouldContainExactly first
@@ -108,8 +115,8 @@ class ReplicaTest : StringSpec({
     }
 
     "two replicas converge through their databases" {
-        val a = Replica(newStore(), deviceA, TestClock(1_000))
-        val b = Replica(newStore(), deviceB, TestClock(2_000))
+        val a = Replica(driver(), deviceA, TestClock(1_000))
+        val b = Replica(driver(), deviceB, TestClock(2_000))
         a.write(mapOf(key(1) to byteArrayOf(1), key(2) to byteArrayOf(1)))
         b.write(mapOf(key(2) to byteArrayOf(2), key(3) to byteArrayOf(2)))
         val fromA = a.delta(folder).shouldNotBeNull()
@@ -121,7 +128,7 @@ class ReplicaTest : StringSpec({
     }
 
     "concurrent writes get distinct HLCs" {
-        val replica = Replica(newStore(), deviceA, TestClock(1_000))
+        val replica = Replica(driver(), deviceA, TestClock(1_000))
         val written = coroutineScope {
             (1..50).map { field ->
                 async(Dispatchers.Default) { replica.write(mapOf(key(field) to byteArrayOf(1))).single() }

@@ -79,15 +79,18 @@ in the client.
   ID. Apps read typed models through their own projection code.
 - Storage (code: `LocalStore` in `core/storage`, schema in `src/commonMain/sqldelight`): SQLite
   tables `field_state`, `ingested_batch(plug, batch_key)` and `plug_watermark(plug, hlc)`, keyed
-  by `PlugId` (a stable name per configured plug). It knows no merge or HLC rules. HLCs are stored as the packed value with
-  its sign bit flipped, so SQL compares them unsigned like `Hlc`. The platform creates the
-  `SqlDriver` with `LocalStore.Schema`; JVM tests use sqlite-jdbc (decision 0046).
-- `Replica` in `core/sync` (code) is the device's state: a `LocalStore` plus the `HlcClock`, which
-  starts from the store's highest HLC, so writes after a restart order after everything stored
-  even if the wall clock went back. A local write stamps all its cells with one fresh HLC. Ingest
-  skips a batch key already ingested from that plug, and writes the winners and marks the key in
-  one transaction. A delta is built from the plug's watermark, which moves on `pushed`. Every
-  operation holds a coroutine `Mutex` and runs in one transaction.
+  by `PlugId` (a stable name per configured plug). It knows no merge or HLC rules. HLCs are stored
+  as the packed value with its sign bit flipped, so SQL compares them unsigned like `Hlc`. The
+  platform creates the `SqlDriver` with `LocalStore.Schema`; JVM tests use sqlite-jdbc (decision
+  0046).
+- `Replica` in `core/sync` (code) is the device's state: it takes the `SqlDriver`, owns the
+  `LocalStore` on it, and holds the `HlcClock`, which starts from the store's highest HLC, so
+  writes after a restart order after everything stored even if the wall clock went back. A local
+  write stamps all its cells with one fresh HLC. Ingest skips a batch key already ingested from
+  that plug, and writes the winners and marks the key in one transaction. A delta is built from
+  the plug's watermark, which moves on `pushed`. Every operation holds a coroutine `Mutex` and
+  runs in one transaction. The app opens one replica per database and writes only through it;
+  the mutex doesn't cover a second one.
 - Deletes are an ordinary LWW `deleted` field (tombstone).
 - `merge(local, remote)` in `core/sync` (code) is per-cell last-writer-wins on the total order
   `(pt, c, deviceId)` of the Hybrid Logical Clock (decision 0005), held in a `Stamp`. It is a pure
