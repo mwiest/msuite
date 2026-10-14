@@ -50,17 +50,17 @@ enum class SimField(val id: FieldId) {
     DELETED(FieldId(2)),
 }
 
-class SimDevice(val id: DeviceId, wallMillis: Long, seed: Long) {
+class SimDevice(val id: DeviceId, wallMillis: Long, seed: Long, backend: SimBackend) {
     val wall = TestClock(wallMillis)
-    val clock = HlcClock(wall)
-    val state = mutableMapOf<CellKey, Cell>()
+    val state = backend(wall, id)
     val ingested = mutableSetOf<Int>()
-    var watermark: Hlc? = null
     var online = true
     var maxWallSeen = wallMillis
     val jitter = Random(seed)
 
-    fun snapshot(): Batch = Batch(Model.DATA_MODEL_VERSION, state.values.toList())
+    fun cells(): Map<CellKey, Cell> = state.cells()
+
+    fun snapshot(): Batch = Batch(Model.DATA_MODEL_VERSION, cells().values.toList())
 
     fun setWall(millis: Long) {
         wall.millis = millis.coerceAtLeast(0)
@@ -70,11 +70,19 @@ class SimDevice(val id: DeviceId, wallMillis: Long, seed: Long) {
 
 /**
  * The Layer 1 merge/HLC simulator (decision 0007, docs/testing.md): devices with their own clocks,
- * sharing an append-only store of batches through the real [ingest], [buildDelta] and [merge].
+ * sharing an append-only store of batches through the real [ingest], [buildDelta] and [merge], each
+ * device's state kept by [backend]: in memory, or in a [Replica] over SQLite.
  */
-class Simulation(wallOffsets: List<Long>, seed: Long, recordCount: Int = 4) {
+class Simulation(
+    wallOffsets: List<Long>,
+    seed: Long,
+    recordCount: Int = 4,
+    backend: SimBackend = ::MemoryState,
+) : AutoCloseable {
     val records = List(recordCount) { Uuid.fromLongs(seed, it.toLong()) }
-    val devices = wallOffsets.mapIndexed { i, offset -> SimDevice(DeviceId(seed + i), START + offset, seed + i) }
+    val devices = wallOffsets.mapIndexed { i, offset ->
+        SimDevice(DeviceId(seed + i), START + offset, seed + i, backend)
+    }
     val store = mutableListOf<Batch>()
 
     /** Every cell ever written, the oracle for the LWW invariant. */
@@ -95,24 +103,23 @@ class Simulation(wallOffsets: List<Long>, seed: Long, recordCount: Int = 4) {
 
     fun write(device: SimDevice, record: Uuid, field: Int, seed: Long) {
         val simField = SimField.entries[field.mod(SimField.entries.size)]
-        val hlc = device.clock.now()
-        // Invariant 5: a write orders after everything the device has seen.
-        device.state.values.forEach { seen -> hlc shouldBeGreaterThan seen.stamp.hlc }
+        val seen = device.cells().values
         val value = when (simField) {
             SimField.TITLE -> Value.Text("t$seed")
             SimField.DONE, SimField.DELETED -> Value.Bool(seed % 2 == 0L)
             SimField.POSITION -> Value.Text(newPosition(device, record, seed))
         }
-        val cell = Cell(CellKey(record, simField.id), ValueCodec.encode(value), Stamp(hlc, device.id))
-        device.state[cell.key] = cell
+        val cell = device.state.write(CellKey(record, simField.id), ValueCodec.encode(value))
+        // Invariant 5: a write orders after everything the device has seen.
+        seen.forEach { cell.stamp.hlc shouldBeGreaterThan it.stamp.hlc }
         writes += cell
     }
 
     fun push(device: SimDevice) {
-        val delta = buildDelta(device.state.values, device.watermark) ?: return
+        val delta = device.state.delta() ?: return
         store += delta
         device.ingested += store.lastIndex
-        device.watermark = delta.hlcHi()
+        device.state.pushed(delta)
     }
 
     fun pull(device: SimDevice, random: Random) {
@@ -140,24 +147,24 @@ class Simulation(wallOffsets: List<Long>, seed: Long, recordCount: Int = 4) {
         }
         withClue("still syncing after $QUIESCENCE_ROUNDS rounds") {
             devices.forEach { device ->
-                buildDelta(device.state.values, device.watermark).shouldBe(null)
+                device.state.delta().shouldBe(null)
                 (store.indices.toSet() - device.ingested).shouldBeEmpty()
             }
         }
     }
 
     fun value(device: Int, record: Int, field: SimField): Value? =
-        devices[device].state[CellKey(records[record], field.id)]?.let { ValueCodec.decode(it.value) }
+        devices[device].cells()[CellKey(records[record], field.id)]?.let { ValueCodec.decode(it.value) }
 
     /** The records with a position, as every device sorts them: by `(position, recordId)`. */
-    fun order(device: SimDevice): List<Uuid> = device.state.values
+    fun order(device: SimDevice): List<Uuid> = device.cells().values
         .filter { it.key.fieldId == SimField.POSITION.id }
         .sortedWith(compareBy<Cell> { (ValueCodec.decode(it.value) as Value.Text).value }.thenBy { it.key.recordId })
         .map { it.key.recordId }
 
     private fun ingestOne(device: SimDevice, index: Int) {
         val batch = store[index]
-        when (val result = ingest(batch, device.state::get, device.clock)) {
+        when (val result = device.state.ingest(index.toString(), batch)) {
             IngestResult.Deferred -> {
                 // Invariant 13: deferred only when more than 24 h ahead of this device's clock.
                 batch.hlcHi()!!.pt shouldBeGreaterThan device.wall.millis + HlcClock.MAX_AHEAD.inWholeMilliseconds
@@ -166,7 +173,6 @@ class Simulation(wallOffsets: List<Long>, seed: Long, recordCount: Int = 4) {
             is IngestResult.Merged -> {
                 // Invariant 3: delivering a batch again changes nothing.
                 if (index in device.ingested) result.changes.shouldBeEmpty()
-                result.changes.forEach { device.state[it.key] = it }
                 device.ingested += index
             }
         }
@@ -186,11 +192,11 @@ class Simulation(wallOffsets: List<Long>, seed: Long, recordCount: Int = 4) {
     }
 
     private fun positionOf(device: SimDevice, record: Uuid): String =
-        (ValueCodec.decode(device.state.getValue(CellKey(record, SimField.POSITION.id)).value) as Value.Text).value
+        (ValueCodec.decode(device.cells().getValue(CellKey(record, SimField.POSITION.id)).value) as Value.Text).value
 
     // Invariant 13: merging never pushes a device's HLC more than 24 h past its wall clock.
     private fun checkClockBound(device: SimDevice) {
-        device.state.values.forEach {
+        device.cells().values.forEach {
             it.stamp.hlc.pt shouldBeLessThanOrEqualTo device.maxWallSeen + HlcClock.MAX_AHEAD.inWholeMilliseconds
         }
     }
@@ -201,7 +207,7 @@ class Simulation(wallOffsets: List<Long>, seed: Long, recordCount: Int = 4) {
         withClue("invariant 1: identical state") { bytes.distinct().size shouldBe 1 }
         val expected = writes.groupBy { it.key }.mapValues { (_, cells) -> cells.maxWith(LWW_ORDER) }
         withClue("invariants 4, 6, 10: each field holds its LWW winner, and only written fields exist") {
-            devices.forEach { it.state.toMap() shouldBe expected }
+            devices.forEach { it.cells() shouldBe expected }
         }
         val positioned = writes.filter { it.key.fieldId == SimField.POSITION.id }.map { it.key.recordId }.toSet()
         withClue("invariants 8, 9: every positioned item once, in the same order everywhere") {
@@ -214,7 +220,7 @@ class Simulation(wallOffsets: List<Long>, seed: Long, recordCount: Int = 4) {
 
     /** Invariant 11: a snapshot stands in for the deltas it folds, for a fresh device and for [earlier] state. */
     fun checkSnapshots(earlier: Map<CellKey, Cell>) {
-        val final = devices.first().state.toMap()
+        val final = devices.first().cells()
         val snapshot = devices.first().snapshot()
         fun ingestAll(start: Map<CellKey, Cell>, batches: List<Batch>): Map<CellKey, Cell> {
             val state = start.toMutableMap()
@@ -229,6 +235,8 @@ class Simulation(wallOffsets: List<Long>, seed: Long, recordCount: Int = 4) {
         ingestAll(emptyMap(), listOf(snapshot)) shouldBe final
         ingestAll(earlier, listOf(snapshot)) shouldBe ingestAll(earlier, store)
     }
+
+    override fun close() = devices.forEach { it.state.close() }
 
     companion object {
         const val START = 1_760_000_000_000L

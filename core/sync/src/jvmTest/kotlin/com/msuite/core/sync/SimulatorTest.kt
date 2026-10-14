@@ -45,21 +45,26 @@ private val arbScenario: Arb<Scenario> = Arb.bind(
     Scenario(seed, listOf(offsets.first() + brokenClock) + offsets.drop(1), steps, captureAt)
 }
 
+private fun Scenario.check(backend: SimBackend) = Simulation(offsets, seed, backend = backend).use { sim ->
+    var earlier = emptyMap<CellKey, Cell>()
+    steps.forEachIndexed { i, step ->
+        if (i == captureAt) earlier = sim.devices.first().cells()
+        sim.run(step)
+    }
+    sim.quiesce()
+    sim.checkConverged()
+    sim.checkSnapshots(earlier)
+}
+
 private fun Simulation.title(device: Int, record: Int) = (value(device, record, SimField.TITLE) as Value.Text?)?.value
 
 class SimulatorTest : StringSpec({
     "any schedule converges to the LWW winners (invariants 1 to 11 and 13)" {
-        checkAll(PropTestConfig(iterations = 1_000), arbScenario) { scenario ->
-            val sim = Simulation(scenario.offsets, scenario.seed)
-            var earlier = emptyMap<CellKey, Cell>()
-            scenario.steps.forEachIndexed { i, step ->
-                if (i == scenario.captureAt) earlier = sim.devices.first().state.toMap()
-                sim.run(step)
-            }
-            sim.quiesce()
-            sim.checkConverged()
-            sim.checkSnapshots(earlier)
-        }
+        checkAll(PropTestConfig(iterations = 1_000), arbScenario) { it.check(::MemoryState) }
+    }
+
+    "any schedule converges the same through Replica and SQLite" {
+        checkAll(PropTestConfig(iterations = 300), arbScenario) { it.check(::ReplicaState) }
     }
 
     "concurrent edits of one field: the faster clock wins, everywhere" {

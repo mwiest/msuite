@@ -31,9 +31,12 @@ store of batches, through the real `ingest`, `buildDelta` and `merge`:
 - a generated schedule of `Write` / `Tick` / `Jump` / `Push` / `Pull` / `Toggle` steps runs, then a
   quiescence phase connects everyone, moves every clock past the 24 h bound, and syncs to a
   fixpoint;
-- property-based (kotest-property, 1000 schedules, shrinking the step list), plus named
-  scenarios: a faster clock wins a conflict, a causal edit wins on a slower clock, a delete beats
-  an older edit, a far-future batch is held back and merged later;
+- each device keeps its state behind `SimState` (`SimState.kt`): `MemoryState` runs the pure
+  functions over a map, `ReplicaState` the real `Replica` over in-memory SQLite, so the storage
+  path is checked against the same invariants;
+- property-based (kotest-property, 1000 schedules in memory and 300 through `Replica`, shrinking
+  the step list), plus named scenarios: a faster clock wins a conflict, a causal edit wins on a
+  slower clock, a delete beats an older edit, a far-future batch is held back and merged later;
 - everything is seeded, including the `keyBetween` jitter and the clocks.
 
 Invariant 7 is property-tested on its own in `core/model` (`FractionalIndexTest`).

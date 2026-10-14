@@ -47,8 +47,9 @@ class Replica(driver: SqlDriver, private val deviceId: DeviceId, wallClock: Cloc
         buildDelta(store.cells(above = watermark), watermark)
     }
 
-    suspend fun pushed(plug: PlugId, delta: Batch) = serialized {
-        delta.hlcHi()?.let { store.setWatermark(plug, it) }
+    suspend fun pushed(plug: PlugId, delta: Batch) {
+        val hlcHi = delta.hlcHi() ?: return
+        serialized { store.setWatermark(plug, hlcHi) }
     }
 
     suspend fun cells(): List<Cell> = serialized { store.cells() }
