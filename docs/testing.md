@@ -43,6 +43,15 @@ schedules in memory and 300 through `Replica`, shrinking the step list), plus na
 faster clock wins a conflict, a causal edit wins on a slower clock, a delete beats an older edit,
 a far-future batch is held back and merged later.
 
+The ToDo simulator (`apps/todo/domain/src/jvmTest/.../TodoSimulation.kt`, driven by
+`TodoSimulatorTest.kt`) runs the real `ListCommands`, `TaskCommands` and `projectTodos()` on
+`Replica`s. Every device first runs its first-run setup, alternating English and German, then
+picks its targets from its own current view. A raw `Relist` write points a task at another list,
+standing in for a later "move to list" feature. It checks invariants 1 and 14 to 16, with 200
+schedules plus two named scenarios: a deleted list's task hidden and revived by a move, and a device
+that worked offline from the start joining. Invariant 14 is checked against an oracle that
+recomputes visibility from the raw cells.
+
 Invariant 7 is property-tested on its own in `core/model` (`FractionalIndexTest`).
 
 ### Invariants
@@ -97,7 +106,7 @@ Envelope (decision 0029, Layer 3):
 | Layer | Lands with | Covers |
 |---|---|---|
 | 1 | v1 step 2 (landed), gating the LWW merge | pure merge and HLC, invariants 1 to 11 and 13 |
-| 1 + ToDo rules | v1 step 4, with the ToDo app's projection | invariants 14 to 16 |
+| 1 + ToDo rules | v1 step 4 (landed) | invariants 14 to 16, through the ToDo commands |
 | 2 | v1 step 5 (manual plug), step 8 (synced-folder plug on plain files) | the real plug wrapped in; invariant 12 with the folder plug |
 | 3 | v1 step 6 | encrypted batches still converge, invariant 17 |
 

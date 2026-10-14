@@ -1,6 +1,6 @@
 # Plan: v1 step 4, the single-device ToDo app
 
-Status: **slices 1 to 3 done; slice 4 (simulator invariants 14 to 16) next.** Started 2026-10-14.
+Status: **slices 1 to 4 done; slice 5 (app wiring) next.** Started 2026-10-14.
 Part of [`v1-todo.md`](v1-todo.md) step 4.
 
 ## Goal
@@ -36,7 +36,9 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
    and reorder tasks; each a `Replica.write`. Tested against the projection. New tasks go to the
    top; clearing a field writes an empty value (decision 0056); malformed values decode as absent
    (`74de47a`). Landed: `33e017c`.
-4. [ ] **Simulator invariants 14 to 16.** The ToDo rules under random schedules (`testing.md`).
+4. [x] **Simulator invariants 14 to 16.** The ToDo rules under random schedules (`testing.md`).
+   The harness moved into `core/sync-testing` first (decision 0057, `f1317df`); the commands take
+   an ID source (`d2a97ad`); edits are guarded against wrong IDs (`0e45c4d`).
 5. [ ] **App wiring.** The shell creates the driver and the `Replica` with a stable device ID and
    passes it into the app root; the UI observes the projection. See Open questions.
 6. [ ] **Screens.** Tasks of a list (checkbox, star, FAB), the task editor, list management,

@@ -12,6 +12,7 @@ kotlin {
             api(project(":core:sync"))
         }
         jvmTest.dependencies {
+            implementation(project(":core:sync-testing"))
             implementation(libs.sqldelight.sqlite.driver)
             implementation(libs.kotest.property)
             implementation(libs.kotest.assertions.core)
