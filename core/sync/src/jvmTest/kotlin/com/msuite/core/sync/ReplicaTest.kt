@@ -11,6 +11,7 @@ import com.msuite.core.model.Model
 import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.LocalStore
+import com.msuite.core.sync.testing.TestClock
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldBeEmpty

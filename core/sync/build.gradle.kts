@@ -15,6 +15,7 @@ kotlin {
         }
         // Merge/HLC simulator harness (decision 0007) runs on the jvm target.
         jvmTest.dependencies {
+            implementation(project(":core:sync-testing"))
             implementation(libs.sqldelight.sqlite.driver)
             implementation(libs.kotest.property)
             implementation(libs.kotest.assertions.core)

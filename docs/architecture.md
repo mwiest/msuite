@@ -16,6 +16,7 @@ are code say so. Each part becomes "what the code does" as its step in
 | `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `CoreFields`, `Stamp`, `Cell`, `PlugId`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks | `LocalStore` over all three tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, simulator Layer 1 |
+| `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `TestClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `ListCommands`, `TaskCommands` |
@@ -53,7 +54,8 @@ KeyStore, camera QR, alarms) stays behind interfaces in the app layer, never in 
 | `msuite.kmp-library` | KMP + AGP KMP library, targets `android` and `jvm`, JUnit Platform | `core/{model,storage,sync,crypto}`, `apps/todo/domain` |
 | `msuite.compose-library` | KMP + AGP KMP library + Compose Multiplatform, android target only | `core/design`, `apps/todo/shared` |
 | `msuite.android-app` | Android application with built-in Kotlin, Compose, `targetSdk` | `apps/todo/android` |
-| `msuite.jvm-app` | Kotlin/JVM `application`, JDK 21 toolchain, Java 17 bytecode | `server` |
+| `msuite.jvm-library` | Kotlin/JVM, JDK 21 toolchain, Java 17 bytecode, JUnit Platform | `core/sync-testing` |
+| `msuite.jvm-app` | `msuite.jvm-library` plus `application` | `server` |
 | `msuite.serialization` | the kotlinx.serialization compiler plugin | `core/model` |
 | `msuite.sqldelight` | the SQLDelight plugin; the module declares its database | `core/storage` |
 | `msuite.quality` | Spotless (ktlint, rules in `.editorconfig`) and detekt (`config/detekt/detekt.yml`), applied by all of the above and the root project | everything |
@@ -87,10 +89,9 @@ in the client.
 - Storage (code: `LocalStore` in `core/storage`, schema in `src/commonMain/sqldelight`): SQLite
   tables `field_state`, `ingested_batch(plug, batch_key)` and `plug_watermark(plug, hlc)`, keyed
   by `PlugId` (a stable name per configured plug); the last two sit behind `LocalStore.plugs`. It
-  knows no merge or HLC rules. HLCs are stored
-  as the packed value with its sign bit flipped, so SQL compares them unsigned like `Hlc`. The
-  platform creates the `SqlDriver` with `LocalStore.Schema`; JVM tests use sqlite-jdbc (decision
-  0046).
+  knows no merge or HLC rules. HLCs are stored as the packed value with its sign bit flipped, so
+  SQL compares them unsigned like `Hlc`. The platform creates the `SqlDriver` with
+  `LocalStore.Schema`; JVM tests use sqlite-jdbc (decision 0046).
 - `Replica` in `core/sync` (code) is the device's state: it takes the `SqlDriver`, owns the
   `LocalStore` on it, and holds the `HlcClock`, which starts from the store's highest HLC, so
   writes after a restart order after everything stored even if the wall clock went back. A local

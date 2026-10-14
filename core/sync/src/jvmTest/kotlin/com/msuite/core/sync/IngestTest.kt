@@ -8,6 +8,7 @@ import com.msuite.core.model.FieldId
 import com.msuite.core.model.Hlc
 import com.msuite.core.model.Model
 import com.msuite.core.model.Stamp
+import com.msuite.core.sync.testing.TestClock
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.comparables.shouldBeGreaterThan

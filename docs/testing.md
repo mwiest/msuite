@@ -20,24 +20,28 @@ applies.
 
 ## Merge/HLC simulator
 
-Decisions 0007 and 0034. Layer 1 is `core/sync/src/jvmTest/.../Simulation.kt`, driven by
-`SimulatorTest.kt`. It is a seeded, in-memory simulation of 2 to 4 devices sharing an append-only
-store of batches, through the real `ingest`, `buildDelta` and `merge`:
+Decisions 0007, 0034 and 0057. The harness is `Cluster` in `core/sync-testing`: a seeded
+simulation of 2 to 4 devices sharing an append-only store of batches, through the real `ingest`,
+`buildDelta` and `merge`. Each layer or app extends it with its own write steps and invariants:
+Layer 1 is `core/sync/src/jvmTest/.../Simulation.kt`, driven by `SimulatorTest.kt`. The harness
+gives every simulator:
 
 - each device has its own wall clock: an offset (one device may be days ahead), uneven ticks, and
   jumps forward or back mid-run;
 - a push can fail (retried by a later push), a device can go offline, and a pull fetches a random
   subset of the unseen batches in random order and re-fetches some it has seen;
-- a generated schedule of `Write` / `Tick` / `Jump` / `Push` / `Pull` / `Toggle` steps runs, then a
-  quiescence phase connects everyone, moves every clock past the 24 h bound, and syncs to a
-  fixpoint;
+- a generated schedule of the simulator's write steps and the shared `NetStep`s (`Tick` / `Jump` /
+  `Push` / `Pull` / `Toggle`) runs, then a quiescence phase connects everyone, moves every clock
+  past the 24 h bound, and syncs to a fixpoint;
 - each device keeps its state behind `SimState` (`SimState.kt`): `MemoryState` runs the pure
   functions over a map, `ReplicaState` the real `Replica` over in-memory SQLite, so the storage
   path is checked against the same invariants;
-- property-based (kotest-property, 1000 schedules in memory and 300 through `Replica`, shrinking
-  the step list), plus named scenarios: a faster clock wins a conflict, a causal edit wins on a
-  slower clock, a delete beats an older edit, a far-future batch is held back and merged later;
 - everything is seeded, including the `keyBetween` jitter and the clocks.
+
+Layer 1 writes generic `Write` steps to a few records. It is property-based (kotest-property, 1000
+schedules in memory and 300 through `Replica`, shrinking the step list), plus named scenarios: a
+faster clock wins a conflict, a causal edit wins on a slower clock, a delete beats an older edit,
+a far-future batch is held back and merged later.
 
 Invariant 7 is property-tested on its own in `core/model` (`FractionalIndexTest`).
 

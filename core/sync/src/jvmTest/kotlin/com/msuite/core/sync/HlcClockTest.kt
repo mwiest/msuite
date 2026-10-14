@@ -1,6 +1,7 @@
 package com.msuite.core.sync
 
 import com.msuite.core.model.Hlc
+import com.msuite.core.sync.testing.TestClock
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeFalse

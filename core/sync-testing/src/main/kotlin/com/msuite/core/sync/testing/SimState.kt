@@ -1,4 +1,4 @@
-package com.msuite.core.sync
+package com.msuite.core.sync.testing
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.msuite.core.model.Batch
@@ -9,6 +9,12 @@ import com.msuite.core.model.Hlc
 import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.LocalStore
+import com.msuite.core.sync.HlcClock
+import com.msuite.core.sync.IngestResult
+import com.msuite.core.sync.Replica
+import com.msuite.core.sync.buildDelta
+import com.msuite.core.sync.hlcHi
+import com.msuite.core.sync.ingest
 import kotlinx.coroutines.runBlocking
 import java.util.Properties
 import kotlin.time.Clock
@@ -55,7 +61,8 @@ class MemoryState(wall: Clock, private val deviceId: DeviceId) : SimState {
 
 /** The real [Replica] over an in-memory SQLite database. */
 class ReplicaState(wall: Clock, deviceId: DeviceId) : SimState {
-    private val replica =
+    /** For app commands that write through the replica themselves. */
+    val replica =
         Replica(JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY, Properties(), LocalStore.Schema), deviceId, wall)
 
     override fun cells(): Map<CellKey, Cell> = runBlocking { replica.cells() }.associateBy { it.key }
