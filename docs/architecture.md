@@ -127,7 +127,7 @@ in the client.
 Code: `projectTodos()` in `apps/todo/domain`, which reads cells into sorted lists and tasks.
 
 - A task whose list is deleted is hidden everywhere; deleting a list writes only the list's
-  `deleted` field (decision 0032). This holds for "My Tasks" too.
+  `deleted` field (decision 0032). This holds for "My Tasks" too (decision 0055).
 - A record without a known `TYPE` is not shown (its creation may not have synced yet), nor is a
   task without a live list. A value of an unexpected type reads as absent.
 - Lists and tasks sort by `(position, id)`; positions compare by code unit, which for base62 keys
