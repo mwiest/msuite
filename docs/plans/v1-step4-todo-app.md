@@ -31,7 +31,7 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
    by `(position, id)`, hiding tasks of deleted lists (decision 0032). Tested in `jvmTest`. First
    run writes "My Tasks" with its title in the device language; deleting it is honoured like any
    list (decided 2026-10-14). Value types `Date`, `Ref` and the reserved core fields came first:
-   `94d07a8`, `93f239a`.
+   `94d07a8`, `93f239a`; landed: `8b69bc1`.
 3. [ ] **Commands.** Create, rename, delete and reorder lists; create, edit, complete, star, delete
    and reorder tasks; each a `Replica.write`. Tested against the projection.
 4. [ ] **Simulator invariants 14 to 16.** The ToDo rules under random schedules (`testing.md`).
