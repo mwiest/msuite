@@ -26,6 +26,7 @@ success is a working demonstration of the architecture and UX, not adoption. Wha
 | Relay server | Ktor CIO, programmatic config, filesystem storage | Netty, HOCON module loading, JDBC / native SQLite |
 | QR scan | ZXing / zxing-cpp | Google ML Kit |
 | UI | Compose Multiplatform + Material 3 | AndroidX Compose (Android-only) |
+| UI text | Compose Multiplatform resources, English and German | Android `strings.xml` |
 | Navigation | Navigation Compose Multiplatform (`org.jetbrains.androidx.navigation`), type-safe routes | a hand-rolled back stack |
 | Dependency injection | Manual constructor injection, one composition root per app (Koin in the app layer only if wiring grows) | Hilt / Dagger; any reflection DI in the relay |
 | Date and time | kotlinx-datetime | `java.time` |
@@ -35,7 +36,7 @@ success is a working demonstration of the architecture and UX, not adoption. Wha
 | Tests | kotest + kotest-property in `jvmTest`, logic in `commonMain` | - |
 | Format / lint | Spotless (ktlint), detekt | - |
 
-Reasons: decisions 0010, 0012, 0016 to 0020, 0026, 0037, 0038, 0046.
+Reasons: decisions 0010, 0012, 0016 to 0020, 0026, 0037, 0038, 0046, 0047.
 
 ## Hard constraints
 

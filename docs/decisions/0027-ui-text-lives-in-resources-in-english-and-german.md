@@ -1,6 +1,6 @@
 # 0027: UI text lives in resources, in English and German
 
-Date: 2026-10-11. Status: accepted.
+Date: 2026-10-11. Status: accepted; mechanism settled by 0047.
 
 ## Context
 
