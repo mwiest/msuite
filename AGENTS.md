@@ -51,7 +51,8 @@ Not to be broken without a new decision record.
 - **All merge stays in the client.** Backends are dumb, interchangeable stores of ciphertext; never
   a second merge layer below the app's (decisions 0003, 0028).
 - **Apps depend on `core/*`, never on each other** (`apps/<a>/*` never on `apps/<b>/*`).
-  App code lives in the KMP module `apps/<app>/shared`; `apps/<app>/android` is a thin shell (decision 0037).
+  App logic lives in the KMP module `apps/<app>/domain` (no Compose), its UI in
+  `apps/<app>/shared`; `apps/<app>/android` is a thin shell (decisions 0037, 0051).
 - **Don't roll your own crypto**: compose primitives from cryptography-kotlin only.
 - **No telemetry**: no analytics or crash-reporting SDKs (decision 0024).
 - Don't reopen a recorded decision without cause: read its "Rejected" section first.

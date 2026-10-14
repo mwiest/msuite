@@ -26,7 +26,8 @@ users. No web app.
 - No reminders or notifications (decision 0014). Also out: subtasks, recurring tasks, attachments,
   web.
 - UI text in Compose Multiplatform resources, English and German (decisions 0027, 0047).
-- `apps/todo/shared` also targets `jvm`; the projection and rules are tested there (decision 0048).
+- The projection, rules and commands live in `apps/todo/domain` (android + jvm) and are tested
+  there; `shared` holds the Compose UI (decision 0051).
 - The UI refreshes on change ticks from `Replica` (decision 0049); the Android shell creates the
   SQLite driver (decision 0050).
 
@@ -64,9 +65,9 @@ Each step may take several commits; a step that grows big gets its own plan.
    default binary collation; positions sit inside value blobs, so step 4 sorts them in Kotlin
    (decision 0044). Proves: state persists and merges through the database. Landed: `0f1b455`,
    `e351d69`.
-4. [ ] **Single-device ToDo app.** The feature set above in `apps/todo/shared`: projection over
-   `field_state`, the read-time rules, screens. Simulator invariants 14 to 16. Proves: a usable
-   offline app exists.
+4. [ ] **Single-device ToDo app.** The feature set above: projection over `field_state`, the
+   read-time rules and commands in `apps/todo/domain`, screens in `apps/todo/shared`. Simulator
+   invariants 14 to 16. Proves: a usable offline app exists.
 5. [ ] **Backend-plug interface and the manual plug.** `put`/`list`/`get`; export/import of one
    full-state snapshot (plaintext, debug-only); simulator Layer 2. Proves: merge across two
    devices.

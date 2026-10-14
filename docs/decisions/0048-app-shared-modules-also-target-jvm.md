@@ -1,6 +1,6 @@
 # 0048: An app's shared module also targets jvm, for its tests
 
-Date: 2026-10-14. Status: accepted. Narrows 0037 (targets of `apps/<app>/shared`) in line with 0038.
+Date: 2026-10-14. Status: replaced by 0051.
 
 ## Context
 

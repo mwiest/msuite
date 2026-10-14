@@ -1,6 +1,6 @@
 # 0037: App code lives in KMP modules; the Android app is a thin shell
 
-Date: 2026-10-11. Status: accepted; targets of `shared` narrowed by 0048. Narrows 0020 (navigation artifact).
+Date: 2026-10-11. Status: accepted; modules per app narrowed by 0051. Narrows 0020 (navigation artifact).
 
 ## Context
 
