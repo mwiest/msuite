@@ -1,6 +1,6 @@
 # Plan: v1 step 4, the single-device ToDo app
 
-Status: **slices 1 and 2 done; slice 3 (commands) next.** Started 2026-10-14.
+Status: **slices 1 to 3 done; slice 4 (simulator invariants 14 to 16) next.** Started 2026-10-14.
 Part of [`v1-todo.md`](v1-todo.md) step 4.
 
 ## Goal
@@ -32,8 +32,10 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
    run writes "My Tasks" with its title in the device language; deleting it is honoured like any
    list (decision 0055). Value types `Date`, `Ref` and the reserved core fields came first:
    `94d07a8`, `93f239a`; landed: `8b69bc1`.
-3. [ ] **Commands.** Create, rename, delete and reorder lists; create, edit, complete, star, delete
-   and reorder tasks; each a `Replica.write`. Tested against the projection.
+3. [x] **Commands.** Create, rename, delete and reorder lists; create, edit, complete, star, delete
+   and reorder tasks; each a `Replica.write`. Tested against the projection. New tasks go to the
+   top; clearing a field writes an empty value (decision 0056); malformed values decode as absent
+   (`74de47a`).
 4. [ ] **Simulator invariants 14 to 16.** The ToDo rules under random schedules (`testing.md`).
 5. [ ] **App wiring.** The shell creates the driver and the `Replica` with a stable device ID and
    passes it into the app root; the UI observes the projection. See Open questions.

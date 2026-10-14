@@ -58,4 +58,9 @@ class ValueCodecTest : StringSpec({
         ValueCodec.decode(byteArrayOf(0x18)).shouldBeNull() // int64 tag without its varint
         ValueCodec.decode(byteArrayOf(-1, -1, -1, -1, -1, -1)).shouldBeNull() // no valid tag
     }
+
+    "a cleared field is empty bytes, which decode to null (decision 0056)" {
+        ValueCodec.encode(null).size shouldBe 0
+        ValueCodec.decode(ValueCodec.encode(null)).shouldBeNull()
+    }
 })

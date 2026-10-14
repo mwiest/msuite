@@ -29,8 +29,10 @@ sealed interface Value {
 /** Each value is a one-field ProtoBuf message whose field number names the type. */
 @OptIn(ExperimentalSerializationApi::class)
 object ValueCodec {
-    fun encode(value: Value): ByteArray = ProtoBuf.encodeToByteArray(
+    /** `null` clears the field: empty bytes, which every reader decodes as absent (decision 0056). */
+    fun encode(value: Value?): ByteArray = ProtoBuf.encodeToByteArray(
         when (value) {
+            null -> ValueProto()
             is Value.Text -> ValueProto(text = value.value)
             is Value.Bool -> ValueProto(bool = value.value)
             is Value.Int64 -> ValueProto(int64 = value.value)

@@ -9,8 +9,10 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":core:model"))
+            api(project(":core:sync"))
         }
         jvmTest.dependencies {
+            implementation(libs.sqldelight.sqlite.driver)
             implementation(libs.kotest.property)
             implementation(libs.kotest.assertions.core)
             implementation(libs.kotest.runner.junit5)

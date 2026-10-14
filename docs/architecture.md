@@ -18,7 +18,7 @@ are code say so. Each part becomes "what the code does" as its step in
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, simulator Layer 1 |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
-| `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()` |
+| `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `ListCommands`, `TaskCommands` |
 | `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp()` showing a placeholder string from its resources |
 | `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `MainActivity` calling `TodoApp()` |
 | `server` | Kotlin/JVM application | The dumb relay, a Ktor CIO binary (decision 0017) | `main` printing a line |
@@ -99,7 +99,9 @@ in the client.
   runs in one transaction. The app opens one replica per database and writes only through it;
   the mutex doesn't cover a second one. `changes`, a `StateFlow`, ticks after each committed write
   or ingest that changed state; the UI re-reads on a tick (decision 0049).
-- Deletes are an ordinary LWW `deleted` field (tombstone).
+- Deletes are an ordinary LWW `deleted` field (tombstone). Clearing a field writes its cell with
+  an empty value, which decodes as absent (decision 0056). Malformed value bytes also decode as
+  absent, so a bad cell can't crash a reader.
 - `merge(local, remote)` in `core/sync` (code) is per-cell last-writer-wins on the total order
   `(pt, c, deviceId)` of the Hybrid Logical Clock (decision 0005), held in a `Stamp`. It is a pure
   function of state, so merge is convergent and order-independent, and it knows nothing about the
@@ -124,7 +126,9 @@ in the client.
 
 ### Read-time rules (ToDo)
 
-Code: `projectTodos()` in `apps/todo/domain`, which reads cells into sorted lists and tasks.
+Code: `projectTodos()` in `apps/todo/domain`, which reads cells into sorted lists and tasks. Edits
+are `ListCommands` and `TaskCommands` there, each one `Replica.write`: a new list goes to the end,
+a new task to the top of its list, and a move places the item at an index of the shown order.
 
 - A task whose list is deleted is hidden everywhere; deleting a list writes only the list's
   `deleted` field (decision 0032). This holds for "My Tasks" too (decision 0055).
