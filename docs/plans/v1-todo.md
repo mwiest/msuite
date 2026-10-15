@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 3 done; step 4 (single-device ToDo app) next.** Started 2026-07-02; reordered 2026-10-11
+Status: **steps 0 to 3 done; step 4 (single-device ToDo app) in progress, slice 6 next.** Started 2026-07-02; reordered 2026-10-11
 (decision 0034).
 
 ## Goal
