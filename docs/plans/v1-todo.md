@@ -68,8 +68,7 @@ Each step may take several commits; a step that grows big gets its own plan.
 4. [x] **Single-device ToDo app.** The feature set above: projection over `field_state`, the
    read-time rules and commands in `apps/todo/domain`, screens in `apps/todo/shared`. Simulator
    invariants 14 to 16. Proves: a usable offline app exists. Decisions 0049 to 0064; the wiring
-   and UI are in `architecture.md`. Checked on an emulator. Landed from `674ab59` to the commit
-   that deleted its plan.
+   and UI are in `architecture.md`. Checked on an emulator. Landed: `674ab59` to `292e00e`.
 5. [ ] **Backend-plug interface and the manual plug.** `put`/`list`/`get`; export/import of one
    full-state snapshot (plaintext, debug-only); simulator Layer 2. Proves: merge across two
    devices.
