@@ -44,4 +44,10 @@
         <item quantity="one">Ihre Aufgabe wird mitgelöscht.</item>
         <item quantity="other">Ihre %1$d Aufgaben werden mitgelöscht.</item>
     </plurals>
+    <string name="settings">Einstellungen</string>
+    <string name="back">Zurück</string>
+    <string name="theme">Design</string>
+    <string name="theme_system">Systemstandard</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_dark">Dunkel</string>
 </resources>

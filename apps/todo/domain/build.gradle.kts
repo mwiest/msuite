@@ -10,10 +10,12 @@ kotlin {
         commonMain.dependencies {
             api(project(":core:model"))
             api(project(":core:sync"))
+            api(libs.multiplatform.settings)
         }
         jvmTest.dependencies {
             implementation(project(":core:sync-testing"))
             implementation(libs.sqldelight.sqlite.driver)
+            implementation(libs.multiplatform.settings.test)
             implementation(libs.kotest.property)
             implementation(libs.kotest.assertions.core)
             implementation(libs.kotest.runner.junit5)

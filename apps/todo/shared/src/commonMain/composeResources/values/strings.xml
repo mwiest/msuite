@@ -44,4 +44,10 @@
         <item quantity="one">Its task is deleted too.</item>
         <item quantity="other">Its %1$d tasks are deleted too.</item>
     </plurals>
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+    <string name="theme">Theme</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 </resources>

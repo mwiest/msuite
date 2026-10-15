@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 3 done; step 4 (single-device ToDo app) in progress, slice 6 next.** Started
+Status: **steps 0 to 4 done; step 5 (backend-plug interface and the manual plug) next.** Started
 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -65,10 +65,11 @@ Each step may take several commits; a step that grows big gets its own plan.
    default binary collation; positions sit inside value blobs, so step 4 sorts them in Kotlin
    (decision 0044). Proves: state persists and merges through the database. Landed: `0f1b455`,
    `e351d69`.
-4. [ ] **Single-device ToDo app.** The feature set above: projection over `field_state`, the
+4. [x] **Single-device ToDo app.** The feature set above: projection over `field_state`, the
    read-time rules and commands in `apps/todo/domain`, screens in `apps/todo/shared`. Simulator
-   invariants 14 to 16. Proves: a usable offline app exists. Plan:
-   [`v1-step4-todo-app.md`](v1-step4-todo-app.md).
+   invariants 14 to 16. Proves: a usable offline app exists. Decisions 0049 to 0064; the wiring
+   and UI are in `architecture.md`. Checked on an emulator. Landed from `674ab59` to the commit
+   that deleted its plan.
 5. [ ] **Backend-plug interface and the manual plug.** `put`/`list`/`get`; export/import of one
    full-state snapshot (plaintext, debug-only); simulator Layer 2. Proves: merge across two
    devices.

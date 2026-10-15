@@ -1,13 +1,27 @@
 package com.msuite.todo
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
+import com.msuite.todo.domain.ThemeMode
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val replica = (application as TodoApplication).replica
-        setContent { TodoApp(replica) }
+        val app = application as TodoApplication
+        // The bar icons must contrast with the app's theme, which may differ from the system's.
+        lifecycleScope.launch { app.settings.themeMode.collect { enableEdgeToEdge(it.barStyle(), it.barStyle()) } }
+        setContent { TodoApp(app.replica, app.settings) }
     }
+}
+
+private fun ThemeMode.barStyle(): SystemBarStyle = when (this) {
+    ThemeMode.System -> SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+    ThemeMode.Light -> SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+    ThemeMode.Dark -> SystemBarStyle.dark(Color.TRANSPARENT)
 }

@@ -19,6 +19,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -51,11 +52,13 @@ import com.msuite.todo.domain.TodoList
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.app_title
 import com.msuite.todo.resources.ic_add
+import com.msuite.todo.resources.ic_settings
 import com.msuite.todo.resources.new_list
 import com.msuite.todo.resources.new_task
 import com.msuite.todo.resources.no_lists
 import com.msuite.todo.resources.no_tasks
 import com.msuite.todo.resources.save
+import com.msuite.todo.resources.settings
 import com.msuite.todo.resources.task_title
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -68,7 +71,7 @@ import kotlin.uuid.Uuid
 /** The lists as tabs (decision 0061) and the selected list's tasks. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TasksScreen(app: TodoContainer) {
+fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
     val state = remember(app) { app.states }.collectAsState(initial = null).value ?: return
     val scope = rememberCoroutineScope()
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -79,7 +82,7 @@ fun TasksScreen(app: TodoContainer) {
 
     Scaffold(
         topBar = {
-            TasksTopBar(selected, state.lists, onDialog = { listDialog = it }) { to ->
+            TasksTopBar(selected, state.lists, onSettings, onDialog = { listDialog = it }) { to ->
                 scope.launch { app.lists.move(id, to) }
             }
         },
@@ -261,12 +264,16 @@ private fun Centered(text: String) {
 private fun TasksTopBar(
     selected: TodoList?,
     lists: List<TodoList>,
+    onSettings: () -> Unit,
     onDialog: (ListDialog) -> Unit,
     onMove: TodoList.(Int) -> Unit,
 ) {
     TopAppBar(
         title = { Text(stringResource(Res.string.app_title)) },
         actions = {
+            IconButton(onClick = onSettings) {
+                Icon(painterResource(Res.drawable.ic_settings), stringResource(Res.string.settings))
+            }
             if (selected != null) {
                 ListMenu(selected, lists.indexOf(selected), lists.size, onDialog) { selected.onMove(it) }
             }

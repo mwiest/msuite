@@ -19,9 +19,9 @@ are code say so. Each part becomes "what the code does" as its step in
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `TestClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
-| `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `ListCommands`, `TaskCommands` |
-| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica)` creates "My Tasks" if missing; `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs; drag via Reorderable (decision 0063) |
-| `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `TodoApplication` opens the one `Replica` per process on `todo.db` (decision 0050); `MainActivity` calls `TodoApp(replica)`; backup off (decision 0060) |
+| `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`, `ListCommands`, `TaskCommands` |
+| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica)` creates "My Tasks" if missing; `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI) |
+| `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `TodoApplication` opens the one `Replica` and the `TodoSettings`; `MainActivity` calls `TodoApp(replica, settings)`; backup off (decision 0060) |
 | `server` | Kotlin/JVM application | The dumb relay, a Ktor CIO binary (decision 0017) | `main` printing a line |
 | `web/` | Not a module | Deferred web app; see `web/README.md` | - |
 
@@ -141,6 +141,19 @@ edit checks that its ID is a record of the right type (hidden ones included) and
   task without a live list. A value of an unexpected type reads as absent.
 - Lists and tasks sort by `(position, id)`; positions compare by code unit, which for base62 keys
   is bytewise (decision 0044).
+
+### ToDo app wiring and UI
+
+The shell's `TodoApplication` is the composition root: one `Replica` per process on `todo.db`
+(decisions 0050, 0058) and `TodoSettings` on `SharedPreferences` (decision 0064); `MainActivity`
+passes both to `TodoApp` and sets the system bar style from the theme. In `shared`, `TodoContainer`
+holds the commands and `todoStates()`; screens launch commands in their own scope, and the replica
+moves the work off the UI thread (decision 0059). Navigation Compose has two routes: the tasks
+screen (lists as tabs, decision 0061; the task editor sheet, decision 0062; list menu, dialogs and
+drag to reorder, decision 0063) and settings (decision 0064). Icons are Material vector drawables
+in the resources. Testable logic sits in `domain` (`TodoState.selected`, `TodoList.deletable`,
+`toPickerMillis`, `TodoSettings`); `shared` has no test target (decision 0051), so screens are
+checked on an emulator.
 
 ### Batch encoding
 
