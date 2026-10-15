@@ -55,7 +55,8 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
       `7dd7fbb`.
    2. [x] **Task editor**, a bottom sheet (decision 0062): title, notes, due date, star, done,
       delete. Navigation comes with the first screen that needs it. The picker's UTC millis
-      convert in `domain` (tested). Checked on an emulator, also after a restart. Landed: `b56c89b`.
+      convert in `domain` (tested). Checked on an emulator, also after a restart. Landed:
+      `b56c89b`.
    3. [ ] **List management**: create, rename, delete, reorder lists; reorder tasks.
    4. [ ] **Settings**: the theme (system, light, dark) in multiplatform-settings, created by
       the shell (it needs a `Context`).
