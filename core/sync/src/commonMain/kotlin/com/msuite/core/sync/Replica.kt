@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -23,9 +24,15 @@ import kotlin.uuid.Uuid
  * the highest stored HLC, so writes after a restart order after everything stored, even if the
  * wall clock went back. Every operation runs alone (the clock isn't thread-safe) and in one
  * transaction. The replica owns the database: open one per database and write only through it.
+ * Apps use [open]; the constructor with an explicit [deviceId] is for tests and the simulator.
  */
-class Replica(driver: SqlDriver, private val deviceId: DeviceId, wallClock: Clock) : AutoCloseable {
-    private val store = LocalStore(driver)
+class Replica private constructor(
+    private val store: LocalStore,
+    private val deviceId: DeviceId,
+    wallClock: Clock,
+) : AutoCloseable {
+    constructor(driver: SqlDriver, deviceId: DeviceId, wallClock: Clock) : this(LocalStore(driver), deviceId, wallClock)
+
     private val clock = HlcClock(wallClock, store.maxHlc() ?: Hlc.ZERO)
     private val mutex = Mutex()
     private val ticks = MutableStateFlow(0L)
@@ -71,6 +78,14 @@ class Replica(driver: SqlDriver, private val deviceId: DeviceId, wallClock: Cloc
     override fun close() = store.close()
 
     private fun tick() = ticks.update { it + 1 }
+
+    companion object {
+        /** Opens the replica with the device ID stored in the database, created on first open (decision 0058). */
+        fun open(driver: SqlDriver, wallClock: Clock, random: Random = Random.Default): Replica {
+            val store = LocalStore(driver)
+            return Replica(store, store.deviceId { DeviceId.random(random) }, wallClock)
+        }
+    }
 
     private suspend fun <R> serialized(block: () -> R): R = mutex.withLock { store.transaction(block) }
 }

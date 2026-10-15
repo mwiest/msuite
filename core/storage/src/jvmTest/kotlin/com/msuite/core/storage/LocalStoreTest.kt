@@ -132,6 +132,12 @@ class LocalStoreTest : StringSpec({
         store.plugs.isIngested(folder, "k1") shouldBe false
     }
 
+    "the device ID is created once and kept across reopening" {
+        val url = "jdbc:sqlite:${tempfile(suffix = ".db").absolutePath}"
+        open(url).use { it.deviceId { DeviceId(-3) } } shouldBe DeviceId(-3)
+        open(url).use { it.deviceId { DeviceId(4) } } shouldBe DeviceId(-3)
+    }
+
     "state persists across reopening the database" {
         val file = tempfile(suffix = ".db")
         val url = "jdbc:sqlite:${file.absolutePath}"

@@ -37,6 +37,12 @@ class LocalStore(private val driver: SqlDriver) : AutoCloseable {
     fun cells(recordId: Uuid): List<Cell> =
         db.fieldStateQueries.recordCells(recordId.toByteArray()).executeAsList().map { it.toCell() }
 
+    /** This device's ID; on first call, stores the one from [create] (decision 0058). */
+    fun deviceId(create: () -> DeviceId): DeviceId = transaction {
+        db.deviceQueries.deviceId().executeAsOneOrNull()?.let(::DeviceId)
+            ?: create().also { db.deviceQueries.setDeviceId(it.bits) }
+    }
+
     fun maxHlc(): Hlc? = db.fieldStateQueries.maxHlc().executeAsOne().hlc?.let(::hlcFromSql)
 
     /** Writes [cells], replacing any stored cell with the same key. */

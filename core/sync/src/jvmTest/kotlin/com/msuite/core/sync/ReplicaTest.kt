@@ -27,6 +27,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import java.util.Properties
+import kotlin.random.Random
 import kotlin.uuid.Uuid
 
 private val record = Uuid.random()
@@ -52,6 +53,18 @@ class ReplicaTest : StringSpec({
         val written = replica.write(mapOf(key(1) to byteArrayOf(1), key(2) to byteArrayOf(2)))
         written.map { it.stamp }.distinct() shouldContainExactly listOf(Stamp(Hlc.of(1_000, 0), deviceA))
         store.cells() shouldContainExactlyInAnyOrder written
+    }
+
+    "an opened replica stamps with a device ID it keeps across restarts" {
+        val url = "jdbc:sqlite:${tempfile(suffix = ".db").absolutePath}"
+        val first = Replica.open(driver(url), TestClock(1_000), Random(1)).use {
+            it.write(mapOf(key(1) to byteArrayOf(1)))
+        }
+        val again = Replica.open(driver(url), TestClock(2_000), Random(2)).use {
+            it.write(mapOf(key(2) to byteArrayOf(1)))
+        }
+        first.single().stamp.deviceId shouldBe DeviceId.random(Random(1))
+        again.single().stamp.deviceId shouldBe first.single().stamp.deviceId
     }
 
     "after a restart with the wall clock set back, new writes still order after stored ones" {

@@ -1,0 +1,11 @@
+-- This device's ID (decision 0058): one row, kept with the cells it stamped.
+CREATE TABLE device (
+    singleton INTEGER NOT NULL PRIMARY KEY CHECK (singleton = 0),
+    device_id INTEGER NOT NULL
+);
+
+deviceId:
+SELECT device_id FROM device;
+
+setDeviceId:
+INSERT INTO device VALUES (0, ?);

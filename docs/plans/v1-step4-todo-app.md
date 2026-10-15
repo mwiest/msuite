@@ -18,6 +18,7 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
 - Due dates are `Value.Date`, a `LocalDate` stored as epoch days (decision 0052).
 - A task's list is a `Value.Ref` (decision 0053). Record types are `Int64` IDs in the reserved
   `CoreFields.TYPE`, next to `DELETED` (decision 0054).
+- The device ID is a row in the database, created by `Replica.open` (decision 0058).
 
 ## Slices
 
@@ -46,8 +47,7 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
 
 ## Open questions
 
-- Where the device ID lives: a row in the database (survives with the data it stamped), or
-  multiplatform-settings. Decide before slice 5.
+None.
 
 ## How to verify
 
