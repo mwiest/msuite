@@ -8,4 +8,28 @@
     <string name="save">Speichern</string>
     <string name="star">Markieren</string>
     <string name="unstar">Markierung entfernen</string>
+    <string name="notes">Details hinzufügen</string>
+    <string name="add_date">Datum hinzufügen</string>
+    <string name="clear_date">Datum entfernen</string>
+    <string name="mark_done">Als erledigt markieren</string>
+    <string name="mark_undone">Als nicht erledigt markieren</string>
+    <string name="more">Weitere Optionen</string>
+    <string name="delete">Löschen</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="due_date">%2$d. %1$s %3$d</string>
+    <string-array name="months">
+        <item>Jan.</item>
+        <item>Feb.</item>
+        <item>März</item>
+        <item>Apr.</item>
+        <item>Mai</item>
+        <item>Juni</item>
+        <item>Juli</item>
+        <item>Aug.</item>
+        <item>Sept.</item>
+        <item>Okt.</item>
+        <item>Nov.</item>
+        <item>Dez.</item>
+    </string-array>
 </resources>

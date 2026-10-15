@@ -17,7 +17,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -42,21 +41,18 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.msuite.todo.domain.Task
 import com.msuite.todo.domain.TodoList
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.app_title
 import com.msuite.todo.resources.ic_add
-import com.msuite.todo.resources.ic_star
-import com.msuite.todo.resources.ic_star_border
 import com.msuite.todo.resources.new_task
 import com.msuite.todo.resources.no_lists
 import com.msuite.todo.resources.no_tasks
 import com.msuite.todo.resources.save
-import com.msuite.todo.resources.star
 import com.msuite.todo.resources.task_title
-import com.msuite.todo.resources.unstar
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -71,6 +67,7 @@ fun TasksScreen(app: TodoContainer) {
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     val selected = state.selected(selectedId?.let(Uuid::parse))
     var adding by rememberSaveable { mutableStateOf(false) }
+    var editingId by rememberSaveable { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(Res.string.app_title)) }) },
@@ -96,6 +93,7 @@ fun TasksScreen(app: TodoContainer) {
                     items(tasks, key = { it.id.toString() }) { task ->
                         TaskRow(
                             task,
+                            onOpen = { editingId = task.id.toString() },
                             onDone = { scope.launch { app.tasks.setDone(task.id, it) } },
                             onStar = { scope.launch { app.tasks.setStarred(task.id, it) } },
                         )
@@ -114,6 +112,10 @@ fun TasksScreen(app: TodoContainer) {
             onDismiss = { adding = false },
         )
     }
+
+    // Gone when deleted, also elsewhere; the sheet closes with it.
+    val editing = selected?.let { list -> state.tasks(list.id).firstOrNull { it.id.toString() == editingId } }
+    if (editing != null) TaskEditorSheet(editing, app, scope) { editingId = null }
 }
 
 @Composable
@@ -126,29 +128,29 @@ private fun ListTabs(lists: List<TodoList>, selected: TodoList, onSelect: (TodoL
 }
 
 @Composable
-private fun TaskRow(task: Task, onDone: (Boolean) -> Unit, onStar: (Boolean) -> Unit) {
+private fun TaskRow(task: Task, onOpen: () -> Unit, onDone: (Boolean) -> Unit, onStar: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable { onDone(!task.done) }.padding(horizontal = 4.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(checked = task.done, onCheckedChange = onDone)
-        Text(
-            task.title,
-            Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge,
-            textDecoration = if (task.done) TextDecoration.LineThrough else null,
-        )
-        IconButton(onClick = { onStar(!task.starred) }) {
-            if (task.starred) {
-                Icon(
-                    painterResource(Res.drawable.ic_star),
-                    stringResource(Res.string.unstar),
-                    tint = MaterialTheme.colorScheme.primary,
+        Column(Modifier.weight(1f)) {
+            Text(
+                task.title,
+                style = MaterialTheme.typography.bodyLarge,
+                textDecoration = if (task.done) TextDecoration.LineThrough else null,
+            )
+            if (task.notes.isNotBlank()) {
+                Text(
+                    task.notes,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            } else {
-                Icon(painterResource(Res.drawable.ic_star_border), stringResource(Res.string.star))
             }
+            task.due?.let { Text(dueDateText(it), style = MaterialTheme.typography.labelMedium) }
         }
+        StarButton(task.starred, onStar)
     }
 }
 

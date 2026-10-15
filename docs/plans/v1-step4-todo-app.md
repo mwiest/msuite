@@ -53,8 +53,9 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
       list falls back to the first (`TodoState.selected`, tested). Icons are vector drawables in
       the resources, no icon library. Checked on an emulator, also after a restart. Landed:
       `7dd7fbb`.
-   2. [ ] **Task editor**, a bottom sheet (decision 0062): title, notes, due date, star, done,
-      delete. Navigation comes with the first screen that needs it.
+   2. [x] **Task editor**, a bottom sheet (decision 0062): title, notes, due date, star, done,
+      delete. Navigation comes with the first screen that needs it. The picker's UTC millis
+      convert in `domain` (tested). Checked on an emulator, also after a restart.
    3. [ ] **List management**: create, rename, delete, reorder lists; reorder tasks.
    4. [ ] **Settings**: the theme (system, light, dark) in multiplatform-settings, created by
       the shell (it needs a `Context`).
