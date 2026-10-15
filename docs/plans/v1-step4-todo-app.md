@@ -57,7 +57,8 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
       delete. Navigation comes with the first screen that needs it. The picker's UTC millis
       convert in `domain` (tested). Checked on an emulator, also after a restart. Landed:
       `b56c89b`.
-   3. [ ] **List management**: create, rename, delete, reorder lists; reorder tasks.
+   3. [ ] **List management**: create, rename, delete (confirmed), move lists from the top bar;
+      reorder tasks by long-press drag (decision 0063).
    4. [ ] **Settings**: the theme (system, light, dark) in multiplatform-settings, created by
       the shell (it needs a `Context`).
 
