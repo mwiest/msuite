@@ -41,6 +41,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
@@ -74,8 +75,8 @@ import kotlin.uuid.Uuid
 fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
     val state = remember(app) { app.states }.collectAsState(initial = null).value ?: return
     val scope = rememberCoroutineScope()
-    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
-    val selected = state.selected(selectedId?.let(Uuid::parse))
+    val lastList by app.settings.lastList.collectAsState()
+    val selected = state.selected(lastList)
     var adding by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var listDialog by rememberSaveable { mutableStateOf<ListDialog?>(null) }
@@ -95,7 +96,7 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
         },
     ) { padding ->
         Column(Modifier.padding(padding)) {
-            ListTabs(state.lists, selected, onSelect = { selectedId = it.id.toString() }) {
+            ListTabs(state.lists, selected, onSelect = { app.settings.setLastList(it.id) }) {
                 listDialog = ListDialog.Create
             }
             if (selected == null) {
@@ -126,7 +127,7 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
 
         ListDialog.Create -> ListNameDialog("", onDismiss = closeDialog, onSave = { name ->
             closeDialog()
-            scope.launch { selectedId = app.lists.create(name).toString() }
+            scope.launch { app.settings.setLastList(app.lists.create(name)) }
         })
 
         else -> ListDialogHost(dialog, selected, selected?.let { state.tasks(it.id).size } ?: 0, run = { command ->
@@ -152,10 +153,14 @@ private fun Tasks(tasks: List<Task>, app: TodoContainer, scope: CoroutineScope, 
     }
 }
 
-/** Tasks in their order; a long-press drag reorders them, written once when the drag ends (decision 0063). */
+/**
+ * Open tasks, then done ones (decision 0065). A long-press drag reorders the open ones, written
+ * once when the drag ends (decision 0063); done tasks don't move.
+ */
 @Composable
 private fun TaskList(tasks: List<Task>, onMove: (Uuid, Int) -> Unit, row: @Composable (Task, Modifier) -> Unit) {
-    var order by remember(tasks) { mutableStateOf(tasks) }
+    val (open, done) = tasks.partition { !it.done }
+    var order by remember(open) { mutableStateOf(open) }
     val listState = rememberLazyListState()
     val reorder = rememberReorderableLazyListState(listState) { from, to ->
         order = order.toMutableList().apply { add(to.index, removeAt(from.index)) }
@@ -169,12 +174,13 @@ private fun TaskList(tasks: List<Task>, onMove: (Uuid, Int) -> Unit, row: @Compo
                         task,
                         Modifier.longPressDraggableHandle(onDragStopped = {
                             val to = order.indexOf(task)
-                            if (to != tasks.indexOf(task)) onMove(task.id, to)
+                            if (to != open.indexOf(task)) onMove(task.id, to)
                         }),
                     )
                 }
             }
         }
+        items(done, key = { it.id.toString() }) { task -> row(task, Modifier.alpha(DONE_ALPHA)) }
     }
 }
 
@@ -182,13 +188,17 @@ private fun TaskList(tasks: List<Task>, onMove: (Uuid, Int) -> Unit, row: @Compo
 private fun ListTabs(lists: List<TodoList>, selected: TodoList?, onSelect: (TodoList) -> Unit, onNew: () -> Unit) {
     PrimaryScrollableTabRow(selectedTabIndex = lists.indexOf(selected).coerceAtLeast(0), edgePadding = 16.dp) {
         lists.forEach { list ->
-            Tab(selected = list == selected, onClick = { onSelect(list) }, text = { Text(list.title) })
+            Tab(
+                selected = list == selected,
+                onClick = { onSelect(list) },
+                text = { Text(list.title) },
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Tab(
             selected = false,
             onClick = onNew,
-            text = { Text(stringResource(Res.string.new_list)) },
-            icon = { Icon(painterResource(Res.drawable.ic_add), null) },
+            icon = { Icon(painterResource(Res.drawable.ic_add), stringResource(Res.string.new_list)) },
         )
     }
 }
@@ -251,6 +261,8 @@ private fun NewTaskSheet(onSave: (String) -> Unit, onDismiss: () -> Unit) {
     }
     LaunchedEffect(Unit) { focus.requestFocus() }
 }
+
+private const val DONE_ALPHA = 0.5f
 
 @Composable
 private fun Centered(text: String) {

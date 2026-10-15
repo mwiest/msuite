@@ -16,7 +16,8 @@ class MainActivity : ComponentActivity() {
         val app = application as TodoApplication
         // The bar icons must contrast with the app's theme, which may differ from the system's.
         lifecycleScope.launch { app.settings.themeMode.collect { enableEdgeToEdge(it.barStyle(), it.barStyle()) } }
-        setContent { TodoApp(app.replica, app.settings) }
+        val version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+        setContent { TodoApp(app.replica, app.settings, version) }
     }
 }
 

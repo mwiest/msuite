@@ -140,7 +140,8 @@ edit checks that its ID is a record of the right type (hidden ones included) and
 - A record without a known `TYPE` is not shown (its creation may not have synced yet), nor is a
   task without a live list. A value of an unexpected type reads as absent.
 - Lists and tasks sort by `(position, id)`; positions compare by code unit, which for base62 keys
-  is bytewise (decision 0044).
+  is bytewise (decision 0044). Within a list, open tasks come before done ones, and a task moves
+  only among tasks with its done state (decision 0065).
 
 ### ToDo app wiring and UI
 
@@ -150,7 +151,8 @@ passes both to `TodoApp` and sets the system bar style from the theme. In `share
 holds the commands and `todoStates()`; screens launch commands in their own scope, and the replica
 moves the work off the UI thread (decision 0059). Navigation Compose has two routes: the tasks
 screen (lists as tabs, decision 0061; the task editor sheet, decision 0062; list menu, dialogs and
-drag to reorder, decision 0063) and settings (decision 0064). Icons are Material vector drawables
+drag to reorder, decision 0063) and settings (decision 0064), which ends with an About section (version from the shell). The
+open list is remembered in `TodoSettings` (decision 0065). Icons are Material vector drawables
 in the resources. Testable logic sits in `domain` (`TodoState.selected`, `TodoList.deletable`,
 `toPickerMillis`, `TodoSettings`); `shared` has no test target (decision 0051), so screens are
 checked on an emulator.

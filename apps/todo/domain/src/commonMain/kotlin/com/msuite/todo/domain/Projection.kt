@@ -27,7 +27,10 @@ data class Task(
     val position: String,
 )
 
-/** What the UI shows: live lists and their visible tasks, each sorted by `(position, id)` (decision 0004). */
+/**
+ * What the UI shows: live lists sorted by `(position, id)` (decision 0004), and their visible
+ * tasks, open ones before done ones, each by `(position, id)` (decision 0065).
+ */
 class TodoState(val lists: List<TodoList>, private val tasksByList: Map<Uuid, List<Task>>) {
     fun tasks(listId: Uuid): List<Task> = tasksByList[listId].orEmpty()
 
@@ -63,7 +66,7 @@ fun projectTodos(cells: Iterable<Cell>): TodoState {
             done = f.bool(TodoFields.DONE),
             position = f.text(TodoFields.POSITION),
         )
-    }.sortedWith(compareBy<Task> { it.position }.thenBy { it.id })
+    }.sortedWith(compareBy<Task> { it.done }.thenBy { it.position }.thenBy { it.id })
     return TodoState(lists, tasks.groupBy { it.listId })
 }
 

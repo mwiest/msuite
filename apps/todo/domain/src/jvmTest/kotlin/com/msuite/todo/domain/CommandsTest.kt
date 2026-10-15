@@ -154,6 +154,18 @@ class CommandsTest : StringSpec({
         todo.state().tasks(list).map { it.id } shouldContainExactly listOf(a, b, c)
     }
 
+    "a task moves among the tasks with its done state, as shown" {
+        val todo = Todo()
+        val list = todo.lists.create("L")
+        val (b, done, a) = listOf("b", "done", "a").map { todo.tasks.create(list, it) }
+        todo.tasks.setDone(done, true)
+        todo.state().tasks(list).map { it.id } shouldContainExactly listOf(a, b, done)
+        todo.tasks.move(a, 1)
+        todo.state().tasks(list).map { it.id } shouldContainExactly listOf(b, a, done)
+        todo.tasks.move(a, 0)
+        todo.state().tasks(list).map { it.id } shouldContainExactly listOf(a, b, done)
+    }
+
     "edits refuse an ID that isn't a record of their kind" {
         val todo = Todo()
         val list = todo.lists.create("L")

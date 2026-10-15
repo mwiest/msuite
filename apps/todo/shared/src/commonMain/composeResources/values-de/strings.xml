@@ -50,4 +50,13 @@
     <string name="theme_system">Systemstandard</string>
     <string name="theme_light">Hell</string>
     <string name="theme_dark">Dunkel</string>
+    <string name="about">Über</string>
+    <string name="app_name">msuite ToDo</string>
+    <string name="version">Version</string>
+    <string name="author">Autor</string>
+    <string name="license">Lizenz</string>
+    <string name="license_name">GNU GPL v3 oder neuer</string>
+    <string name="source_code">Quellcode</string>
+    <string name="third_party">Open-Source-Bibliotheken</string>
+    <string name="third_party_licenses">Kotlin, kotlinx (coroutines, datetime, serialization), Compose Multiplatform (Material 3, Navigation), AndroidX, SQLDelight, multiplatform-settings, Reorderable und Material Icons, alle unter der Apache License 2.0</string>
 </resources>

@@ -106,13 +106,14 @@ class TaskCommands(
 
     suspend fun delete(id: Uuid) = replica.edit(id, TodoTypes.TASK, CoreFields.DELETED to Value.Bool(true))
 
-    /** Moves the visible task to [toIndex] within its list, in the order shown. */
+    /** Moves the visible task to [toIndex] among its list's tasks with the same done state, in the order shown. */
     suspend fun move(id: Uuid, toIndex: Int) {
         replica.requireType(id, TodoTypes.TASK)
         val state = projectTodos(replica.cells())
         val task =
             requireNotNull(state.lists.flatMap { state.tasks(it.id) }.find { it.id == id }) { "task $id is hidden" }
-        val others = state.tasks(task.listId).filter { it.id != id }.map { it.position }
+        // Open and done tasks are sorted apart, so only one group is in position order.
+        val others = state.tasks(task.listId).filter { it.id != id && it.done == task.done }.map { it.position }
         replica.write(id, TodoFields.POSITION to Value.Text(positionAt(others, toIndex, random)))
     }
 }
