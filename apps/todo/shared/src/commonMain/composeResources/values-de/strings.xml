@@ -1,3 +1,11 @@
 <resources>
     <string name="my_tasks">Meine Aufgaben</string>
+    <string name="app_title">Aufgaben</string>
+    <string name="no_lists">Keine Listen</string>
+    <string name="no_tasks">Noch keine Aufgaben</string>
+    <string name="new_task">Neue Aufgabe</string>
+    <string name="task_title">Titel</string>
+    <string name="save">Speichern</string>
+    <string name="star">Markieren</string>
+    <string name="unstar">Markierung entfernen</string>
 </resources>

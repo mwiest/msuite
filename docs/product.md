@@ -3,9 +3,11 @@
 What msuite is and what its apps do today. When behaviour changes, this file changes in the same
 commit. What is intended but not built is in `roadmap.md` and the plans.
 
-Checked against the code on 2026-10-15: **the ToDo app stores its data on the device but has no
-screens yet.** On first start it creates "My Tasks" (in the device language) and shows the lists
-and task titles it holds; Android backup is off. Its intended features are in [`plans/v1-todo.md`](plans/v1-todo.md).
+Checked against the code on 2026-10-15: **the ToDo app works offline on one device, with a single
+screen so far.** On first start it creates "My Tasks" (in the device language). The lists are tabs
+at the top; the selected list shows its tasks, newest first, each with a checkbox (done tasks are
+struck through) and a star. The add button opens a sheet to type a new task's title. Everything is
+kept on the device; Android backup is off. Its intended features are in [`plans/v1-todo.md`](plans/v1-todo.md).
 
 ## What msuite is
 

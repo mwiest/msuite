@@ -47,6 +47,14 @@ class ProjectionTest : StringSpec({
         projectTodos(emptyList()).lists.shouldBeEmpty()
     }
 
+    "the selected list falls back to the first live one" {
+        val state = projectTodos(list(id(1), "Home", "a") + list(id(2), "Work", "b") + list(id(3), "Old", "c", deleted))
+        state.selected(id(2))?.id shouldBe id(2)
+        state.selected(id(3))?.id shouldBe id(1)
+        state.selected(null)?.id shouldBe id(1)
+        projectTodos(emptyList()).selected(id(1)) shouldBe null
+    }
+
     "a list and its task read back typed, absent fields as defaults" {
         val state = projectTodos(
             list(id(1), "Home", "a") +

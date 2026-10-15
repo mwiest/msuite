@@ -27,6 +27,9 @@ data class Task(
 /** What the UI shows: live lists and their visible tasks, each sorted by `(position, id)` (decision 0004). */
 class TodoState(val lists: List<TodoList>, private val tasksByList: Map<Uuid, List<Task>>) {
     fun tasks(listId: Uuid): List<Task> = tasksByList[listId].orEmpty()
+
+    /** The list [id] if it's live, else the first list, e.g. after the selected one was deleted elsewhere. */
+    fun selected(id: Uuid?): TodoList? = lists.firstOrNull { it.id == id } ?: lists.firstOrNull()
 }
 
 /** The current state, then a re-read after each change (decision 0049). */
