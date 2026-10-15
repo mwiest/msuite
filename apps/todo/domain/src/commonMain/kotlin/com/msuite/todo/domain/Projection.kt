@@ -5,6 +5,9 @@ import com.msuite.core.model.CoreFields
 import com.msuite.core.model.FieldId
 import com.msuite.core.model.Value
 import com.msuite.core.model.ValueCodec
+import com.msuite.core.sync.Replica
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import kotlin.uuid.Uuid
 
@@ -25,6 +28,9 @@ data class Task(
 class TodoState(val lists: List<TodoList>, private val tasksByList: Map<Uuid, List<Task>>) {
     fun tasks(listId: Uuid): List<Task> = tasksByList[listId].orEmpty()
 }
+
+/** The current state, then a re-read after each change (decision 0049). */
+fun Replica.todoStates(): Flow<TodoState> = changes.map { projectTodos(cells()) }
 
 /**
  * Reads `field_state` cells as lists and tasks. Hidden: deleted records, records whose type is

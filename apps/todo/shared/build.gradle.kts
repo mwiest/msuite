@@ -11,7 +11,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":core:design"))
-            implementation(project(":apps:todo:domain"))
+            // TodoApp takes a Replica.
+            api(project(":apps:todo:domain"))
 
             api(libs.compose.runtime)
             implementation(libs.compose.foundation)

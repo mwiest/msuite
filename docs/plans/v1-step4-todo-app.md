@@ -1,6 +1,6 @@
 # Plan: v1 step 4, the single-device ToDo app
 
-Status: **slices 1 to 4 done; slice 5 (app wiring) next.** Started 2026-10-14.
+Status: **slices 1 to 5 done; slice 6 (screens) next.** Started 2026-10-14.
 Part of [`v1-todo.md`](v1-todo.md) step 4.
 
 ## Goal
@@ -40,8 +40,11 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
 4. [x] **Simulator invariants 14 to 16.** The ToDo rules under random schedules (`testing.md`).
    The harness moved into `core/sync-testing` first (decision 0057, `f1317df`); the commands take
    an ID source (`d2a97ad`); edits are guarded against wrong IDs (`0e45c4d`). Landed: `8ece7f2`.
-5. [ ] **App wiring.** The shell creates the driver and the `Replica` with a stable device ID and
-   passes it into the app root; the UI observes the projection. See Open questions.
+5. [x] **App wiring.** The shell's `TodoApplication` opens one `Replica` per process; the device ID
+   is a row in the database (decision 0058, `8f8b2c7`); the replica runs off the UI thread
+   (decision 0059, `1c3602d`); `TodoApp(replica)` creates "My Tasks" and shows `todoStates()`.
+   Backup is off (decision 0060). Checked on an emulator: "My Tasks" appears once, also after a restart. Landed:
+   see git log.
 6. [ ] **Screens.** Tasks of a list (checkbox, star, FAB), the task editor, list management,
    settings (theme), with navigation. One slice per screen if they grow.
 

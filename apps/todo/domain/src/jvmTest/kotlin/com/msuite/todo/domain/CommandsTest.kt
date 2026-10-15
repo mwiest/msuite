@@ -13,6 +13,10 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.datetime.LocalDate
 import java.util.Properties
 import kotlin.random.Random
@@ -40,6 +44,15 @@ private class Todo {
 }
 
 class CommandsTest : StringSpec({
+    "the state flow emits the current state, then re-reads after each change" {
+        val todo = Todo()
+        val titles = async(Dispatchers.Unconfined) {
+            todo.replica.todoStates().take(2).toList().map { state -> state.lists.map { it.title } }
+        }
+        todo.lists.createMyTasksIfMissing("My Tasks")
+        titles.await() shouldContainExactly listOf(emptyList(), listOf("My Tasks"))
+    }
+
     "My Tasks is created on first run only" {
         val todo = Todo()
         todo.lists.createMyTasksIfMissing("My Tasks") shouldBe true
