@@ -22,12 +22,17 @@ import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldStartWith
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import java.util.Properties
+import java.util.concurrent.Executors
 import kotlin.random.Random
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 private val record = Uuid.random()
@@ -65,6 +70,19 @@ class ReplicaTest : StringSpec({
         }
         first.single().stamp.deviceId shouldBe DeviceId.random(Random(1))
         again.single().stamp.deviceId shouldBe first.single().stamp.deviceId
+    }
+
+    "operations run in the replica's coroutine context, off the caller's thread" {
+        val threads = mutableListOf<String>()
+        val clock = object : Clock {
+            override fun now(): Instant = Instant.fromEpochMilliseconds(1_000).also {
+                threads += Thread.currentThread().name
+            }
+        }
+        Executors.newSingleThreadExecutor { Thread(it, "replica-io") }.asCoroutineDispatcher().use { io ->
+            Replica.open(driver(), clock, context = io).use { it.write(mapOf(key(1) to byteArrayOf(1))) }
+        }
+        threads.single() shouldStartWith "replica-io"
     }
 
     "after a restart with the wall clock set back, new writes still order after stored ones" {

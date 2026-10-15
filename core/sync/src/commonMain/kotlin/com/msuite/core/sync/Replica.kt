@@ -9,29 +9,39 @@ import com.msuite.core.model.Hlc
 import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.LocalStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /**
- * The device's state, in the database behind [driver], with its HLC clock. The clock starts from
- * the highest stored HLC, so writes after a restart order after everything stored, even if the
- * wall clock went back. Every operation runs alone (the clock isn't thread-safe) and in one
- * transaction. The replica owns the database: open one per database and write only through it.
+ * The device's state, in its database, with its HLC clock. The clock starts from the highest
+ * stored HLC, so writes after a restart order after everything stored, even if the wall clock went
+ * back. Every operation runs alone (the clock isn't thread-safe), in one transaction, in [context]
+ * (the driver blocks; keep it off the UI thread). The replica owns the database: open one per
+ * database and write only through it.
  * Apps use [open]; the constructor with an explicit [deviceId] is for tests and the simulator.
  */
 class Replica private constructor(
     private val store: LocalStore,
     private val deviceId: DeviceId,
     wallClock: Clock,
+    private val context: CoroutineContext,
 ) : AutoCloseable {
-    constructor(driver: SqlDriver, deviceId: DeviceId, wallClock: Clock) : this(LocalStore(driver), deviceId, wallClock)
+    constructor(
+        driver: SqlDriver,
+        deviceId: DeviceId,
+        wallClock: Clock,
+        context: CoroutineContext = Dispatchers.Default,
+    ) : this(LocalStore(driver), deviceId, wallClock, context)
 
     private val clock = HlcClock(wallClock, store.maxHlc() ?: Hlc.ZERO)
     private val mutex = Mutex()
@@ -81,11 +91,18 @@ class Replica private constructor(
 
     companion object {
         /** Opens the replica with the device ID stored in the database, created on first open (decision 0058). */
-        fun open(driver: SqlDriver, wallClock: Clock, random: Random = Random.Default): Replica {
+        fun open(
+            driver: SqlDriver,
+            wallClock: Clock,
+            random: Random = Random.Default,
+            context: CoroutineContext = Dispatchers.Default,
+        ): Replica {
             val store = LocalStore(driver)
-            return Replica(store, store.deviceId { DeviceId.random(random) }, wallClock)
+            return Replica(store, store.deviceId { DeviceId.random(random) }, wallClock, context)
         }
     }
 
-    private suspend fun <R> serialized(block: () -> R): R = mutex.withLock { store.transaction(block) }
+    private suspend fun <R> serialized(block: () -> R): R = withContext(context) {
+        mutex.withLock { store.transaction(block) }
+    }
 }

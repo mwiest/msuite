@@ -99,7 +99,8 @@ in the client.
   write stamps all its cells with one fresh HLC. Ingest skips a batch key already ingested from
   that plug, and writes the winners and marks the key in one transaction. A delta is built from
   the plug's watermark, which moves on `pushed`. Every operation holds a coroutine `Mutex` and
-  runs in one transaction. The app opens one replica per database and writes only through it;
+  runs in one transaction, in the replica's coroutine context (default `Dispatchers.Default`, so
+  the blocking driver stays off the UI thread, decision 0059). The app opens one replica per database and writes only through it;
   the mutex doesn't cover a second one. `changes`, a `StateFlow`, ticks after each committed write
   or ingest that changed state; the UI re-reads on a tick (decision 0049).
 - Deletes are an ordinary LWW `deleted` field (tombstone). Clearing a field writes its cell with
