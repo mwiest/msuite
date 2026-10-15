@@ -10,7 +10,9 @@ struck through), a star, and its notes' first line and due date below the title.
 opens a sheet to type a new task's title. Tapping a task opens its editor in a sheet: title, notes,
 star, a due date picked from a calendar (display only, no reminder), mark done or not done, and
 delete in the overflow menu. Title and notes are saved when you leave the field or close the
-sheet. Everything is
+sheet. A long press drags a task to a new place. The "New list" tab creates a list; the top bar's
+menu renames the selected list, moves it left or right, or deletes it after confirming how many
+tasks go with it ("My Tasks" can't be deleted). Everything is
 kept on the device; Android backup is off. Its intended features are in [`plans/v1-todo.md`](plans/v1-todo.md).
 
 ## What msuite is

@@ -47,6 +47,11 @@ class ProjectionTest : StringSpec({
         projectTodos(emptyList()).lists.shouldBeEmpty()
     }
 
+    "every list but My Tasks can be deleted" {
+        val state = projectTodos(list(TodoIds.MY_TASKS, "My Tasks", "a") + list(id(1), "Home", "b"))
+        state.lists.map { it.deletable } shouldContainExactly listOf(false, true)
+    }
+
     "the selected list falls back to the first live one" {
         val state = projectTodos(list(id(1), "Home", "a") + list(id(2), "Work", "b") + list(id(3), "Old", "c", deleted))
         state.selected(id(2))?.id shouldBe id(2)

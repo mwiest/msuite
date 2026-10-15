@@ -32,4 +32,16 @@
         <item>Nov.</item>
         <item>Dez.</item>
     </string-array>
+    <string name="new_list">Neue Liste</string>
+    <string name="list_name">Name</string>
+    <string name="rename_list">Liste umbenennen</string>
+    <string name="move_left">Nach links</string>
+    <string name="move_right">Nach rechts</string>
+    <string name="delete_list">Liste löschen</string>
+    <string name="delete_list_title">„%1$s“ löschen?</string>
+    <string name="create">Erstellen</string>
+    <plurals name="delete_list_tasks">
+        <item quantity="one">Ihre Aufgabe wird mitgelöscht.</item>
+        <item quantity="other">Ihre %1$d Aufgaben werden mitgelöscht.</item>
+    </plurals>
 </resources>

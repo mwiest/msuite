@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import kotlin.uuid.Uuid
 
-data class TodoList(val id: Uuid, val title: String, val position: String)
+data class TodoList(val id: Uuid, val title: String, val position: String) {
+    /** My Tasks can't be deleted (decision 0031). */
+    val deletable: Boolean get() = id != TodoIds.MY_TASKS
+}
 
 data class Task(
     val id: Uuid,
