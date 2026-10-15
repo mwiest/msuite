@@ -43,8 +43,8 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
 5. [x] **App wiring.** The shell's `TodoApplication` opens one `Replica` per process; the device ID
    is a row in the database (decision 0058, `8f8b2c7`); the replica runs off the UI thread
    (decision 0059, `1c3602d`); `TodoApp(replica)` creates "My Tasks" and shows `todoStates()`.
-   Backup is off (decision 0060). Checked on an emulator: "My Tasks" appears once, also after a restart. Landed:
-   `7e47dfa`.
+   Backup is off (decision 0060). Checked on an emulator: "My Tasks" appears once, also after a
+   restart. Landed: `7e47dfa`.
 6. [ ] **Screens.** Tasks of a list (checkbox, star, FAB), the task editor, list management,
    settings (theme), with navigation. One slice per screen if they grow.
 
