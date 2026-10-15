@@ -51,7 +51,8 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
    1. [x] **Tasks of a list.** Lists as tabs (decision 0061), the selected list's tasks with
       checkbox and star, a FAB that adds a task by title in a bottom sheet. A deleted selected
       list falls back to the first (`TodoState.selected`, tested). Icons are vector drawables in
-      the resources, no icon library. Checked on an emulator, also after a restart.
+      the resources, no icon library. Checked on an emulator, also after a restart. Landed:
+      `7dd7fbb`.
    2. [ ] **Task editor**, with navigation: title, notes, due date, star, done, delete.
    3. [ ] **List management**: create, rename, delete, reorder lists; reorder tasks.
    4. [ ] **Settings**: the theme (system, light, dark) in multiplatform-settings, created by
