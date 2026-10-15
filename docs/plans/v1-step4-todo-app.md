@@ -61,8 +61,8 @@ list, the fixed "My Tasks") are proven by simulator invariants 14 to 16.
       reorder tasks by long-press drag (decision 0063). `TodoList.deletable` is tested; the
       rest is UI over the tested commands. Checked on an emulator, also after a restart.
       Landed: `d340e84`.
-   4. [ ] **Settings**: the theme (system, light, dark) in multiplatform-settings, created by
-      the shell (it needs a `Context`).
+   4. [ ] **Settings**: a navigation route with the theme (system, light, dark), kept in
+      multiplatform-settings created by the shell (decision 0064).
 
 ## Open questions
 
