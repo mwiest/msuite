@@ -151,11 +151,11 @@ passes both to `TodoApp` and sets the system bar style from the theme. In `share
 holds the commands and `todoStates()`; screens launch commands in their own scope, and the replica
 moves the work off the UI thread (decision 0059). Navigation Compose has two routes: the tasks
 screen (lists as tabs, decision 0061; the task editor sheet, decision 0062; list menu, dialogs and
-drag to reorder, decision 0063) and settings (decision 0064), which ends with an About section (version from the shell). The
-open list is remembered in `TodoSettings` (decision 0065). Icons are Material vector drawables
-in the resources. Testable logic sits in `domain` (`TodoState.selected`, `TodoList.deletable`,
-`toPickerMillis`, `TodoSettings`); `shared` has no test target (decision 0051), so screens are
-checked on an emulator.
+drag to reorder, decision 0063) and settings (decision 0064), which ends with an About section
+(version from the shell). The open list is remembered in `TodoSettings` (decision 0065). Icons are
+Material vector drawables in the resources. Testable logic sits in `domain` (`TodoState.selected`,
+`TodoList.deletable`, `toPickerMillis`, `TodoSettings`); `shared` has no test target (decision
+0051), so screens are checked on an emulator.
 
 ### Batch encoding
 
