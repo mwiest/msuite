@@ -18,6 +18,8 @@ plaintext, so the path is a proof of concept until step 6 encrypts it (decisions
   0067): it is not marked ingested and is retried after an app update.
 - A plug that can't decode a batch skips it and retries it later; it is never marked ingested
   (decision 0068).
+- A key whose bytes keep failing to decode is retried a bounded number of times, then kept and
+  flagged corrupt (decision 0069).
 - Layer 2 wraps the real plug contract in the `Cluster` harness, so step 8 swaps a plain-file
   folder in with nothing else changing (decision 0057, `testing.md`).
 - The export is plaintext, so the whole path is a proof of concept until step 6 (v1 plan;

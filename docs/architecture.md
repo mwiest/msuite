@@ -122,7 +122,8 @@ in the client.
   `buildDelta` and `ingest` in `core/sync`; `ingest` defers a batch beyond the 24 h bound
   (`IngestResult.Deferred`), holds back one from a newer data-model version (`IngestResult.TooNew`,
   decision 0067), or merges it and advances the HLC. A fetched batch that won't decode is skipped
-  and retried (`decodeOrNull`, decision 0068).
+  and retried a bounded number of times, then kept and flagged corrupt (`decodeOrNull`,
+  `Replica.unreadable`, decisions 0068, 0069).
 - Unknown field IDs from newer app versions are rows the app doesn't read; they are merged and
   written out like any other (decisions 0006, 0035).
 - Manual order is a `position` field holding a fractional-index string with a random suffix; lists

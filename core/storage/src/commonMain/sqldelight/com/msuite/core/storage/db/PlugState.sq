@@ -5,6 +5,16 @@ CREATE TABLE ingested_batch (
     PRIMARY KEY (plug, batch_key)
 ) WITHOUT ROWID;
 
+-- A key whose bytes failed to decode: attempts counts the failures, corrupt is set once they run
+-- out and the key stops being fetched (decision 0069). The bytes stay in the backend.
+CREATE TABLE unreadable_batch (
+    plug TEXT NOT NULL,
+    batch_key TEXT NOT NULL,
+    attempts INTEGER NOT NULL,
+    corrupt INTEGER NOT NULL,
+    PRIMARY KEY (plug, batch_key)
+) WITHOUT ROWID;
+
 CREATE TABLE plug_watermark (
     plug TEXT NOT NULL PRIMARY KEY,
     hlc INTEGER NOT NULL
@@ -15,6 +25,21 @@ SELECT COUNT(*) > 0 FROM ingested_batch WHERE plug = ? AND batch_key = ?;
 
 markIngested:
 INSERT OR IGNORE INTO ingested_batch VALUES (?, ?);
+
+insertUnreadable:
+INSERT OR IGNORE INTO unreadable_batch (plug, batch_key, attempts, corrupt) VALUES (?, ?, 1, 0);
+
+bumpUnreadable:
+UPDATE unreadable_batch SET attempts = attempts + 1 WHERE plug = ? AND batch_key = ?;
+
+unreadable:
+SELECT attempts FROM unreadable_batch WHERE plug = ? AND batch_key = ?;
+
+markCorrupt:
+UPDATE unreadable_batch SET corrupt = 1 WHERE plug = ? AND batch_key = ?;
+
+isCorrupt:
+SELECT COUNT(*) > 0 FROM unreadable_batch WHERE plug = ? AND batch_key = ? AND corrupt = 1;
 
 watermark:
 SELECT hlc FROM plug_watermark WHERE plug = ?;

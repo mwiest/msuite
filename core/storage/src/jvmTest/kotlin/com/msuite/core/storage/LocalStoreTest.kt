@@ -14,6 +14,7 @@ import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
@@ -41,6 +42,40 @@ private val signBitHlc = Hlc.of(1L shl 47, 0)
 
 private val folder = PlugId("folder")
 private val relay = PlugId("relay")
+
+/** The schema before the unreadable table (migration 1): pinned so the migration stays honest. */
+private val V1_SCHEMA = listOf(
+    """
+    CREATE TABLE field_state (
+        record_id BLOB NOT NULL,
+        field_id INTEGER NOT NULL,
+        value BLOB NOT NULL,
+        hlc INTEGER NOT NULL,
+        device_id INTEGER NOT NULL,
+        PRIMARY KEY (record_id, field_id)
+    ) WITHOUT ROWID
+    """.trimIndent(),
+    "CREATE INDEX field_state_hlc ON field_state (hlc)",
+    """
+    CREATE TABLE device (
+        singleton INTEGER NOT NULL PRIMARY KEY CHECK (singleton = 0),
+        device_id INTEGER NOT NULL
+    )
+    """.trimIndent(),
+    """
+    CREATE TABLE ingested_batch (
+        plug TEXT NOT NULL,
+        batch_key TEXT NOT NULL,
+        PRIMARY KEY (plug, batch_key)
+    ) WITHOUT ROWID
+    """.trimIndent(),
+    """
+    CREATE TABLE plug_watermark (
+        plug TEXT NOT NULL PRIMARY KEY,
+        hlc INTEGER NOT NULL
+    )
+    """.trimIndent(),
+)
 
 class LocalStoreTest : StringSpec({
     "a written cell reads back identical" {
@@ -108,6 +143,33 @@ class LocalStoreTest : StringSpec({
         store.plugs.markIngested(folder, "k1")
         store.plugs.isIngested(folder, "k1") shouldBe true
         store.plugs.isIngested(relay, "k1") shouldBe false
+    }
+
+    "unreadable keys count attempts per plug and can be flagged corrupt" {
+        val store = open()
+        store.plugs.recordUnreadable(folder, "k1") shouldBe 1
+        store.plugs.recordUnreadable(folder, "k1") shouldBe 2
+        store.plugs.recordUnreadable(relay, "k1") shouldBe 1
+        store.plugs.isCorrupt(folder, "k1") shouldBe false
+        store.plugs.markCorrupt(folder, "k1")
+        store.plugs.isCorrupt(folder, "k1") shouldBe true
+        store.plugs.isCorrupt(relay, "k1") shouldBe false
+    }
+
+    "a version 1 database gains the unreadable table when migrated" {
+        val url = "jdbc:sqlite:${tempfile(suffix = ".db").absolutePath}"
+        val v1 = JdbcSqliteDriver(url, Properties())
+        V1_SCHEMA.forEach { v1.execute(null, it, 0) }
+        v1.execute(null, "INSERT INTO ingested_batch VALUES ('folder', 'k1')", 0)
+        v1.execute(null, "INSERT INTO field_state VALUES (x'000102030405060708090a0b0c0d0e0f', 1, x'01', 2, 3)", 0)
+        LocalStore.Schema.migrate(v1, 1, 2).value
+        v1.close()
+        // Reopen without the schema: the driver above would create it again on top of the migration.
+        LocalStore(JdbcSqliteDriver(url, Properties())).use {
+            it.plugs.isIngested(folder, "k1") shouldBe true
+            it.plugs.recordUnreadable(folder, "k2") shouldBe 1
+            it.cells() shouldHaveSize 1
+        }
     }
 
     "a watermark is kept per plug and can move" {

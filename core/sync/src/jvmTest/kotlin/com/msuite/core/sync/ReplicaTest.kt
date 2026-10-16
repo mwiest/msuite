@@ -144,6 +144,19 @@ class ReplicaTest : StringSpec({
         store.plugs.isIngested(folder, "k1") shouldBe false
     }
 
+    "a key that won't decode is flagged corrupt after the bounded retries" {
+        val driver = driver()
+        val store = LocalStore(driver)
+        val replica = Replica(driver, deviceA, TestClock(1_000))
+        replica.unreadable(folder, "k1") shouldBe false
+        replica.unreadable(folder, "k1") shouldBe false
+        replica.isCorrupt(folder, "k1") shouldBe false
+        replica.unreadable(folder, "k1") shouldBe true
+        replica.isCorrupt(folder, "k1") shouldBe true
+        replica.isCorrupt(relay, "k1") shouldBe false
+        store.plugs.isIngested(folder, "k1") shouldBe false
+    }
+
     "a delta holds what wasn't pushed to that plug yet" {
         val replica = Replica(driver(), deviceA, TestClock(1_000))
         val first = replica.write(mapOf(key(1) to byteArrayOf(1)))

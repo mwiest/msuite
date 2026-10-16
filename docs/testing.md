@@ -45,8 +45,9 @@ faster clock wins a conflict, a causal edit wins on a slower clock, a delete bea
 a far-future batch is held back and merged later.
 
 Layer 2 runs the same schedules with whole snapshots through a `PlugStore`, in memory and through
-`Replica` (`SimulatorTest.kt`), and checks that an object that won't decode is skipped and left for
-a retry (decision 0068). Invariant 12 lands with the folder plug at step 8.
+`Replica` (`SimulatorTest.kt`), and checks that an object that won't decode is skipped, retried a
+bounded number of times, then flagged corrupt and left alone (decisions 0068, 0069). Invariant 12
+lands with the folder plug at step 8.
 
 The ToDo simulator (`apps/todo/domain/src/jvmTest/.../TodoSimulation.kt`, driven by
 `TodoSimulatorTest.kt`) runs the real `ListCommands`, `TaskCommands` and `projectTodos()` on

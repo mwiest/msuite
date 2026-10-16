@@ -1,0 +1,7 @@
+CREATE TABLE unreadable_batch (
+    plug TEXT NOT NULL,
+    batch_key TEXT NOT NULL,
+    attempts INTEGER NOT NULL,
+    corrupt INTEGER NOT NULL,
+    PRIMARY KEY (plug, batch_key)
+) WITHOUT ROWID;

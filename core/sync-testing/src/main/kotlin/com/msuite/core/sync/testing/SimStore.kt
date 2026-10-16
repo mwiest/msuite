@@ -14,7 +14,7 @@ interface SimStore {
     /** Every key, in a deterministic order: merges are commutative, so the order only has to be stable. */
     fun keys(): List<String>
 
-    /** The batch under [key], or `null` if its bytes can't be read (decision 0068: skip and retry). */
+    /** The batch under [key], or `null` if its bytes can't be read (decisions 0068, 0069: skip, retry, then flag). */
     fun get(key: String): Batch?
 }
 

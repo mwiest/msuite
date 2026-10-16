@@ -68,6 +68,23 @@ class PlugBook internal constructor(private val queries: PlugStateQueries) {
         queries.markIngested(plug.id, batchKey)
     }
 
+    /** One more failed decode of [batchKey]; returns how many were recorded in total (decision 0069). */
+    fun recordUnreadable(plug: PlugId, batchKey: String): Int = queries.transactionWithResult {
+        if (queries.bumpUnreadable(plug.id, batchKey).value > 0) {
+            queries.unreadable(plug.id, batchKey).executeAsOne().toInt()
+        } else {
+            queries.insertUnreadable(plug.id, batchKey)
+            1
+        }
+    }
+
+    /** Flags [batchKey] to stop being fetched; the bytes stay in the backend (decision 0069). */
+    fun markCorrupt(plug: PlugId, batchKey: String) {
+        queries.markCorrupt(plug.id, batchKey)
+    }
+
+    fun isCorrupt(plug: PlugId, batchKey: String): Boolean = queries.isCorrupt(plug.id, batchKey).executeAsOne()
+
     /** The highest HLC pushed to [plug], or `null` if nothing was pushed yet. */
     fun watermark(plug: PlugId): Hlc? = queries.watermark(plug.id).executeAsOneOrNull()?.let(::hlcFromSql)
 

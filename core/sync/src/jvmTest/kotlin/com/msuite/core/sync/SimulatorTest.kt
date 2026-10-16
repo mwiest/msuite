@@ -100,13 +100,18 @@ class SimulatorTest : StringSpec({
         checkAll(PropTestConfig(iterations = 150), arbScenario) { it.checkLayer2(::ReplicaState) }
     }
 
-    "an object that won't decode is skipped, not merged, and stays unmarked" {
+    "an object that won't decode is skipped, then flagged and left alone" {
         val plug = MemoryPlug()
         Simulation(listOf(0L), seed = 9, backend = ::MemoryState, store = PlugStore(plug)).use { sim ->
-            runBlocking { plug.put("sim/000999", byteArrayOf(0x08)) }
-            sim.pullAll(sim.devices[0])
-            sim.devices[0].cells() shouldBe emptyMap()
-            sim.devices[0].ingested shouldBe emptySet<String>()
+            val device = sim.devices[0]
+            runBlocking { plug.put("sim/garbage", byteArrayOf(0x08)) }
+            repeat(MAX_DECODE_ATTEMPTS) { sim.pullAll(device) }
+            device.cells() shouldBe emptyMap()
+            device.ingested shouldBe emptySet<String>()
+            device.state.isCorrupt("sim/garbage") shouldBe true
+            val getsBefore = plug.gets
+            sim.pullAll(device)
+            plug.gets shouldBe getsBefore
         }
     }
 

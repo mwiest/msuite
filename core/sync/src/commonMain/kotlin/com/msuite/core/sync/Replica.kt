@@ -22,6 +22,9 @@ import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
+/** Failed decodes of one key before it is flagged corrupt and stops being fetched (decision 0069). */
+const val MAX_DECODE_ATTEMPTS = 3
+
 /**
  * The device's state, in its database, with its HLC clock. The clock starts from the highest
  * stored HLC, so writes after a restart order after everything stored, even if the wall clock went
@@ -65,6 +68,22 @@ class Replica private constructor(
         mergeLocked(batch).also { result ->
             if (result is IngestResult.Merged) store.plugs.markIngested(plug, batchKey)
         }
+    }
+
+    /**
+     * Records that [batchKey]'s bytes failed to decode; returns true once it is flagged corrupt
+     * (decision 0069): after [MAX_DECODE_ATTEMPTS] failures it is not fetched again, the bytes
+     * staying in the backend.
+     */
+    suspend fun unreadable(plug: PlugId, batchKey: String): Boolean = serialized {
+        if (store.plugs.recordUnreadable(plug, batchKey) < MAX_DECODE_ATTEMPTS) return@serialized false
+        store.plugs.markCorrupt(plug, batchKey)
+        true
+    }
+
+    /** Whether [batchKey] failed to decode too often and must not be fetched again (decision 0069). */
+    suspend fun isCorrupt(plug: PlugId, batchKey: String): Boolean = serialized {
+        store.plugs.isCorrupt(plug, batchKey)
     }
 
     /** Merges [batch] with no plug bookkeeping: the manual snapshot path (decision 0066). */

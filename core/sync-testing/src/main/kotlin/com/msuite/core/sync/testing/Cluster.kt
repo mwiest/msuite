@@ -118,14 +118,16 @@ open class Cluster(
     }
 
     fun pull(device: SimDevice, random: Random) {
-        val unseen = store.keys().filter { it !in device.ingested && random.nextInt(TENTHS) < FETCH_TENTHS }
+        val unseen = store.keys().filter {
+            it !in device.ingested && !device.state.isCorrupt(it) && random.nextInt(TENTHS) < FETCH_TENTHS
+        }
         val again = device.ingested.filter { random.nextInt(TENTHS) < REFETCH_TENTHS }
         for (key in (unseen + again).shuffled(random)) ingestOne(device, key)
     }
 
     /** Downloads every unseen batch, in store order. */
     fun pullAll(device: SimDevice) {
-        store.keys().filter { it !in device.ingested }.forEach { ingestOne(device, it) }
+        store.keys().filter { it !in device.ingested && !device.state.isCorrupt(it) }.forEach { ingestOne(device, it) }
     }
 
     /** Connects everyone, moves every wall clock past the 24 h bound, and syncs to a fixpoint. */
@@ -144,7 +146,7 @@ open class Cluster(
         withClue("still syncing after $QUIESCENCE_ROUNDS rounds") {
             devices.forEach { device ->
                 device.state.outgoing(snapshots).shouldBe(null)
-                (store.keys().toSet() - device.ingested).shouldBeEmpty()
+                (store.keys().toSet() - device.ingested).filterNot(device.state::isCorrupt).shouldBeEmpty()
             }
         }
     }
@@ -163,8 +165,11 @@ open class Cluster(
     }
 
     private fun ingestOne(device: SimDevice, key: String) {
-        // A key that won't decode is skipped and retried, not merged, and stays unmarked (decision 0068).
-        val batch = store.get(key) ?: return
+        // A key that won't decode is recorded and retried, then flagged corrupt (decision 0069).
+        val batch = store.get(key) ?: run {
+            device.state.unreadable(key)
+            return
+        }
         when (val result = device.state.ingest(key, batch)) {
             IngestResult.Deferred -> {
                 // Invariant 13: deferred only when more than 24 h ahead of this device's clock.

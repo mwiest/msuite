@@ -13,6 +13,10 @@ import kotlin.random.Random
 class MemoryPlug(private val seed: Long = 0) : BackendPlug {
     private val objects = linkedMapOf<String, ByteArray>()
 
+    /** How often [get] was called; the simulator asserts a corrupt key stops being fetched (0069). */
+    var gets = 0
+        private set
+
     override suspend fun put(key: String, bytes: ByteArray) {
         objects.putIfAbsent(key, bytes.copyOf())
     }
@@ -20,5 +24,5 @@ class MemoryPlug(private val seed: Long = 0) : BackendPlug {
     override suspend fun list(prefix: String): List<String> =
         objects.keys.filter { it.startsWith(prefix) }.shuffled(Random(seed))
 
-    override suspend fun get(key: String): ByteArray? = objects[key]?.copyOf()
+    override suspend fun get(key: String): ByteArray? = objects[key]?.also { gets++ }?.copyOf()
 }

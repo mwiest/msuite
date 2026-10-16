@@ -12,6 +12,7 @@ import com.msuite.core.model.Stamp
 import com.msuite.core.storage.LocalStore
 import com.msuite.core.sync.HlcClock
 import com.msuite.core.sync.IngestResult
+import com.msuite.core.sync.MAX_DECODE_ATTEMPTS
 import com.msuite.core.sync.Replica
 import com.msuite.core.sync.buildDelta
 import com.msuite.core.sync.hlcHi
@@ -36,6 +37,15 @@ interface SimState : AutoCloseable {
     fun pushed(batch: Batch)
 
     fun ingest(batchKey: String, batch: Batch): IngestResult
+
+    /**
+     * Records that [batchKey]'s bytes failed to decode; returns true once it is flagged corrupt
+     * and must not be fetched again (decision 0069).
+     */
+    fun unreadable(batchKey: String): Boolean
+
+    /** Whether [batchKey] is flagged corrupt; such a key is not fetched again (decision 0069). */
+    fun isCorrupt(batchKey: String): Boolean
 
     override fun close() {}
 }
@@ -65,6 +75,13 @@ class MemoryState(wall: Clock, private val deviceId: DeviceId) : SimState {
     override fun ingest(batchKey: String, batch: Batch): IngestResult = ingest(batch, state::get, clock).also {
         if (it is IngestResult.Merged) it.changes.forEach { cell -> state[cell.key] = cell }
     }
+
+    override fun unreadable(batchKey: String): Boolean =
+        (attempts.merge(batchKey, 1, Int::plus) ?: 0) >= MAX_DECODE_ATTEMPTS
+
+    override fun isCorrupt(batchKey: String): Boolean = (attempts[batchKey] ?: 0) >= MAX_DECODE_ATTEMPTS
+
+    private val attempts = mutableMapOf<String, Int>()
 }
 
 /** The real [Replica] over an in-memory SQLite database. */
@@ -88,6 +105,10 @@ class ReplicaState(wall: Clock, deviceId: DeviceId) : SimState {
 
     override fun ingest(batchKey: String, batch: Batch): IngestResult =
         runBlocking { replica.ingest(PLUG, batchKey, batch) }
+
+    override fun unreadable(batchKey: String): Boolean = runBlocking { replica.unreadable(PLUG, batchKey) }
+
+    override fun isCorrupt(batchKey: String): Boolean = runBlocking { replica.isCorrupt(PLUG, batchKey) }
 
     override fun close() = replica.close()
 
