@@ -6,6 +6,7 @@ import com.msuite.core.model.Cell
 import com.msuite.core.model.CellKey
 import com.msuite.core.model.DeviceId
 import com.msuite.core.model.Hlc
+import com.msuite.core.model.Model
 import com.msuite.core.model.PlugId
 import com.msuite.core.model.Stamp
 import com.msuite.core.storage.LocalStore
@@ -26,9 +27,13 @@ interface SimState : AutoCloseable {
     /** A local write, stamped by the device's clock. */
     fun write(key: CellKey, value: ByteArray): Cell
 
-    fun delta(): Batch?
+    /**
+     * What to publish: the delta since the last push, or — with [snapshot] — the whole state once
+     * there is anything new. `null` when nothing changed since the last push.
+     */
+    fun outgoing(snapshot: Boolean): Batch?
 
-    fun pushed(delta: Batch)
+    fun pushed(batch: Batch)
 
     fun ingest(batchKey: String, batch: Batch): IngestResult
 
@@ -48,10 +53,13 @@ class MemoryState(wall: Clock, private val deviceId: DeviceId) : SimState {
     override fun write(key: CellKey, value: ByteArray): Cell =
         Cell(key, value, Stamp(clock.now(), deviceId)).also { state[key] = it }
 
-    override fun delta(): Batch? = buildDelta(state.values, watermark)
+    override fun outgoing(snapshot: Boolean): Batch? {
+        val delta = buildDelta(state.values, watermark) ?: return null
+        return if (snapshot) Batch(Model.DATA_MODEL_VERSION, state.values.toList()) else delta
+    }
 
-    override fun pushed(delta: Batch) {
-        watermark = delta.hlcHi()
+    override fun pushed(batch: Batch) {
+        watermark = batch.hlcHi()
     }
 
     override fun ingest(batchKey: String, batch: Batch): IngestResult = ingest(batch, state::get, clock).also {
@@ -71,9 +79,12 @@ class ReplicaState(wall: Clock, deviceId: DeviceId) : SimState {
         replica.write(mapOf(key to value))
     }.single()
 
-    override fun delta(): Batch? = runBlocking { replica.delta(PLUG) }
+    override fun outgoing(snapshot: Boolean): Batch? = runBlocking {
+        val delta = replica.delta(PLUG) ?: return@runBlocking null
+        if (snapshot) Batch(Model.DATA_MODEL_VERSION, replica.cells()) else delta
+    }
 
-    override fun pushed(delta: Batch) = runBlocking { replica.pushed(PLUG, delta) }
+    override fun pushed(batch: Batch) = runBlocking { replica.pushed(PLUG, batch) }
 
     override fun ingest(batchKey: String, batch: Batch): IngestResult =
         runBlocking { replica.ingest(PLUG, batchKey, batch) }

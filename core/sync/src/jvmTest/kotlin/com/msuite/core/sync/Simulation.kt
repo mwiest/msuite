@@ -13,13 +13,16 @@ import com.msuite.core.model.ProtoBatchEncoder
 import com.msuite.core.model.Stamp
 import com.msuite.core.model.Value
 import com.msuite.core.model.ValueCodec
+import com.msuite.core.sync.testing.BatchStore
 import com.msuite.core.sync.testing.Cluster
 import com.msuite.core.sync.testing.MemoryState
 import com.msuite.core.sync.testing.NetStep
 import com.msuite.core.sync.testing.SimBackend
 import com.msuite.core.sync.testing.SimDevice
 import com.msuite.core.sync.testing.SimStep
+import com.msuite.core.sync.testing.SimStore
 import com.msuite.core.sync.testing.TestClock
+import com.msuite.core.sync.testing.batches
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.comparables.shouldBeGreaterThan
@@ -48,7 +51,9 @@ class Simulation(
     seed: Long,
     recordCount: Int = 4,
     backend: SimBackend = ::MemoryState,
-) : Cluster(wallOffsets, seed, backend) {
+    store: SimStore = BatchStore(),
+    snapshots: Boolean = false,
+) : Cluster(wallOffsets, seed, backend, store, snapshots) {
     val records = List(recordCount) { Uuid.fromLongs(seed, it.toLong()) }
 
     /** Every cell ever written, the oracle for the LWW invariant. */
@@ -131,8 +136,8 @@ class Simulation(
             }
             return state
         }
-        ingestAll(emptyMap(), store) shouldBe final
+        ingestAll(emptyMap(), store.batches()) shouldBe final
         ingestAll(emptyMap(), listOf(snapshot)) shouldBe final
-        ingestAll(earlier, listOf(snapshot)) shouldBe ingestAll(earlier, store)
+        ingestAll(earlier, listOf(snapshot)) shouldBe ingestAll(earlier, store.batches())
     }
 }

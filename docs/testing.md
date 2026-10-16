@@ -35,13 +35,18 @@ gives every simulator:
   past the 24 h bound, and syncs to a fixpoint;
 - each device keeps its state behind `SimState` (`SimState.kt`): `MemoryState` runs the pure
   functions over a map, `ReplicaState` the real `Replica` over in-memory SQLite, so the storage
-  path is checked against the same invariants;
+  path is checked against the same invariants. The shared store is a `SimStore`: `BatchStore` keeps
+  batches in memory (Layer 1), `PlugStore` pushes encoded bytes through a real `BackendPlug`;
 - everything is seeded, including the `keyBetween` jitter and the clocks.
 
 Layer 1 writes generic `Write` steps to a few records. It is property-based (kotest-property, 1000
 schedules in memory and 300 through `Replica`, shrinking the step list), plus named scenarios: a
 faster clock wins a conflict, a causal edit wins on a slower clock, a delete beats an older edit,
 a far-future batch is held back and merged later.
+
+Layer 2 runs the same schedules with whole snapshots through a `PlugStore`, in memory and through
+`Replica` (`SimulatorTest.kt`), and checks that an object that won't decode is skipped and left for
+a retry (decision 0068). Invariant 12 lands with the folder plug at step 8.
 
 The ToDo simulator (`apps/todo/domain/src/jvmTest/.../TodoSimulation.kt`, driven by
 `TodoSimulatorTest.kt`) runs the real `ListCommands`, `TaskCommands` and `projectTodos()` on
@@ -107,7 +112,7 @@ Envelope (decision 0029, Layer 3):
 |---|---|---|
 | 1 | v1 step 2 (landed), gating the LWW merge | pure merge and HLC, invariants 1 to 11 and 13 |
 | 1 + ToDo rules | v1 step 4 (landed) | invariants 14 to 16, through the ToDo commands |
-| 2 | v1 step 5 (manual plug), step 8 (synced-folder plug on plain files) | the real plug wrapped in; invariant 12 with the folder plug |
+| 2 | v1 step 5 (landed), step 8 (synced-folder plug on plain files) | the real plug wrapped in; invariant 12 with the folder plug |
 | 3 | v1 step 6 | encrypted batches still converge, invariant 17 |
 
 ## Formatting and static analysis

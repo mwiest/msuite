@@ -3,8 +3,10 @@ package com.msuite.core.sync
 import com.msuite.core.model.Cell
 import com.msuite.core.model.CellKey
 import com.msuite.core.model.Value
+import com.msuite.core.sync.testing.MemoryPlug
 import com.msuite.core.sync.testing.MemoryState
 import com.msuite.core.sync.testing.NetStep
+import com.msuite.core.sync.testing.PlugStore
 import com.msuite.core.sync.testing.ReplicaState
 import com.msuite.core.sync.testing.SimBackend
 import com.msuite.core.sync.testing.SimStep
@@ -21,6 +23,7 @@ import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.long
 import io.kotest.property.arbitrary.map
 import io.kotest.property.checkAll
+import kotlinx.coroutines.runBlocking
 
 private const val HOUR = NetStep.HOUR
 private val DAY = HlcClock.MAX_AHEAD.inWholeMilliseconds
@@ -60,6 +63,24 @@ private fun Scenario.check(backend: SimBackend) = Simulation(offsets, seed, back
     sim.checkSnapshots(earlier)
 }
 
+// Layer 2: whole snapshots through a real plug, instead of deltas into a memory list (docs/testing.md).
+private fun Scenario.checkLayer2(backend: SimBackend) = Simulation(
+    offsets,
+    seed,
+    backend = backend,
+    store = PlugStore(MemoryPlug()),
+    snapshots = true,
+).use { sim ->
+    var earlier = emptyMap<CellKey, Cell>()
+    steps.forEachIndexed { i, step ->
+        if (i == captureAt) earlier = sim.devices.first().cells()
+        sim.run(step)
+    }
+    sim.quiesce()
+    sim.checkConverged()
+    sim.checkSnapshots(earlier)
+}
+
 private fun Simulation.title(device: Int, record: Int) = (value(device, record, SimField.TITLE) as Value.Text?)?.value
 
 class SimulatorTest : StringSpec({
@@ -69,6 +90,24 @@ class SimulatorTest : StringSpec({
 
     "any schedule converges the same through Replica and SQLite" {
         checkAll(PropTestConfig(iterations = 300), arbScenario) { it.check(::ReplicaState) }
+    }
+
+    "any schedule converges through a plug on the manual snapshot path (in memory)" {
+        checkAll(PropTestConfig(iterations = 300), arbScenario) { it.checkLayer2(::MemoryState) }
+    }
+
+    "the manual snapshot path converges through Replica and SQLite too" {
+        checkAll(PropTestConfig(iterations = 150), arbScenario) { it.checkLayer2(::ReplicaState) }
+    }
+
+    "an object that won't decode is skipped, not merged, and stays unmarked" {
+        val plug = MemoryPlug()
+        Simulation(listOf(0L), seed = 9, backend = ::MemoryState, store = PlugStore(plug)).use { sim ->
+            runBlocking { plug.put("sim/000999", byteArrayOf(0x08)) }
+            sim.pullAll(sim.devices[0])
+            sim.devices[0].cells() shouldBe emptyMap()
+            sim.devices[0].ingested shouldBe emptySet<String>()
+        }
     }
 
     "concurrent edits of one field: the faster clock wins, everywhere" {

@@ -36,9 +36,9 @@ Each slice is one commit, builds, and leaves the build green.
    (over `ProtoBatchEncoder`); a bad file raises `MalformedBatch`. Checks: two replicas converge
    through export/import, importing twice changes nothing, a far-future snapshot is deferred.
    Landed: `bfb438d`.
-3. [ ] **The version and decode seams.** `ingest` reports a batch from a newer data-model version
+3. [x] **The version and decode seams.** `ingest` reports a batch from a newer data-model version
    as a distinct non-merged result and `Replica` doesn't mark it ingested; a plug decode failure is
-   skipped. Decisions 0067, 0068. Checks in `IngestTest` and the Layer 2 store.
+   skipped. Decisions 0067, 0068. Checks in `IngestTest` and the Layer 2 store. Landed: `dbd8524`.
 4. [ ] **Simulator Layer 2.** `Cluster` syncs through a swappable store; `PlugStore` runs batches
    through a real `BackendPlug` and `ProtoBatchEncoder`; a simulation where devices publish whole
    snapshots converges (and re-publishing changes nothing). Invariant 12 on the contract.

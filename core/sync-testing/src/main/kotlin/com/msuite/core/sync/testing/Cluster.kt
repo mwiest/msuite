@@ -64,7 +64,7 @@ sealed interface NetStep : SimStep {
 class SimDevice(val id: DeviceId, wallMillis: Long, seed: Long, backend: SimBackend) {
     val wall = TestClock(wallMillis)
     val state = backend(wall, id)
-    val ingested = mutableSetOf<Int>()
+    val ingested = mutableSetOf<String>()
     var online = true
     var maxWallSeen = wallMillis
     val jitter = Random(seed)
@@ -81,15 +81,21 @@ class SimDevice(val id: DeviceId, wallMillis: Long, seed: Long, backend: SimBack
 
 /**
  * The multi-device harness of the simulator (decisions 0007, 0057, docs/testing.md): devices with
- * their own clocks, sharing an append-only store of batches through the real ingest and delta
- * code, each device's state kept by [backend]. Apps extend it with their own write steps and
- * invariants. Checks invariants 3 and 13 as it goes.
+ * their own clocks, syncing through an append-only [store], each device's state kept by [backend].
+ * Layer 1 publishes deltas into a [BatchStore]; Layer 2 sets [snapshots] and a [PlugStore] to run
+ * the real plug contract. Apps extend it with their own write steps and invariants. Checks
+ * invariants 3 and 13 as it goes.
  */
-open class Cluster(wallOffsets: List<Long>, seed: Long, backend: SimBackend) : AutoCloseable {
+open class Cluster(
+    wallOffsets: List<Long>,
+    seed: Long,
+    backend: SimBackend,
+    protected val store: SimStore = BatchStore(),
+    protected val snapshots: Boolean = false,
+) : AutoCloseable {
     val devices = wallOffsets.mapIndexed { i, offset ->
         SimDevice(DeviceId(seed + i), START + offset, seed + i, backend)
     }
-    val store = mutableListOf<Batch>()
 
     fun device(step: SimStep): SimDevice = devices[step.device.mod(devices.size)]
 
@@ -106,26 +112,25 @@ open class Cluster(wallOffsets: List<Long>, seed: Long, backend: SimBackend) : A
     }
 
     fun push(device: SimDevice) {
-        val delta = device.state.delta() ?: return
-        store += delta
-        device.ingested += store.lastIndex
-        device.state.pushed(delta)
+        val payload = device.state.outgoing(snapshots) ?: return
+        device.ingested += store.put(payload)
+        device.state.pushed(payload)
     }
 
     fun pull(device: SimDevice, random: Random) {
-        val unseen = store.indices.filter { it !in device.ingested && random.nextInt(TENTHS) < FETCH_TENTHS }
+        val unseen = store.keys().filter { it !in device.ingested && random.nextInt(TENTHS) < FETCH_TENTHS }
         val again = device.ingested.filter { random.nextInt(TENTHS) < REFETCH_TENTHS }
-        for (index in (unseen + again).shuffled(random)) ingestOne(device, index)
+        for (key in (unseen + again).shuffled(random)) ingestOne(device, key)
     }
 
     /** Downloads every unseen batch, in store order. */
     fun pullAll(device: SimDevice) {
-        store.indices.filter { it !in device.ingested }.forEach { ingestOne(device, it) }
+        store.keys().filter { it !in device.ingested }.forEach { ingestOne(device, it) }
     }
 
     /** Connects everyone, moves every wall clock past the 24 h bound, and syncs to a fixpoint. */
     fun quiesce() {
-        val written = devices.flatMap { it.cells().values } + store.flatMap { it.cells }
+        val written = devices.flatMap { it.cells().values } + store.batches().flatMap { it.cells }
         val latest = (devices.map { it.wall.millis } + written.map { it.stamp.hlc.pt }).max()
         val caughtUp = latest + HlcClock.MAX_AHEAD.inWholeMilliseconds + 1
         devices.forEach {
@@ -138,8 +143,8 @@ open class Cluster(wallOffsets: List<Long>, seed: Long, backend: SimBackend) : A
         }
         withClue("still syncing after $QUIESCENCE_ROUNDS rounds") {
             devices.forEach { device ->
-                device.state.delta().shouldBe(null)
-                (store.indices.toSet() - device.ingested).shouldBeEmpty()
+                device.state.outgoing(snapshots).shouldBe(null)
+                (store.keys().toSet() - device.ingested).shouldBeEmpty()
             }
         }
     }
@@ -157,9 +162,10 @@ open class Cluster(wallOffsets: List<Long>, seed: Long, backend: SimBackend) : A
         }
     }
 
-    private fun ingestOne(device: SimDevice, index: Int) {
-        val batch = store[index]
-        when (val result = device.state.ingest(index.toString(), batch)) {
+    private fun ingestOne(device: SimDevice, key: String) {
+        // A key that won't decode is skipped and retried, not merged, and stays unmarked (decision 0068).
+        val batch = store.get(key) ?: return
+        when (val result = device.state.ingest(key, batch)) {
             IngestResult.Deferred -> {
                 // Invariant 13: deferred only when more than 24 h ahead of this device's clock.
                 batch.hlcHi()!!.pt shouldBeGreaterThan device.wall.millis + HlcClock.MAX_AHEAD.inWholeMilliseconds
@@ -169,8 +175,8 @@ open class Cluster(wallOffsets: List<Long>, seed: Long, backend: SimBackend) : A
 
             is IngestResult.Merged -> {
                 // Invariant 3: delivering a batch again changes nothing.
-                if (index in device.ingested) result.changes.shouldBeEmpty()
-                device.ingested += index
+                if (key in device.ingested) result.changes.shouldBeEmpty()
+                device.ingested += key
             }
         }
     }
