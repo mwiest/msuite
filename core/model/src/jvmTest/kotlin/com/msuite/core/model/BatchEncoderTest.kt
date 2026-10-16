@@ -74,4 +74,11 @@ class BatchEncoderTest : StringSpec({
     "bytes that are not a batch are rejected" {
         shouldThrow<MalformedBatch> { encoder.decode(byteArrayOf(0x08)) }
     }
+
+    "decodeOrNull reads a batch and returns null for bytes that are not one" {
+        checkAll(arbBatch) { batch ->
+            encoder.decodeOrNull(encoder.encode(batch))?.cells shouldBe batch.cells
+        }
+        encoder.decodeOrNull(byteArrayOf(0x08)).shouldBe(null)
+    }
 })

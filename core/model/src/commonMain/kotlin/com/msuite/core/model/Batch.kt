@@ -34,6 +34,13 @@ interface BatchEncoder {
 /** Thrown by [BatchEncoder.decode] on bytes it can't read. A caller skips the batch and retries it later (0068). */
 class MalformedBatch(cause: Throwable? = null) : Exception("not an encoded batch", cause)
 
+/** [decode], or `null` if the bytes can't be read: the caller skips the batch and retries it later (0068). */
+fun BatchEncoder.decodeOrNull(bytes: ByteArray): Batch? = try {
+    decode(bytes)
+} catch (ignored: MalformedBatch) {
+    null
+}
+
 /** kotlinx.serialization ProtoBuf (decision 0016). The proto field numbers below can never change. */
 @OptIn(ExperimentalSerializationApi::class)
 object ProtoBatchEncoder : BatchEncoder {

@@ -2,8 +2,8 @@ package com.msuite.core.sync.testing
 
 import com.msuite.core.model.Batch
 import com.msuite.core.model.ProtoBatchEncoder
+import com.msuite.core.model.decodeOrNull
 import com.msuite.core.sync.BackendPlug
-import com.msuite.core.sync.decodeOrNull
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -22,7 +22,7 @@ class PlugStore(private val plug: BackendPlug) : SimStore {
 
     override fun keys(): List<String> = runBlocking { plug.list(PREFIX) }
 
-    override fun get(key: String): Batch? = runBlocking { plug.get(key)?.let(::decodeOrNull) }
+    override fun get(key: String): Batch? = runBlocking { plug.get(key)?.let { ProtoBatchEncoder.decodeOrNull(it) } }
 
     private companion object {
         const val PREFIX = "sim/"

@@ -4,9 +4,7 @@ import com.msuite.core.model.Batch
 import com.msuite.core.model.Cell
 import com.msuite.core.model.CellKey
 import com.msuite.core.model.Hlc
-import com.msuite.core.model.MalformedBatch
 import com.msuite.core.model.Model
-import com.msuite.core.model.ProtoBatchEncoder
 
 /** Merges a fetched batch into local state, unless it is too new or more than [HlcClock.MAX_AHEAD] ahead. */
 fun ingest(batch: Batch, local: (CellKey) -> Cell?, clock: HlcClock): IngestResult {
@@ -23,13 +21,6 @@ fun ingest(batch: Batch, local: (CellKey) -> Cell?, clock: HlcClock): IngestResu
             IngestResult.Merged(merge(local, batch.cells))
         }
     }
-}
-
-/** [ProtoBatchEncoder.decode], or `null` if the bytes can't be read: the caller skips and retries (decision 0068). */
-fun decodeOrNull(bytes: ByteArray): Batch? = try {
-    ProtoBatchEncoder.decode(bytes)
-} catch (ignored: MalformedBatch) {
-    null
 }
 
 sealed interface IngestResult {
