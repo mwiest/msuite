@@ -8,7 +8,8 @@ import io.kotest.matchers.shouldBe
 
 /**
  * The append-only contract every plug must keep (decision 0003; invariant 12 in docs/testing.md).
- * The folder plug (step 8) and the relay plug (step 9) run this too.
+ * The folder plug (step 8) and the relay plug (step 9) run this too. The plug is built with a seed
+ * so it lists keys jumbled: nothing in the contract owes or implies an order.
  */
 suspend fun assertPlugContract(plug: BackendPlug) {
     plug.get("missing").shouldBeNull()
@@ -37,6 +38,6 @@ suspend fun assertPlugContract(plug: BackendPlug) {
 
 class BackendPlugTest : StringSpec({
     "the in-memory plug keeps the append-only contract" {
-        assertPlugContract(MemoryPlug())
+        assertPlugContract(MemoryPlug(seed = 1))
     }
 })

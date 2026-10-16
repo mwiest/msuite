@@ -12,12 +12,15 @@ package com.msuite.core.sync
 interface BackendPlug {
     /**
      * Writes [bytes] under [key]. Create-only: an existing [key] is left untouched, never clobbered
-     * (decision 0003). Keys are content-addressed, so a repeated put carries the same bytes, and a
-     * caller treats an existing key as success.
+     * (decision 0003). Callers key objects by content (decision 0029), so a repeated put carries the
+     * same bytes and a caller treats an existing key as success.
      */
     suspend fun put(key: String, bytes: ByteArray)
 
-    /** The keys under [prefix], names only; every listed key points at a complete object (decision 0003). */
+    /**
+     * The keys under [prefix], names only, in no guaranteed order. A key can briefly point at
+     * incomplete bytes on some backends, so a caller tolerates an object it can't read (0068).
+     */
     suspend fun list(prefix: String): List<String>
 
     /** The bytes under [key], or `null` if it is absent. */

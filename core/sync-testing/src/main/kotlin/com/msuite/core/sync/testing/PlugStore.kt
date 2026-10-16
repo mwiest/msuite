@@ -5,27 +5,32 @@ import com.msuite.core.model.ProtoBatchEncoder
 import com.msuite.core.model.decodeOrNull
 import com.msuite.core.sync.BackendPlug
 import kotlinx.coroutines.runBlocking
+import java.security.MessageDigest
 
 /**
  * A [SimStore] over a real [BackendPlug] and the real codec (decision 0057): Layer 2 pushes encoded
  * bytes through the plug and reads them back, so the contract and `decodeOrNull` are exercised.
- * Keys are fixed-width so they keep publish order.
+ * Keys are the batch's SHA-256, like the content-addressed keys the live plugs will use (decision
+ * 0029): a repeated put carries the same bytes, and two stores over one plug can't clash and drop
+ * each other's batches. The order of `list` is no plug's contract, so keys come back sorted.
  */
 class PlugStore(private val plug: BackendPlug) : SimStore {
-    private var next = 0
-
     override fun put(batch: Batch): String {
-        val key = PREFIX + next++.toString().padStart(WIDTH, '0')
-        runBlocking { plug.put(key, ProtoBatchEncoder.encode(batch)) }
+        val bytes = ProtoBatchEncoder.encode(batch)
+        val key = PREFIX + bytes.sha256()
+        runBlocking { plug.put(key, bytes) }
         return key
     }
 
-    override fun keys(): List<String> = runBlocking { plug.list(PREFIX) }
+    override fun keys(): List<String> = runBlocking { plug.list(PREFIX) }.sorted()
 
     override fun get(key: String): Batch? = runBlocking { plug.get(key)?.let { ProtoBatchEncoder.decodeOrNull(it) } }
 
+    private fun ByteArray.sha256(): String = MessageDigest.getInstance("SHA-256")
+        .digest(this)
+        .joinToString("") { it.toUByte().toString(16).padStart(2, '0') }
+
     private companion object {
         const val PREFIX = "sim/"
-        const val WIDTH = 6
     }
 }

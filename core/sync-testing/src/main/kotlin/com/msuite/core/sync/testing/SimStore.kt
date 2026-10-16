@@ -11,7 +11,7 @@ interface SimStore {
     /** Publishes [batch]; returns the key it landed under. */
     fun put(batch: Batch): String
 
-    /** Every key, oldest first. */
+    /** Every key, in a deterministic order: merges are commutative, so the order only has to be stable. */
     fun keys(): List<String>
 
     /** The batch under [key], or `null` if its bytes can't be read (decision 0068: skip and retry). */
