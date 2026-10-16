@@ -25,12 +25,12 @@ private data object TasksRoute
 private data object SettingsRoute
 
 /**
- * The whole ToDo UI over [replica] and [settings]; [version] is shown in About. Platform shells
- * (apps/todo/android) only host it.
+ * The whole ToDo UI over [replica] and [settings]; [version] is shown in About, and [files] is the
+ * platform file picker for the manual plug. Platform shells (apps/todo/android) only host it.
  */
 @Composable
-fun TodoApp(replica: Replica, settings: TodoSettings, version: String) {
-    val app = remember(replica, settings) { TodoContainer(replica, settings) }
+fun TodoApp(replica: Replica, settings: TodoSettings, version: String, files: SnapshotFiles) {
+    val app = remember(replica, settings, files) { TodoContainer(replica, settings, files) }
     val myTasks = stringResource(Res.string.my_tasks)
     LaunchedEffect(app) { app.lists.createMyTasksIfMissing(myTasks) }
     val theme by settings.themeMode.collectAsState()
@@ -44,7 +44,7 @@ fun TodoApp(replica: Replica, settings: TodoSettings, version: String) {
         val nav = rememberNavController()
         NavHost(nav, startDestination = TasksRoute) {
             composable<TasksRoute> { TasksScreen(app) { nav.navigate(SettingsRoute) } }
-            composable<SettingsRoute> { SettingsScreen(settings, version) { nav.popBackStack() } }
+            composable<SettingsRoute> { SettingsScreen(app.settings, app.sync, version) { nav.popBackStack() } }
         }
     }
 }

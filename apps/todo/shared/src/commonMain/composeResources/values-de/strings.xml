@@ -50,6 +50,16 @@
     <string name="theme_system">Systemstandard</string>
     <string name="theme_light">Hell</string>
     <string name="theme_dark">Dunkel</string>
+    <string name="sync">Synchronisierung</string>
+    <string name="sync_manual_hint">Eine Snapshot-Datei von Hand zwischen Geräten weitergeben. Sie ist noch nicht verschlüsselt, daher nur zum Testen.</string>
+    <string name="export">Exportieren</string>
+    <string name="import_file">Importieren</string>
+    <string name="sync_exported">Exportiert.</string>
+    <string name="sync_imported">Importiert.</string>
+    <string name="sync_cancelled">Abgebrochen.</string>
+    <string name="sync_deferred">Die Datei kommt von einem Gerät mit weit vorauslaufender Uhr; später erneut importieren.</string>
+    <string name="sync_too_new">Die Datei stammt aus einer neueren App-Version; zuerst aktualisieren.</string>
+    <string name="sync_failed">Die Datei konnte nicht gelesen werden.</string>
     <string name="about">Über</string>
     <string name="app_name">msuite ToDo</string>
     <string name="version">Version</string>

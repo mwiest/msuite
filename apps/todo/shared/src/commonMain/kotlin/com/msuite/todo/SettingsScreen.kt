@@ -1,6 +1,7 @@
 package com.msuite.todo
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -21,6 +23,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,11 +40,21 @@ import com.msuite.todo.resources.about
 import com.msuite.todo.resources.app_name
 import com.msuite.todo.resources.author
 import com.msuite.todo.resources.back
+import com.msuite.todo.resources.export
 import com.msuite.todo.resources.ic_arrow_back
+import com.msuite.todo.resources.import_file
 import com.msuite.todo.resources.license
 import com.msuite.todo.resources.license_name
 import com.msuite.todo.resources.settings
 import com.msuite.todo.resources.source_code
+import com.msuite.todo.resources.sync
+import com.msuite.todo.resources.sync_cancelled
+import com.msuite.todo.resources.sync_deferred
+import com.msuite.todo.resources.sync_exported
+import com.msuite.todo.resources.sync_failed
+import com.msuite.todo.resources.sync_imported
+import com.msuite.todo.resources.sync_manual_hint
+import com.msuite.todo.resources.sync_too_new
 import com.msuite.todo.resources.theme
 import com.msuite.todo.resources.theme_dark
 import com.msuite.todo.resources.theme_light
@@ -46,6 +62,7 @@ import com.msuite.todo.resources.theme_system
 import com.msuite.todo.resources.third_party
 import com.msuite.todo.resources.third_party_licenses
 import com.msuite.todo.resources.version
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -53,10 +70,10 @@ private const val AUTHOR = "Marc Wiest"
 private const val SOURCE_URL = "https://github.com/mwiest/msuite"
 private const val LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 
-/** The theme for now; step 5 adds the backend plug (decision 0064). About sits at the bottom. */
+/** The theme and the manual plug; step 6 encrypts the export, later steps add live plugs (decision 0064). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(settings: TodoSettings, version: String, onBack: () -> Unit) {
+fun SettingsScreen(settings: TodoSettings, sync: SyncActions, version: String, onBack: () -> Unit) {
     val theme by settings.themeMode.collectAsState()
     Scaffold(
         topBar = {
@@ -74,7 +91,40 @@ fun SettingsScreen(settings: TodoSettings, version: String, onBack: () -> Unit) 
             SectionTitle(stringResource(Res.string.theme))
             ThemePicker(theme, settings::setThemeMode)
             HorizontalDivider(Modifier.padding(top = 24.dp))
+            SyncSection(sync)
+            HorizontalDivider(Modifier.padding(top = 24.dp))
             About(version)
+        }
+    }
+}
+
+/** Export/import of one snapshot file, the manual plug (decision 0066). Plaintext until step 6. */
+@Composable
+private fun SyncSection(sync: SyncActions) {
+    var result by remember { mutableStateOf<SyncResult?>(null) }
+    val scope = rememberCoroutineScope()
+    SectionTitle(stringResource(Res.string.sync))
+    Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
+        Text(
+            stringResource(Res.string.sync_manual_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { scope.launch { result = sync.export() } }) {
+                Text(stringResource(Res.string.export))
+            }
+            Button(onClick = { scope.launch { result = sync.import() } }) {
+                Text(stringResource(Res.string.import_file))
+            }
+        }
+        result?.let {
+            Text(
+                stringResource(it.label()),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }
@@ -147,4 +197,13 @@ private fun ThemeMode.label() = when (this) {
     ThemeMode.System -> Res.string.theme_system
     ThemeMode.Light -> Res.string.theme_light
     ThemeMode.Dark -> Res.string.theme_dark
+}
+
+private fun SyncResult.label() = when (this) {
+    SyncResult.Exported -> Res.string.sync_exported
+    SyncResult.Imported -> Res.string.sync_imported
+    SyncResult.Cancelled -> Res.string.sync_cancelled
+    SyncResult.Deferred -> Res.string.sync_deferred
+    SyncResult.TooNew -> Res.string.sync_too_new
+    SyncResult.Failed -> Res.string.sync_failed
 }

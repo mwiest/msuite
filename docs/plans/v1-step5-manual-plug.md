@@ -39,9 +39,10 @@ Each slice is one commit, builds, and leaves the build green.
 3. [x] **The version and decode seams.** `ingest` reports a batch from a newer data-model version
    as a distinct non-merged result and `Replica` doesn't mark it ingested; a plug decode failure is
    skipped. Decisions 0067, 0068. Checks in `IngestTest` and the Layer 2 store. Landed: `dbd8524`.
-4. [ ] **Simulator Layer 2.** `Cluster` syncs through a swappable store; `PlugStore` runs batches
+4. [x] **Simulator Layer 2.** `Cluster` syncs through a swappable store; `PlugStore` runs batches
    through a real `BackendPlug` and `ProtoBatchEncoder`; a simulation where devices publish whole
-   snapshots converges (and re-publishing changes nothing). Invariant 12 on the contract.
+   snapshots converges (and re-publishing changes nothing). Invariant 12 on the contract. Landed:
+   `9d43dce`.
 5. [ ] **Settings UI and the Android file picker.** An "Export"/"Import" section in
    `SettingsScreen`, launching the system create/open-document pickers through a platform interface
    in the shell; strings in English and German. Checked on an emulator.
