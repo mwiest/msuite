@@ -31,10 +31,11 @@ Each slice is one commit, builds, and leaves the build green.
    `MemoryPlug` in `core/sync-testing`; a contract test: create-only, `get` round-trips, `list`
    returns a prefix's keys and no partial object, keys never clash. Decision 0066. Landed:
    `914580e`.
-2. [ ] **Snapshots and the manual plug.** `Replica.snapshot()` and a merge path shared with
-   `ingest`; `ManualSync.export()` / `import(bytes)` over `ProtoBatchEncoder`; a bad file surfaces
-   a typed error. Checks: two replicas converge through export/import, importing twice changes
-   nothing, a far-future snapshot is deferred.
+2. [x] **Snapshots and the manual plug.** `ManualSync.export()` builds the whole state into a
+   `Batch` and `import(bytes)` merges through a `Replica.mergeRemote` path shared with `ingest`
+   (over `ProtoBatchEncoder`); a bad file raises `MalformedBatch`. Checks: two replicas converge
+   through export/import, importing twice changes nothing, a far-future snapshot is deferred.
+   Landed: `bfb438d`.
 3. [ ] **The version and decode seams.** `ingest` reports a batch from a newer data-model version
    as a distinct non-merged result and `Replica` doesn't mark it ingested; a plug decode failure is
    skipped. Decisions 0067, 0068. Checks in `IngestTest` and the Layer 2 store.
