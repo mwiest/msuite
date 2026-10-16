@@ -50,6 +50,23 @@ Each slice is one commit, builds, and leaves the build green.
 5. [x] **Settings UI and the Android file picker.** An "Export"/"Import" section in
    `SettingsScreen`, launching the system create/open-document pickers through a platform interface
    in the shell; strings in English and German. Landed: `9ae8e50`. Emulator check: pending.
+6. [x] **The store seam, hardened.** `decodeOrNull` becomes an extension on `BatchEncoder` in
+   `core/model`, where step 6's encrypted decode chain will land. `PlugStore` keys objects by the
+   batch's SHA-256: two stores over one plug can no longer mint the same keys and lose batches to
+   create-only put, and Layer 2 now exercises the content-addressing of decision 0029. `keys()`
+   sorts, so no plug's `list` order is relied on, and `MemoryPlug` lists keys jumbled on purpose.
+   Landed: `d67989c`, `05cb599`.
+7. [x] **The plug contract test published.** `assertPlugContract` moves to `core/sync-testing`,
+   where the folder plug (step 8) and the relay plug (step 9) can actually run it. Landed: `cb96bb6`.
+8. [x] **Bounded retries and the corrupt flag.** A failed decode is recorded per plug and key;
+   after `MAX_DECODE_ATTEMPTS` (3) the key is flagged corrupt and not fetched again, the bytes
+   staying in the backend (decision 0069, schema migration 1). The simulator asserts the skip over
+   `MemoryState` and over `Replica` with SQLite. Landed: `2fbc30f`.
+9. [x] **The sync actions in the domain module.** `SyncActions`, `SyncResult` and `SnapshotFiles`
+   move to `apps/todo/domain` with unit tests (decision 0051); the file outcome is sealed, so a
+   failed write no longer reads as a cancel, the snapshot is taken after the destination is picked,
+   the import read is capped, and the buttons disable while an operation runs. Landed: `5789870`.
+   Emulator check: pending.
 
 ## Open questions
 
