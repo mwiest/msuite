@@ -60,6 +60,7 @@
     <string name="sync_deferred">That file is from a device whose clock is far ahead; import it again later.</string>
     <string name="sync_too_new">That file is from a newer app version; update first.</string>
     <string name="sync_failed">That file could not be read.</string>
+    <string name="sync_write_failed">The file could not be written.</string>
     <string name="about">About</string>
     <string name="app_name">msuite ToDo</string>
     <string name="version">Version</string>

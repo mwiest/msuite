@@ -11,6 +11,8 @@ import io.kotest.matchers.shouldBe
  * relay plug (step 9) later. The plug is built with a seed so it lists keys jumbled: nothing in
  * the contract owes or implies an order.
  */
+// The numbers below are the contract's literal bytes, not calculations.
+@Suppress("MagicNumber")
 suspend fun assertPlugContract(plug: BackendPlug) {
     plug.get("missing").shouldBeNull()
     plug.list("ns/") shouldBe emptyList<String>()

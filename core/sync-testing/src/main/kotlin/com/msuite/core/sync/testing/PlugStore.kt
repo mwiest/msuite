@@ -28,9 +28,11 @@ class PlugStore(private val plug: BackendPlug) : SimStore {
 
     private fun ByteArray.sha256(): String = MessageDigest.getInstance("SHA-256")
         .digest(this)
-        .joinToString("") { it.toUByte().toString(16).padStart(2, '0') }
+        .joinToString("") { it.toUByte().toString(HEX_RADIX).padStart(HEX_DIGITS_PER_BYTE, '0') }
 
     private companion object {
         const val PREFIX = "sim/"
+        const val HEX_RADIX = 16
+        const val HEX_DIGITS_PER_BYTE = 2
     }
 }

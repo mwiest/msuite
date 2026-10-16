@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.msuite.todo.domain.SyncActions
+import com.msuite.todo.domain.SyncResult
 import com.msuite.todo.domain.ThemeMode
 import com.msuite.todo.domain.TodoSettings
 import com.msuite.todo.resources.Res
@@ -55,6 +57,7 @@ import com.msuite.todo.resources.sync_failed
 import com.msuite.todo.resources.sync_imported
 import com.msuite.todo.resources.sync_manual_hint
 import com.msuite.todo.resources.sync_too_new
+import com.msuite.todo.resources.sync_write_failed
 import com.msuite.todo.resources.theme
 import com.msuite.todo.resources.theme_dark
 import com.msuite.todo.resources.theme_light
@@ -102,7 +105,18 @@ fun SettingsScreen(settings: TodoSettings, sync: SyncActions, version: String, o
 @Composable
 private fun SyncSection(sync: SyncActions) {
     var result by remember { mutableStateOf<SyncResult?>(null) }
+    var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    // One operation at a time: a second launch would replace the pending picker request, and the
+    // call waiting on it would never come back.
+    fun run(action: suspend () -> SyncResult) {
+        scope.launch {
+            busy = true
+            result = action()
+            busy = false
+        }
+    }
     SectionTitle(stringResource(Res.string.sync))
     Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
         Text(
@@ -112,10 +126,10 @@ private fun SyncSection(sync: SyncActions) {
             modifier = Modifier.padding(bottom = 8.dp),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { scope.launch { result = sync.export() } }) {
+            Button(enabled = !busy, onClick = { run(sync::export) }) {
                 Text(stringResource(Res.string.export))
             }
-            Button(onClick = { scope.launch { result = sync.import() } }) {
+            Button(enabled = !busy, onClick = { run(sync::import) }) {
                 Text(stringResource(Res.string.import_file))
             }
         }
@@ -205,5 +219,6 @@ private fun SyncResult.label() = when (this) {
     SyncResult.Cancelled -> Res.string.sync_cancelled
     SyncResult.Deferred -> Res.string.sync_deferred
     SyncResult.TooNew -> Res.string.sync_too_new
+    SyncResult.WriteFailed -> Res.string.sync_write_failed
     SyncResult.Failed -> Res.string.sync_failed
 }

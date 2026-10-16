@@ -9,3 +9,9 @@ style:
   MagicNumber:
     # Annotation arguments such as @ProtoNumber(3) are the protocol, not magic.
     ignoreAnnotation: true
+
+complexity:
+  TooManyFunctions:
+    # Replica is the device's one state API: write, ingest, unreadable, delta, cells and friends.
+    # The rule reports at the threshold, so this reads "12 and up".
+    thresholdInClasses: 13

@@ -3,6 +3,8 @@ package com.msuite.todo
 import com.msuite.core.sync.ManualSync
 import com.msuite.core.sync.Replica
 import com.msuite.todo.domain.ListCommands
+import com.msuite.todo.domain.SnapshotFiles
+import com.msuite.todo.domain.SyncActions
 import com.msuite.todo.domain.TaskCommands
 import com.msuite.todo.domain.TodoSettings
 import com.msuite.todo.domain.TodoState
