@@ -7,6 +7,7 @@ import com.msuite.core.model.DeviceId
 import com.msuite.core.model.FieldId
 import com.msuite.core.model.Hlc
 import com.msuite.core.model.Model
+import com.msuite.core.model.ProtoBatchEncoder
 import com.msuite.core.model.Stamp
 import com.msuite.core.sync.testing.TestClock
 import io.kotest.core.spec.style.StringSpec
@@ -47,6 +48,19 @@ class IngestTest : StringSpec({
 
     "an empty batch merges nothing" {
         ingest(Batch(1, emptyList()), { null }, HlcClock(TestClock(0))) shouldBe IngestResult.Merged(emptyList())
+    }
+
+    "a batch from a newer data-model version is held back and leaves the clock alone" {
+        val clock = HlcClock(TestClock(1_000))
+        val batch = Batch(Model.DATA_MODEL_VERSION + 1, listOf(cell(1, 500)))
+        ingest(batch, { null }, clock) shouldBe IngestResult.TooNew
+        clock.now() shouldBe Hlc.of(1_000, 0)
+    }
+
+    "decodeOrNull skips unreadable bytes but returns a batch" {
+        val batch = Batch(Model.DATA_MODEL_VERSION, listOf(cell(1, 10)))
+        decodeOrNull(ProtoBatchEncoder.encode(batch))?.cells shouldContainExactly batch.cells
+        decodeOrNull(byteArrayOf(0x08)).shouldBeNull()
     }
 
     "a delta holds the cells newer than the watermark" {

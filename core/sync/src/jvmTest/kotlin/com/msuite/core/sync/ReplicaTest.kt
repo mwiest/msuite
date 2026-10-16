@@ -134,6 +134,16 @@ class ReplicaTest : StringSpec({
         store.plugs.isIngested(folder, "k1") shouldBe false
     }
 
+    "a batch from a newer app version is held back and stays unmarked" {
+        val driver = driver()
+        val store = LocalStore(driver)
+        val replica = Replica(driver, deviceA, TestClock(1_000))
+        val batch = Batch(Model.DATA_MODEL_VERSION + 1, listOf(remote(1, 500)))
+        replica.ingest(folder, "k1", batch) shouldBe IngestResult.TooNew
+        store.cells().shouldBeEmpty()
+        store.plugs.isIngested(folder, "k1") shouldBe false
+    }
+
     "a delta holds what wasn't pushed to that plug yet" {
         val replica = Replica(driver(), deviceA, TestClock(1_000))
         val first = replica.write(mapOf(key(1) to byteArrayOf(1)))

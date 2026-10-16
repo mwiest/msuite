@@ -165,6 +165,8 @@ open class Cluster(wallOffsets: List<Long>, seed: Long, backend: SimBackend) : A
                 batch.hlcHi()!!.pt shouldBeGreaterThan device.wall.millis + HlcClock.MAX_AHEAD.inWholeMilliseconds
             }
 
+            IngestResult.TooNew -> error("the simulator never produces a newer-version batch")
+
             is IngestResult.Merged -> {
                 // Invariant 3: delivering a batch again changes nothing.
                 if (index in device.ingested) result.changes.shouldBeEmpty()

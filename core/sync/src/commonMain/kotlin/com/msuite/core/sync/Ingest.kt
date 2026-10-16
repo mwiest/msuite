@@ -4,10 +4,14 @@ import com.msuite.core.model.Batch
 import com.msuite.core.model.Cell
 import com.msuite.core.model.CellKey
 import com.msuite.core.model.Hlc
+import com.msuite.core.model.MalformedBatch
 import com.msuite.core.model.Model
+import com.msuite.core.model.ProtoBatchEncoder
 
-/** Merges a fetched batch into local state, unless it is more than [HlcClock.MAX_AHEAD] ahead. */
+/** Merges a fetched batch into local state, unless it is too new or more than [HlcClock.MAX_AHEAD] ahead. */
 fun ingest(batch: Batch, local: (CellKey) -> Cell?, clock: HlcClock): IngestResult {
+    // A newer app version's batch may carry semantics this one doesn't know (decision 0067).
+    if (batch.dataModelVersion > Model.DATA_MODEL_VERSION) return IngestResult.TooNew
     val hlcHi = batch.hlcHi()
     return when {
         hlcHi == null -> IngestResult.Merged(emptyList())
@@ -21,9 +25,19 @@ fun ingest(batch: Batch, local: (CellKey) -> Cell?, clock: HlcClock): IngestResu
     }
 }
 
+/** [ProtoBatchEncoder.decode], or `null` if the bytes can't be read: the caller skips and retries (decision 0068). */
+fun decodeOrNull(bytes: ByteArray): Batch? = try {
+    ProtoBatchEncoder.decode(bytes)
+} catch (ignored: MalformedBatch) {
+    null
+}
+
 sealed interface IngestResult {
     /** Too far in the future (decision 0040): don't mark it ingested, retry on a later sync. */
     data object Deferred : IngestResult
+
+    /** From a newer data-model version than this app knows (decision 0067): retry after an update. */
+    data object TooNew : IngestResult
 
     /** [changes] are the cells to write into local state. */
     data class Merged(val changes: List<Cell>) : IngestResult

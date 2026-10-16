@@ -1,10 +1,13 @@
 package com.msuite.core.sync
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.msuite.core.model.Batch
 import com.msuite.core.model.CellKey
 import com.msuite.core.model.DeviceId
 import com.msuite.core.model.FieldId
 import com.msuite.core.model.MalformedBatch
+import com.msuite.core.model.Model
+import com.msuite.core.model.ProtoBatchEncoder
 import com.msuite.core.storage.LocalStore
 import com.msuite.core.sync.testing.TestClock
 import io.kotest.assertions.throwables.shouldThrow
@@ -58,5 +61,14 @@ class ManualSyncTest : StringSpec({
     "bytes that are not a snapshot are rejected" {
         val a = Replica(driver(), DeviceId(1), TestClock(1_000))
         shouldThrow<MalformedBatch> { ManualSync(a).import(byteArrayOf(0x08)) }
+    }
+
+    "a snapshot from a newer app version is held back" {
+        val a = Replica(driver(), DeviceId(1), TestClock(1_000))
+        val b = Replica(driver(), DeviceId(2), TestClock(1_000))
+        a.write(mapOf(key(1) to byteArrayOf(1)))
+        val bytes = ProtoBatchEncoder.encode(Batch(Model.DATA_MODEL_VERSION + 1, a.cells()))
+        ManualSync(b).import(bytes) shouldBe IngestResult.TooNew
+        b.cells().shouldBeEmpty()
     }
 })
