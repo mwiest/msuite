@@ -8,7 +8,7 @@ Status: **all slices landed; the two-device check is pending.** Started 2026-10-
 Two devices prove the merge across a boundary: one exports its whole state to a file, the other
 imports it and both converge. Along the way the append-only `put`/`list`/`get` contract that the
 live plugs (synced folder, relay) will implement is frozen and contract-tested. The manual export is
-plaintext and debug-only until step 6 encrypts it (decisions 0003, 0042).
+plaintext, so the path is a proof of concept until step 6 encrypts it (decisions 0003, 0042).
 
 ## Decisions
 
@@ -20,7 +20,8 @@ plaintext and debug-only until step 6 encrypts it (decisions 0003, 0042).
   (decision 0068).
 - Layer 2 wraps the real plug contract in the `Cluster` harness, so step 8 swaps a plain-file
   folder in with nothing else changing (decision 0057, `testing.md`).
-- The export is plaintext and debug-only until step 6 (v1 plan; architecture.md → Backend plugs).
+- The export is plaintext, so the whole path is a proof of concept until step 6 (v1 plan;
+  architecture.md → Backend plugs).
 - The snapshot merges through the same `ingest` reducer as a delta (invariant 11), so it is one
   code path (decision 0002).
 

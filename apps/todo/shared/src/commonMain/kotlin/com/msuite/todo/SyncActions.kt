@@ -9,7 +9,8 @@ enum class SyncResult { Exported, Imported, Cancelled, Deferred, TooNew, Failed 
 
 /**
  * The manual plug wired to a file picker (decision 0066). Export writes the whole state to a file
- * the user picks; import merges a file in. The export is plaintext and debug-only until step 6.
+ * the user picks; import merges a file in. The export is plaintext, so this is a proof of concept
+ * until step 6 encrypts it.
  */
 class SyncActions(private val sync: ManualSync, private val files: SnapshotFiles) {
     suspend fun export(): SyncResult = if (files.export(sync.export())) SyncResult.Exported else SyncResult.Cancelled

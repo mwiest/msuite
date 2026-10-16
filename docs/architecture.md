@@ -218,7 +218,8 @@ the rest.
 The manual plug is a single-file export/import holding one full-state snapshot (code: `ManualSync`
 in `core/sync`; decision 0066). Importing merges `local ⊕ snapshot`; a snapshot is a delta over
 every field, so this exercises the same reducer. Until encryption lands (step 6) the export is
-plaintext and debug-only; after that it is encrypted. The live plugs implement `BackendPlug`; the
+plaintext: the manual path is a proof of concept until then, not a way to carry real data. The live
+plugs implement `BackendPlug`; the
 multi-object keys are first used at runtime by the synced-folder plug, the v1 milestone (decision
 0042). Its logic sits behind a small file-system interface, so the simulator runs it on `jvm` with
 plain files.

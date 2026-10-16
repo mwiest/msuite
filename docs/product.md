@@ -15,7 +15,8 @@ field or close the sheet. A long press drags an open task to a new place. The "+
 the top bar's menu renames the selected list, moves it left or right, or deletes it after confirming
 how many tasks go with it ("My Tasks" can't be deleted). The gear opens the settings: the theme
 (system default, light or dark), a Sync section that exports the device's whole state to a file or
-merges one in (plaintext for now, so this is a debug feature), and an About section with the version,
+merges one in (plaintext for now, so keep it to test data: it turns real at step 6, when the export
+is encrypted), and an About section with the version,
 author, licence (GPL v3 or later), a link to the source code and the open-source libraries used.
 Everything is kept on the device; Android backup is off. Its intended features are in
 [`plans/v1-todo.md`](plans/v1-todo.md).
@@ -53,8 +54,9 @@ sync layer. Success is a working demonstration of the architecture and UX, not a
 ## Sync, as the user sees it
 
 Partly built. Settings has Export and Import: Export writes the device's whole state to one file,
-Import merges a chosen file in (plaintext and debug-only until encryption lands, step 6). Live sync
-is not built yet. Architecture in `architecture.md`.
+Import merges a chosen file in. The file is plaintext, so this is a proof of concept until
+encryption lands at step 6, not a path for real data. Live sync is not built yet. Architecture in
+`architecture.md`.
 
 - Sync is optional. The user picks a backend: none (export/import a file), a synced folder
   (Syncthing, Nextcloud, Dropbox), WebDAV, an S3-compatible bucket, or the self-hostable msuite

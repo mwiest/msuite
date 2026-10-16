@@ -17,7 +17,7 @@ users. No web app.
 - Infra-first, starting with the pure merge core; only door-openers, never deferred machinery
   (decision 0034).
 - Steps 2 to 5 are plaintext; crypto (6) and pairing (7) come after manual sync (5) has proven the
-  merge. The plaintext export of step 5 is debug-only and becomes encrypted in step 6.
+  merge. The plaintext export of step 5 is a proof of concept until it becomes encrypted in step 6.
 - The v1 shipping plug is the manual single-file export/import of one full-state snapshot
   (decision 0003, `architecture.md` → Backend plugs).
 - Storage is one generic `field_state` table (decision 0035); no local op-log (decision 0036).
@@ -71,7 +71,8 @@ Each step may take several commits; a step that grows big gets its own plan.
    invariants 14 to 16. Proves: a usable offline app exists. Decisions 0049 to 0064; the wiring
    and UI are in `architecture.md`. Checked on an emulator. Landed: `674ab59` to `292e00e`.
 5. [ ] **Backend-plug interface and the manual plug.** `put`/`list`/`get`; export/import of one
-   full-state snapshot (plaintext, debug-only); simulator Layer 2. Proves: merge across two
+   full-state snapshot (plaintext; a proof of concept until step 6 encrypts it); simulator Layer 2.
+   Proves: merge across two
    devices. Plan: [`v1-step5-manual-plug.md`](v1-step5-manual-plug.md).
 6. [ ] **E2E encryption of batches** in `core/crypto`: envelope with the object key in the AAD
    (decision 0029); the manual export becomes encrypted; root at rest via KeyStore (decision

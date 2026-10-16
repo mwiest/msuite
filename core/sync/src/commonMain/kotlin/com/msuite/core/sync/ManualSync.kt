@@ -7,7 +7,7 @@ import com.msuite.core.model.ProtoBatchEncoder
 /**
  * The manual plug (decision 0066): the user exports the whole state to one file and imports a file
  * on another device. There is no key and no list; the user is the transport. Until step 6 the
- * export is plaintext and debug-only.
+ * export is plaintext, so the path is a proof of concept until step 6 encrypts it.
  */
 class ManualSync(private val replica: Replica) {
     /** The whole local state, encoded. */
