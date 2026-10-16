@@ -30,7 +30,7 @@ Each slice is one commit, builds, and leaves the build green.
 1. [x] **The plug contract.** `BackendPlug` (`put`/`list`/`get`) in `core/sync` and an in-memory
    `MemoryPlug` in `core/sync-testing`; a contract test: create-only, `get` round-trips, `list`
    returns a prefix's keys and no partial object, keys never clash. Decision 0066. Landed:
-   `0f739be`.
+   `914580e`.
 2. [ ] **Snapshots and the manual plug.** `Replica.snapshot()` and a merge path shared with
    `ingest`; `ManualSync.export()` / `import(bytes)` over `ProtoBatchEncoder`; a bad file surfaces
    a typed error. Checks: two replicas converge through export/import, importing twice changes

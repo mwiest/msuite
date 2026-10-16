@@ -27,8 +27,12 @@ class Batch(val dataModelVersion: Int, cells: List<Cell>) {
 interface BatchEncoder {
     fun encode(batch: Batch): ByteArray
 
+    /** @throws MalformedBatch if [bytes] are not a batch this encoder wrote. */
     fun decode(bytes: ByteArray): Batch
 }
+
+/** Thrown by [BatchEncoder.decode] on bytes it can't read. A caller skips the batch and retries it later (0068). */
+class MalformedBatch(cause: Throwable? = null) : Exception("not an encoded batch", cause)
 
 /** kotlinx.serialization ProtoBuf (decision 0016). The proto field numbers below can never change. */
 @OptIn(ExperimentalSerializationApi::class)
@@ -37,9 +41,11 @@ object ProtoBatchEncoder : BatchEncoder {
         BatchProto(batch.dataModelVersion, batch.cells.map { it.toProto() }),
     )
 
-    override fun decode(bytes: ByteArray): Batch {
+    override fun decode(bytes: ByteArray): Batch = try {
         val proto = ProtoBuf.decodeFromByteArray<BatchProto>(bytes)
-        return Batch(proto.dataModelVersion, proto.cells.map { it.toCell() })
+        Batch(proto.dataModelVersion, proto.cells.map { it.toCell() })
+    } catch (e: IllegalArgumentException) {
+        throw MalformedBatch(e)
     }
 
     private fun Cell.toProto() = CellProto(

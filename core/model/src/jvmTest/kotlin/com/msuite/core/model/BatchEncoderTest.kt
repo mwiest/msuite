@@ -70,4 +70,8 @@ class BatchEncoderTest : StringSpec({
             encoder.decode(newer).cells shouldBe batch.cells.sortedWith(Batch.CELL_ORDER)
         }
     }
+
+    "bytes that are not a batch are rejected" {
+        shouldThrow<MalformedBatch> { encoder.decode(byteArrayOf(0x08)) }
+    }
 })

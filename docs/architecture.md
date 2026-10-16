@@ -15,7 +15,7 @@ are code say so. Each part becomes "what the code does" as its step in
 |---|---|---|---|
 | `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `CoreFields`, `Stamp`, `Cell`, `PlugId`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks, the device ID | `LocalStore` over all four tables (see Sync → Data and merge) |
-| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, simulator Layer 1 |
+| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, `ManualSync`, simulator Layer 1 |
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `TestClock`, `MemoryPlug` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | Placeholder |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
@@ -213,12 +213,13 @@ the rest.
 | Object storage (S3, R2, B2, MinIO) | an object | a key prefix | native | `If-None-Match: *` | `ListObjectsV2(prefix)` |
 | Relay | a file on disk | nested directories | relay does temp + rename | relay rejects existing names and checks the hash | relay lists the namespace |
 
-The manual plug is a single-file export/import holding one full-state snapshot. Importing merges
-`local ⊕ snapshot`; a snapshot is a delta over every field, so this exercises the same reducer.
-Until encryption lands (step 6) the export is plaintext and debug-only; after that it is
-encrypted. The multi-object keys are first used at runtime by the synced-folder plug, the v1
-milestone (decision 0042). Its logic sits behind a small file-system interface, so the simulator
-runs it on `jvm` with plain files.
+The manual plug is a single-file export/import holding one full-state snapshot (code: `ManualSync`
+in `core/sync`; decision 0066). Importing merges `local ⊕ snapshot`; a snapshot is a delta over
+every field, so this exercises the same reducer. Until encryption lands (step 6) the export is
+plaintext and debug-only; after that it is encrypted. The live plugs implement `BackendPlug`; the
+multi-object keys are first used at runtime by the synced-folder plug, the v1 milestone (decision
+0042). Its logic sits behind a small file-system interface, so the simulator runs it on `jvm` with
+plain files.
 
 ### Relay
 

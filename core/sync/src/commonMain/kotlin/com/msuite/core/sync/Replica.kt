@@ -62,13 +62,13 @@ class Replica private constructor(
     /** Merges [batch], fetched from [plug] under [batchKey]; a key ingested before is skipped. */
     suspend fun ingest(plug: PlugId, batchKey: String, batch: Batch): IngestResult = serialized {
         if (store.plugs.isIngested(plug, batchKey)) return@serialized IngestResult.Merged(emptyList())
-        ingest(batch, store::cell, clock).also { result ->
-            if (result is IngestResult.Merged) {
-                store.write(result.changes)
-                store.plugs.markIngested(plug, batchKey)
-            }
+        mergeLocked(batch).also { result ->
+            if (result is IngestResult.Merged) store.plugs.markIngested(plug, batchKey)
         }
-    }.also { if (it is IngestResult.Merged && it.changes.isNotEmpty()) tick() }
+    }
+
+    /** Merges [batch] with no plug bookkeeping: the manual snapshot path (decision 0066). */
+    suspend fun mergeRemote(batch: Batch): IngestResult = serialized { mergeLocked(batch) }
 
     /** What [plug] hasn't been sent yet, or `null`; after a successful put, call [pushed]. */
     suspend fun delta(plug: PlugId): Batch? = serialized {
@@ -81,13 +81,24 @@ class Replica private constructor(
         serialized { store.plugs.setWatermark(plug, hlcHi) }
     }
 
-    suspend fun cells(): List<Cell> = serialized { store.cells() }
-
-    suspend fun cells(recordId: Uuid): List<Cell> = serialized { store.cells(recordId) }
+    /** Every cell, or only [recordId]'s cells. */
+    suspend fun cells(recordId: Uuid? = null): List<Cell> = serialized {
+        if (recordId == null) store.cells() else store.cells(recordId)
+    }
 
     override fun close() = store.close()
 
     private fun tick() = ticks.update { it + 1 }
+
+    /** Merges under the lock, ticking when something changed; no plug bookkeeping. */
+    private fun mergeLocked(batch: Batch): IngestResult {
+        val result = ingest(batch, store::cell, clock)
+        if (result is IngestResult.Merged && result.changes.isNotEmpty()) {
+            store.write(result.changes)
+            tick()
+        }
+        return result
+    }
 
     companion object {
         /** Opens the replica with the device ID stored in the database, created on first open (decision 0058). */
