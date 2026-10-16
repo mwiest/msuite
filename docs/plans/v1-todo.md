@@ -1,7 +1,8 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 4 done; step 5 (backend-plug interface and the manual plug) next.** Started
-2026-07-02; reordered 2026-10-11 (decision 0034).
+Status: **steps 0 to 4 done; step 5 (backend-plug interface and the manual plug) in progress:**
+[`v1-step5-manual-plug.md`](v1-step5-manual-plug.md). Started 2026-07-02; reordered 2026-10-11
+(decision 0034).
 
 ## Goal
 
@@ -71,7 +72,7 @@ Each step may take several commits; a step that grows big gets its own plan.
    and UI are in `architecture.md`. Checked on an emulator. Landed: `674ab59` to `292e00e`.
 5. [ ] **Backend-plug interface and the manual plug.** `put`/`list`/`get`; export/import of one
    full-state snapshot (plaintext, debug-only); simulator Layer 2. Proves: merge across two
-   devices.
+   devices. Plan: [`v1-step5-manual-plug.md`](v1-step5-manual-plug.md).
 6. [ ] **E2E encryption of batches** in `core/crypto`: envelope with the object key in the AAD
    (decision 0029); the manual export becomes encrypted; root at rest via KeyStore (decision
    0039); simulator Layer 3. Proves: data is opaque to any server.
