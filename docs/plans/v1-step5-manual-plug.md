@@ -1,6 +1,7 @@
 # Plan: v1 step 5, the backend-plug contract and the manual plug
 
-Status: **slice 1 in progress.** Started 2026-10-16. A slice of [`v1-todo.md`](v1-todo.md) step 5.
+Status: **all slices landed; the two-device check is pending.** Started 2026-10-16. A slice of
+[`v1-todo.md`](v1-todo.md) step 5.
 
 ## Goal
 
@@ -43,9 +44,9 @@ Each slice is one commit, builds, and leaves the build green.
    through a real `BackendPlug` and `ProtoBatchEncoder`; a simulation where devices publish whole
    snapshots converges (and re-publishing changes nothing). Invariant 12 on the contract. Landed:
    `9d43dce`.
-5. [ ] **Settings UI and the Android file picker.** An "Export"/"Import" section in
+5. [x] **Settings UI and the Android file picker.** An "Export"/"Import" section in
    `SettingsScreen`, launching the system create/open-document pickers through a platform interface
-   in the shell; strings in English and German. Checked on an emulator.
+   in the shell; strings in English and German. Landed: `9ae8e50`. Emulator check: pending.
 
 ## Open questions
 
