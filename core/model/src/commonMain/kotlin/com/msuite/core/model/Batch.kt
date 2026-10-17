@@ -10,7 +10,10 @@ import kotlinx.serialization.protobuf.ProtoNumber
 import kotlinx.serialization.protobuf.ProtoType
 import kotlin.uuid.Uuid
 
-/** The cells of one delta or snapshot; the type is in the object key only (decision 0029). */
+/**
+ * The cells of one delta or snapshot; the type is in the object key only (decision 0029). The
+ * data-model version rides in the envelope header, not the body (decision 0070).
+ */
 class Batch(val dataModelVersion: Int, cells: List<Cell>) {
     val cells: List<Cell> = cells.sortedWith(CELL_ORDER)
 
@@ -24,10 +27,18 @@ class Batch(val dataModelVersion: Int, cells: List<Cell>) {
     }
 }
 
+/**
+ * Encodes and decodes the batch body: cells only, no version (decision 0070). The version is a
+ * property of the transport — the envelope header, or the current constant for plaintext.
+ */
 interface BatchEncoder {
     fun encode(batch: Batch): ByteArray
 
-    /** @throws MalformedBatch if [bytes] are not a batch this encoder wrote. */
+    /**
+     * Reads a batch body; the returned [Batch.dataModelVersion] is the encoder's current constant.
+     *
+     * @throws MalformedBatch if [bytes] are not a body this encoder wrote.
+     */
     fun decode(bytes: ByteArray): Batch
 }
 
@@ -45,12 +56,12 @@ fun BatchEncoder.decodeOrNull(bytes: ByteArray): Batch? = try {
 @OptIn(ExperimentalSerializationApi::class)
 object ProtoBatchEncoder : BatchEncoder {
     override fun encode(batch: Batch): ByteArray = ProtoBuf.encodeToByteArray(
-        BatchProto(batch.dataModelVersion, batch.cells.map { it.toProto() }),
+        BatchProto(batch.cells.map { it.toProto() }),
     )
 
     override fun decode(bytes: ByteArray): Batch = try {
         val proto = ProtoBuf.decodeFromByteArray<BatchProto>(bytes)
-        Batch(proto.dataModelVersion, proto.cells.map { it.toCell() })
+        Batch(Model.DATA_MODEL_VERSION, proto.cells.map { it.toCell() })
     } catch (e: IllegalArgumentException) {
         throw MalformedBatch(e)
     }
@@ -70,10 +81,11 @@ object ProtoBatchEncoder : BatchEncoder {
     )
 }
 
+// Field 1 (dataModelVersion) was the body's version; it is reserved and now lives in the envelope
+// header (decision 0070). Old bytes carrying it decode with the field skipped.
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
 private class BatchProto(
-    @ProtoNumber(1) val dataModelVersion: Int,
     @ProtoNumber(2) val cells: List<CellProto> = emptyList(),
 )
 

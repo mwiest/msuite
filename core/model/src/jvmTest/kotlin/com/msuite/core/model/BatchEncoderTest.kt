@@ -29,10 +29,10 @@ private fun ByteArray.hex(): String = joinToString("") { it.toUByte().toString(1
 private val encoder: BatchEncoder = ProtoBatchEncoder
 
 class BatchEncoderTest : StringSpec({
-    "a batch survives encoding and decoding" {
+    "a batch body survives encoding and decoding" {
         checkAll(arbBatch) { batch ->
             val decoded = encoder.decode(encoder.encode(batch))
-            decoded.dataModelVersion shouldBe batch.dataModelVersion
+            decoded.dataModelVersion shouldBe Model.DATA_MODEL_VERSION
             decoded.cells shouldBe batch.cells.sortedWith(Batch.CELL_ORDER)
         }
     }
@@ -43,6 +43,13 @@ class BatchEncoderTest : StringSpec({
         }
     }
 
+    "the data-model version is not in the body (decision 0070)" {
+        checkAll(arbBatch) { batch ->
+            encoder.encode(Batch(Model.DATA_MODEL_VERSION, batch.cells)) shouldBe
+                encoder.encode(Batch(Model.DATA_MODEL_VERSION + 1, batch.cells))
+        }
+    }
+
     "the bytes are pinned" {
         val cell = Cell(
             key = CellKey(Uuid.fromLongs(0x0102030405060708, 0x090A0B0C0D0E0F10), FieldId(3)),
@@ -50,7 +57,6 @@ class BatchEncoderTest : StringSpec({
             stamp = Stamp(Hlc.of(1, 2), DeviceId(-1)),
         )
         encoder.encode(Batch(1, listOf(cell))).hex() shouldBe
-            "0801" + // dataModelVersion = 1
             "1229" + // cell, 41 bytes
             "0a100102030405060708090a0b0c0d0e0f10" + // recordId
             "1003" + // fieldId = 3

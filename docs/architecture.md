@@ -6,8 +6,9 @@ this file in the same commit.
 
 **Status (2026-10-17):** steps 2 to 5 are code: the merge core, the manual plug and the harness in
 `core/model`, `core/sync` and `core/sync-testing`; storage (step 3) in `core/storage`; the ToDo app
-in `apps/todo`. The other modules are placeholders. The sections from "Sync" on describe the agreed
-design; parts that are code say so. Each part becomes "what the code does" as its step in
+in `apps/todo`. Step 6 is in flight: the crypto primitives and the batch envelope are in
+`core/crypto`. The remaining modules are placeholders. The sections from "Sync" on describe the
+agreed design; parts that are code say so. Each part becomes "what the code does" as its step in
 [`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
 
 ## Modules
@@ -18,7 +19,7 @@ design; parts that are code say so. Each part becomes "what the code does" as it
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks, the device ID | `LocalStore` over all four tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, `ManualSync`, simulator Layer 1 |
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`), `MemoryPlug`, `assertPlugContract`, `TestClock` |
-| `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm` (the primitives of decision 0010) |
+| `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm` and the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`, `ListCommands`, `TaskCommands`, `SyncActions`, `SnapshotFiles` |
 | `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica)` creates "My Tasks" if missing; `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI) |
@@ -164,25 +165,33 @@ Material vector drawables in the resources. Testable logic sits in `domain` (`To
 ### Batch encoding
 
 kotlinx.serialization ProtoBuf behind the `BatchEncoder` interface in `core/model` (code:
-`ProtoBatchEncoder`, decision 0016). Proto field numbers are the stable IDs. A batch is the
-data-model version plus its cells sorted by `(recordId, fieldId)`, so encoding is deterministic.
+`ProtoBatchEncoder`, decision 0016). Proto field numbers are the stable IDs. A batch body is its
+cells sorted by `(recordId, fieldId)`, so encoding is deterministic; the data-model version rides in
+the envelope header, not the body (decisions 0070, 0067). The plaintext transport Layers 1 and 2
+keep decodes as the current version.
 A cell's value is a typed one-field ProtoBuf message (`Value`, `ValueCodec`); a type the reader
 doesn't know decodes as absent. Value types: `Text`, `Bool`, `Int64`, `Date` (a `LocalDate` as
 epoch days, decision 0052) and `Ref` (a record's `Uuid`, decision 0053). Layout and field numbers: decision 0045.
 
 ### Batch envelope (encryption)
 
-Planned for v1 step 6 (decisions 0010, 0029):
+Code in `core/crypto` (decision 0010); the object-key AAD is wired by the plugs (v1 step 6, slice 5
+and the folder plug at step 8):
 
 ```
-header:     salt (256 bit random), data-model version, keyGen id
+header:     format (1 byte) | salt (256 bit random) | data-model version | keyGen id   (41 bytes)
 key:        K   = HKDF-SHA256(root, salt, "msuite-batch-v1")
-aad:        header + object key without the hash ({appId}/{groupId}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi})
-ciphertext: AES-256-GCM(K, fixed nonce, encoded batch, aad)
+aad:        header + context
+ciphertext: AES-256-GCM(K, fixed zero nonce, encoded batch, aad)
 ```
 
-A reader rebuilds the AAD from the key it fetched, so a renamed or moved batch fails to decrypt.
-The ciphertext of a batch is computed once and cached, so retries resend identical bytes.
+The context is a plug object's key minus its `hash` (`{appId}/{groupId}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}`),
+or a constant label for the manual snapshot file, which has no key. The header is cleartext and
+authenticated, so a reader decides `TooNew` (0067) and an unknown `keyGen` before deriving any key,
+and a reader that rebuilds the context from the key it fetched rejects a batch that was renamed,
+moved or replayed elsewhere. The ciphertext of a batch is computed once and cached, so retries
+resend identical bytes and the content address stays stable (a fresh key per salt rules out nonce
+reuse; decision 0010).
 
 ### Backend plugs
 

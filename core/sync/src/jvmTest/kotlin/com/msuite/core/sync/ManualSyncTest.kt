@@ -63,12 +63,15 @@ class ManualSyncTest : StringSpec({
         shouldThrow<MalformedBatch> { ManualSync(a).import(byteArrayOf(0x08)) }
     }
 
-    "a snapshot from a newer app version is held back" {
+    "the plaintext transport reads only the current version (decision 0070)" {
         val a = Replica(driver(), DeviceId(1), TestClock(1_000))
         val b = Replica(driver(), DeviceId(2), TestClock(1_000))
         a.write(mapOf(key(1) to byteArrayOf(1)))
+        // The body carries no version, so a hand-built newer one still merges here; TooNew is the
+        // envelope header's job now (covered in core/crypto's EnvelopeTest).
         val bytes = ProtoBatchEncoder.encode(Batch(Model.DATA_MODEL_VERSION + 1, a.cells()))
-        ManualSync(b).import(bytes) shouldBe IngestResult.TooNew
-        b.cells().shouldBeEmpty()
+        val result = ManualSync(b).import(bytes) as IngestResult.Merged
+        result.changes shouldContainExactlyInAnyOrder a.cells()
+        b.cells() shouldContainExactlyInAnyOrder a.cells()
     }
 })
