@@ -30,6 +30,9 @@ sealed interface IngestResult {
     /** From a newer data-model version than this app knows (decision 0067): retry after an update. */
     data object TooNew : IngestResult
 
+    /** Sealed under a root generation this device doesn't hold (decision 0008): skip it. */
+    data object UnknownKey : IngestResult
+
     /** [changes] are the cells to write into local state. */
     data class Merged(val changes: List<Cell>) : IngestResult
 }

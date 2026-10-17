@@ -51,7 +51,7 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="sync">Sync</string>
-    <string name="sync_manual_hint">Move a snapshot file between devices by hand. It is not encrypted yet, so this is for testing.</string>
+    <string name="sync_manual_hint">Export your whole state to an encrypted file and import it on another device. Until you pair devices (later), the file only imports back on this device.</string>
     <string name="export">Export</string>
     <string name="import_file">Import</string>
     <string name="sync_exported">Exported.</string>
@@ -59,6 +59,7 @@
     <string name="sync_cancelled">Cancelled.</string>
     <string name="sync_deferred">That file is from a device whose clock is far ahead; import it again later.</string>
     <string name="sync_too_new">That file is from a newer app version; update first.</string>
+    <string name="sync_unknown_key">That file was encrypted with a key this device doesn\'t have.</string>
     <string name="sync_failed">That file could not be read.</string>
     <string name="sync_write_failed">The file could not be written.</string>
     <string name="about">About</string>

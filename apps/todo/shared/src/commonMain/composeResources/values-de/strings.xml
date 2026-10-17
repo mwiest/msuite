@@ -51,7 +51,7 @@
     <string name="theme_light">Hell</string>
     <string name="theme_dark">Dunkel</string>
     <string name="sync">Synchronisierung</string>
-    <string name="sync_manual_hint">Eine Snapshot-Datei von Hand zwischen Geräten weitergeben. Sie ist noch nicht verschlüsselt, daher nur zum Testen.</string>
+    <string name="sync_manual_hint">Den gesamten Stand in eine verschlüsselte Datei exportieren und sie auf einem anderen Gerät importieren. Bis die Geräte gekoppelt sind (später), lässt sich die Datei nur auf diesem Gerät wieder importieren.</string>
     <string name="export">Exportieren</string>
     <string name="import_file">Importieren</string>
     <string name="sync_exported">Exportiert.</string>
@@ -59,6 +59,7 @@
     <string name="sync_cancelled">Abgebrochen.</string>
     <string name="sync_deferred">Die Datei kommt von einem Gerät mit weit vorauslaufender Uhr; später erneut importieren.</string>
     <string name="sync_too_new">Die Datei stammt aus einer neueren App-Version; zuerst aktualisieren.</string>
+    <string name="sync_unknown_key">Die Datei wurde mit einem Schlüssel verschlüsselt, den dieses Gerät nicht hat.</string>
     <string name="sync_failed">Die Datei konnte nicht gelesen werden.</string>
     <string name="sync_write_failed">Die Datei konnte nicht geschrieben werden.</string>
     <string name="about">Über</string>

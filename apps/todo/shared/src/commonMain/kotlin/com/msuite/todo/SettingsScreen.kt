@@ -57,6 +57,7 @@ import com.msuite.todo.resources.sync_failed
 import com.msuite.todo.resources.sync_imported
 import com.msuite.todo.resources.sync_manual_hint
 import com.msuite.todo.resources.sync_too_new
+import com.msuite.todo.resources.sync_unknown_key
 import com.msuite.todo.resources.sync_write_failed
 import com.msuite.todo.resources.theme
 import com.msuite.todo.resources.theme_dark
@@ -219,6 +220,7 @@ private fun SyncResult.label() = when (this) {
     SyncResult.Cancelled -> Res.string.sync_cancelled
     SyncResult.Deferred -> Res.string.sync_deferred
     SyncResult.TooNew -> Res.string.sync_too_new
+    SyncResult.UnknownKey -> Res.string.sync_unknown_key
     SyncResult.WriteFailed -> Res.string.sync_write_failed
     SyncResult.Failed -> Res.string.sync_failed
 }

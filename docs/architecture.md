@@ -151,8 +151,9 @@ edit checks that its ID is a record of the right type (hidden ones included) and
 ### ToDo app wiring and UI
 
 The shell's `TodoApplication` is the composition root: one `Replica` per process on `todo.db`
-(decisions 0050, 0058) and `TodoSettings` on `SharedPreferences` (decision 0064); `MainActivity`
-passes both to `TodoApp` and sets the system bar style from the theme. In `shared`, `TodoContainer`
+(decisions 0050, 0058), `TodoSettings` on `SharedPreferences` (decision 0064) and the group root
+behind `IdentityProvider`; `MainActivity`
+passes all to `TodoApp` and sets the system bar style from the theme. In `shared`, `TodoContainer`
 holds the commands and `todoStates()`; screens launch commands in their own scope, and the replica
 moves the work off the UI thread (decision 0059). Navigation Compose has two routes: the tasks
 screen (lists as tabs, decision 0061; the task editor sheet, decision 0062; list menu, dialogs and
@@ -228,8 +229,9 @@ the rest.
 
 The manual plug is a single-file export/import holding one full-state snapshot (code: `ManualSync`
 in `core/sync`; decision 0066). Importing merges `local ⊕ snapshot`; a snapshot is a delta over
-every field, so this exercises the same reducer. Until encryption lands (step 6) the export is
-plaintext: the manual path is a proof of concept until then, not a way to carry real data. The live
+every field, so this exercises the same reducer. The file is a `BatchEnvelope` under the group root
+with the constant manual AAD context (decisions 0010, 0070, 0071), so it holds only ciphertext and
+imports back only where the root is known — pairing a second device is v1 step 7. The live
 plugs implement `BackendPlug`; the
 multi-object keys are first used at runtime by the synced-folder plug, the v1 milestone (decision
 0042). Its logic sits behind a small file-system interface, so the simulator runs it on `jvm` with

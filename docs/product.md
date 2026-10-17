@@ -3,8 +3,8 @@
 What msuite is and what its apps do today. When behaviour changes, this file changes in the same
 commit. What is intended but not built is in `roadmap.md` and the plans.
 
-Checked against the code on 2026-10-16: **the ToDo app works offline on one device, and two devices
-can exchange one whole-state snapshot file by hand; live sync is not built yet.** On first start it
+Checked against the code on 2026-10-17: **the ToDo app works offline on one device, and it exports an
+encrypted whole-state snapshot file it can import back; live sync and pairing are not built yet.** On first start it
 creates "My Tasks" (in the device language). The lists are tabs at the top, and the app reopens on
 the list last shown. The selected list shows its open tasks, newest first, then its done tasks,
 grayed out and struck through; each has a checkbox, a star, and its notes' first line and due date
@@ -14,9 +14,9 @@ mark done or not done, and delete in the overflow menu. Title and notes are save
 field or close the sheet. A long press drags an open task to a new place. The "+" tab creates a list;
 the top bar's menu renames the selected list, moves it left or right, or deletes it after confirming
 how many tasks go with it ("My Tasks" can't be deleted). The gear opens the settings: the theme
-(system default, light or dark), a Sync section that exports the device's whole state to a file or
-merges one in (plaintext for now, so keep it to test data: it turns real at step 6, when the export
-is encrypted), and an About section with the version,
+(system default, light or dark), a Sync section that exports the device's whole state to an
+encrypted file or merges one in (the file is ciphertext under the group's root, so for now it only
+imports back on the same device; pairing devices comes at step 7), and an About section with the version,
 author, licence (GPL v3 or later), a link to the source code and the open-source libraries used.
 Everything is kept on the device; Android backup is off. Its intended features are in
 [`plans/v1-todo.md`](plans/v1-todo.md).
@@ -53,10 +53,11 @@ sync layer. Success is a working demonstration of the architecture and UX, not a
 
 ## Sync, as the user sees it
 
-Partly built. Settings has Export and Import: Export writes the device's whole state to one file,
-Import merges a chosen file in. The file is plaintext, so this is a proof of concept until
-encryption lands at step 6, not a path for real data. Live sync is not built yet. Architecture in
-`architecture.md`.
+Partly built. Settings has Export and Import: Export writes the device's whole state to one
+encrypted file, Import merges a chosen file in. The file is AES-256-GCM ciphertext under the group's
+root secret, so a backend or anyone who finds it sees only opaque bytes; for now it only imports
+back on the device that wrote it, because pairing a second device is step 7. Live sync is not built
+yet. Architecture in `architecture.md`.
 
 - Sync is optional. The user picks a backend: none (export/import a file), a synced folder
   (Syncthing, Nextcloud, Dropbox), WebDAV, an S3-compatible bucket, or the self-hostable msuite

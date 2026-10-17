@@ -1,5 +1,6 @@
 package com.msuite.todo
 
+import com.msuite.core.crypto.IdentityProvider
 import com.msuite.core.sync.ManualSync
 import com.msuite.core.sync.Replica
 import com.msuite.todo.domain.ListCommands
@@ -12,9 +13,9 @@ import com.msuite.todo.domain.todoStates
 import kotlinx.coroutines.flow.Flow
 
 /** What the screens need, built once from the shell's [Replica] and [settings] (decision 0019). */
-class TodoContainer(replica: Replica, val settings: TodoSettings, files: SnapshotFiles) {
+class TodoContainer(replica: Replica, val settings: TodoSettings, files: SnapshotFiles, identity: IdentityProvider) {
     val lists = ListCommands(replica)
     val tasks = TaskCommands(replica)
     val states: Flow<TodoState> = replica.todoStates()
-    val sync = SyncActions(ManualSync(replica), files)
+    val sync = SyncActions(ManualSync(replica, identity), files)
 }

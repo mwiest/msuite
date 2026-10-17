@@ -35,9 +35,10 @@ sealed interface EnvelopeResult {
 class BatchEnvelope(
     private val encoder: BatchEncoder,
     private val roots: (keyGen: Int) -> ByteArray?,
+    private val keyGen: Int = KEY_GEN_V1,
 ) {
     /** Seals [batch]; the fresh [salt] gives a fresh key, so the result is used once. */
-    suspend fun seal(batch: Batch, keyGen: Int, aadContext: String, salt: ByteArray = randomSecret()): ByteArray {
+    suspend fun seal(batch: Batch, aadContext: String, salt: ByteArray = randomSecret()): ByteArray {
         val root = requireNotNull(roots(keyGen)) { "no root for keyGen $keyGen" }
         val header = header(salt, batch.dataModelVersion, keyGen)
         val key = hkdf(root, salt, BATCH_KEY_INFO)

@@ -178,6 +178,8 @@ open class Cluster(
 
             IngestResult.TooNew -> error("the simulator never produces a newer-version batch")
 
+            IngestResult.UnknownKey -> error("the simulator holds every root")
+
             is IngestResult.Merged -> {
                 // Invariant 3: delivering a batch again changes nothing.
                 if (key in device.ingested) result.changes.shouldBeEmpty()

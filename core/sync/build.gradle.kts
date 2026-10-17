@@ -10,6 +10,7 @@ kotlin {
         commonMain.dependencies {
             api(project(":core:model"))
             api(project(":core:storage"))
+            api(project(":core:crypto"))
             api(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
         }

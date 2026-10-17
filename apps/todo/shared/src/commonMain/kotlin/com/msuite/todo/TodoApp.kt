@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.msuite.core.crypto.IdentityProvider
 import com.msuite.core.design.MsuiteTheme
 import com.msuite.core.sync.Replica
 import com.msuite.todo.domain.SnapshotFiles
@@ -26,12 +27,19 @@ private data object TasksRoute
 private data object SettingsRoute
 
 /**
- * The whole ToDo UI over [replica] and [settings]; [version] is shown in About, and [files] is the
- * platform file picker for the manual plug. Platform shells (apps/todo/android) only host it.
+ * The whole ToDo UI over [replica] and [settings]; [version] is shown in About, [files] is the
+ * platform file picker for the manual plug, and [identity] is the group root. Platform shells
+ * (apps/todo/android) only host it.
  */
 @Composable
-fun TodoApp(replica: Replica, settings: TodoSettings, version: String, files: SnapshotFiles) {
-    val app = remember(replica, settings, files) { TodoContainer(replica, settings, files) }
+fun TodoApp(
+    replica: Replica,
+    settings: TodoSettings,
+    version: String,
+    files: SnapshotFiles,
+    identity: IdentityProvider,
+) {
+    val app = remember(replica, settings, files, identity) { TodoContainer(replica, settings, files, identity) }
     val myTasks = stringResource(Res.string.my_tasks)
     LaunchedEffect(app) { app.lists.createMyTasksIfMissing(myTasks) }
     val theme by settings.themeMode.collectAsState()

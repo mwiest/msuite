@@ -18,7 +18,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch { app.settings.themeMode.collect { enableEdgeToEdge(it.barStyle(), it.barStyle()) } }
         val version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
         val files = SafSnapshotFiles(this)
-        setContent { TodoApp(app.replica, app.settings, version, files) }
+        setContent { TodoApp(app.replica, app.settings, version, files, app.identity) }
     }
 }
 

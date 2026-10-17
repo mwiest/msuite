@@ -21,8 +21,8 @@ private const val CONTEXT = "msuite-manual-v1"
 private val root = ByteArray(32) { it.toByte() }
 private val otherRoot = ByteArray(32) { (it + 1).toByte() }
 
-private fun envelope(roots: (Int) -> ByteArray? = { if (it == KEY_GEN_V1) root else null }) =
-    BatchEnvelope(ProtoBatchEncoder, roots)
+private fun envelope(keyGen: Int = KEY_GEN_V1, roots: (Int) -> ByteArray? = { if (it == KEY_GEN_V1) root else null }) =
+    BatchEnvelope(ProtoBatchEncoder, roots, keyGen)
 
 private fun batch(version: Int = Model.DATA_MODEL_VERSION, value: Byte = 1) = Batch(
     version,
@@ -31,37 +31,35 @@ private fun batch(version: Int = Model.DATA_MODEL_VERSION, value: Byte = 1) = Ba
 
 class EnvelopeTest : StringSpec({
     "an envelope round-trips under its root" {
-        val sealed = envelope().seal(batch(), KEY_GEN_V1, CONTEXT)
+        val sealed = envelope().seal(batch(), CONTEXT)
         val opened = envelope().open(sealed, CONTEXT) as EnvelopeResult.Opened
         opened.batch.dataModelVersion shouldBe Model.DATA_MODEL_VERSION
         opened.batch.cells shouldContainExactly batch().cells
     }
 
     "the version rides in the header: a newer one is TooNew without decrypting" {
-        val sealed = envelope().seal(batch(version = Model.DATA_MODEL_VERSION + 1), KEY_GEN_V1, CONTEXT)
+        val sealed = envelope().seal(batch(version = Model.DATA_MODEL_VERSION + 1), CONTEXT)
         // A roots function that would throw proves the header is read first.
-        envelope { error("decrypted a too-new batch") }.open(sealed, CONTEXT) shouldBe EnvelopeResult.TooNew
+        envelope(roots = { error("decrypted a too-new batch") }).open(sealed, CONTEXT) shouldBe EnvelopeResult.TooNew
     }
 
     "an unknown keyGen is reported without decrypting" {
-        val sealed = BatchEnvelope(ProtoBatchEncoder) {
-            root
-        }.seal(batch(), keyGen = KEY_GEN_V1 + 1, aadContext = CONTEXT)
+        val sealed = envelope(keyGen = KEY_GEN_V1 + 1).seal(batch(), CONTEXT)
         envelope().open(sealed, CONTEXT) shouldBe EnvelopeResult.UnknownKeyGen
     }
 
     "a renamed or moved batch fails to open" {
-        val sealed = envelope().seal(batch(), KEY_GEN_V1, CONTEXT)
+        val sealed = envelope().seal(batch(), CONTEXT)
         shouldThrow<MalformedBatch> { envelope().open(sealed, "todo/group/v1_d_x_hash") }
     }
 
     "a foreign root fails to open" {
-        val sealed = BatchEnvelope(ProtoBatchEncoder) { otherRoot }.seal(batch(), KEY_GEN_V1, CONTEXT)
+        val sealed = envelope(roots = { otherRoot }).seal(batch(), CONTEXT)
         shouldThrow<MalformedBatch> { envelope().open(sealed, CONTEXT) }
     }
 
     "a tampered byte fails to open" {
-        val sealed = envelope().seal(batch(), KEY_GEN_V1, CONTEXT)
+        val sealed = envelope().seal(batch(), CONTEXT)
         sealed[sealed.size - 1] = (sealed[sealed.size - 1].toInt() xor 1).toByte()
         shouldThrow<MalformedBatch> { envelope().open(sealed, CONTEXT) }
     }
@@ -73,7 +71,7 @@ class EnvelopeTest : StringSpec({
 
     "the header layout is pinned" {
         val salt = ByteArray(SECRET_SIZE) { it.toByte() }
-        val header = envelope().seal(batch(), KEY_GEN_V1, CONTEXT, salt).copyOfRange(0, 41)
+        val header = envelope().seal(batch(), CONTEXT, salt).copyOfRange(0, 41)
         header.hex() shouldBe
             "01" + // envelope format
             "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f" + // salt
