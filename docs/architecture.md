@@ -17,7 +17,7 @@ agreed design; parts that are code say so. Each part becomes "what the code does
 |---|---|---|---|
 | `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `CoreFields`, `Stamp`, `Cell`, `PlugId`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks, the device ID | `LocalStore` over all four tables (see Sync → Data and merge) |
-| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, `ManualSync`, simulator Layer 1 |
+| `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, `ManualSync`, `ObjectKey`/`ObjectKeyPrefix`/`groupId`, simulator Layer 1 |
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`), `MemoryPlug`, `assertPlugContract`, `TestClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm` and the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
@@ -200,7 +200,7 @@ One append-only interface (decision 0003): `put(key, bytes)` (create-only, atomi
 `list(prefix)` (keys only), `get(key)`. `delete` and a capability descriptor arrive with
 snapshots and the relay.
 
-Object keys (decision 0029):
+Object keys (decision 0029; code: `ObjectKey`, `ObjectKeyPrefix` and `groupId` in `core/sync`):
 
 ```
 {appId}/{groupId}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}
@@ -214,7 +214,8 @@ Object keys (decision 0029):
 - `hlcLo`..`hlcHi`: the HLC span covered, 64 bits each.
 - `hash`: SHA-256 over the ciphertext.
 - Binary fields are unpadded uppercase base32hex (`0-9A-V`), fixed width, so they sort in value
-  order. The name charset is `[A-Z0-9_]`.
+  order. The name charset is `[A-Z0-9_]`. `ObjectKeyPrefix` is the key minus `hash`: the AAD context
+  of 0071, which a publisher seals with and a reader rebuilds from the name it fetched.
 
 Syncing is list-and-diff: `list({appId}/{groupId}/)` minus the keys already ingested, then `get`
 the rest.
