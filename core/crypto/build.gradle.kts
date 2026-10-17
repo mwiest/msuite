@@ -8,9 +8,22 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":core:model"))
-            // TODO: cryptography-kotlin (libs.cryptography.core) — HKDF-SHA256 -> AES-256-GCM
-            //       E2E of batches, single-QR pairing, BIP39 recovery (decision 0008, decision 0010)
+            api(project(":core:model"))
+            // SHA-256, HKDF-SHA256, AES-256-GCM and the RNG; we only compose them (decision 0010).
+            implementation(libs.cryptography.core)
+            implementation(libs.cryptography.random)
+        }
+        // The JDK provider (JCA, Conscrypt on Android) backs android and jvm; web gets its own (0012).
+        androidMain.dependencies {
+            implementation(libs.cryptography.provider.jdk)
+        }
+        jvmMain.dependencies {
+            implementation(libs.cryptography.provider.jdk)
+        }
+        jvmTest.dependencies {
+            implementation(libs.kotest.property)
+            implementation(libs.kotest.assertions.core)
+            implementation(libs.kotest.runner.junit5)
         }
     }
 }
