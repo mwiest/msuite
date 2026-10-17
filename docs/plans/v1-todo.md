@@ -1,6 +1,7 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 5 done; step 6 (E2E encryption of batches) is next:**
+Status: **steps 0 to 6 done (code); the step 6 emulator and two-device checks are pending, and
+step 7 (QR pairing) is next. The step 6 plan:**
 [`v1-step6-e2e-encryption.md`](v1-step6-e2e-encryption.md). Started 2026-07-02; reordered
 2026-10-11 (decision 0034).
 
@@ -76,10 +77,13 @@ Each step may take several commits; a step that grows big gets its own plan.
    `architecture.md` → Backend plugs and Compaction. Checked by hand between a phone and an
    emulator (export and import both ways, an imported file twice, and a deletion that crossed).
    Landed: `914580e` to `5789870`.
-6. [ ] **E2E encryption of batches** in `core/crypto`: envelope with the object key in the AAD
+6. [x] **E2E encryption of batches** in `core/crypto`: envelope with the object key in the AAD
    (decision 0029); the manual export becomes encrypted; root at rest via KeyStore (decision
    0039); simulator Layer 3. Proves: data is opaque to any server. Plan:
-   [`v1-step6-e2e-encryption.md`](v1-step6-e2e-encryption.md).
+   [`v1-step6-e2e-encryption.md`](v1-step6-e2e-encryption.md). Code landed: `c4c65f5`, `f8c3cf2`,
+   `a4107c5`, `1e76ec5`, `a7e3874`, `8456bbb`; decisions 0070, 0071. `allTests` and Layer 3 green
+   on 2026-10-17; the emulator (root survives a restart, the file holds no plaintext) and
+   two-device checks are pending.
 7. [ ] **QR pairing and recovery key.** One QR carrying the root; a joining device merges its data
    (decision 0033); BIP39 recovery; a copied key is marked sensitive and cleared after 60 s
    (decision 0041). Proves: key distribution without accounts.

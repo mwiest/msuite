@@ -1,6 +1,7 @@
 # Plan: v1 step 6, the encrypted batch envelope
 
-Status: **not started.** Started 2026-10-17. A slice of
+Status: **all slices coded, tests and simulator Layer 3 green; the two emulator checks and the
+two-device check are pending.** Started 2026-10-17. A slice of
 [`v1-todo.md`](v1-todo.md) step 6.
 
 ## Goal
@@ -54,38 +55,39 @@ devices without a shared root can no longer exchange it.
 
 Each slice is one commit, builds, and leaves the build green.
 
-1. [ ] **Crypto primitives.** Wire cryptography-kotlin (the pinned `cryptography-core`, plus the
+1. [x] **Crypto primitives.** Wire cryptography-kotlin (the pinned `cryptography-core`, plus the
    provider artifacts it needs for `jvm` and `android`; web stays buildable, 0012): SHA-256,
    HKDF-SHA256, AES-256-GCM, the RNG. No hand-rolled primitives (0010). Checked by jvmTest:
    seal/open round trip, a tampered ciphertext or a wrong AAD fails, the same salt gives identical
-   bytes, fresh salts give distinct ciphertexts.
-2. [ ] **The envelope, and the version moves to the header.** `core/crypto` encodes and opens the
+   bytes, fresh salts give distinct ciphertexts. Landed: `c4c65f5`.
+2. [x] **The envelope, and the version moves to the header.** `core/crypto` encodes and opens the
    envelope; the batch proto's field 1 becomes reserved and the plaintext transport drops it with
    the envelope; `Batch.dataModelVersion` is filled by the decoder — from the header for the
    envelope, the current constant for the plaintext transport — and `ingest` keeps its check
    (0067). The pinned-bytes tests move with the format (it never shipped). Decision 0070.
-3. [ ] **The encrypted manual plug.** `ManualSync` takes the encoder and goes through the
+   Landed: `f8c3cf2`.
+3. [x] **The encrypted manual plug.** `ManualSync` takes the encoder and goes through the
    envelope: export encrypts with the manual context label, import maps `TooNew` and an unknown
    `keyGen` from the header, and a torn, tampered or foreign-root file fails as `MalformedBatch`
    (Failed in the UI). The `sync_manual_hint` strings and `product.md` now say the file is
    encrypted and only imports back on this device until pairing (step 7). Decision 0071.
-   Emulator check: the exported file holds no plaintext.
-4. [ ] **The root at rest.** `IdentityProvider`: the root generated on first use, the wrap behind
+   Emulator check: the exported file holds no plaintext. Landed: `a4107c5`.
+4. [x] **The root at rest.** `IdentityProvider`: the root generated on first use, the wrap behind
    the app-layer seam (0039); the shell wraps with a non-exportable KeyStore AES-256-GCM key into
    a private file, plain JCA; `TodoApplication` wires the provider into the encrypted `ManualSync`.
-   JVM tests use a plain root. Emulator check: the root survives a restart.
-5. [ ] **The object-key grammar, in `core/sync`.** Build and parse
+   JVM tests use a plain root. Emulator check: the root survives a restart. Landed: `1e76ec5`.
+5. [x] **The object-key grammar, in `core/sync`.** Build and parse
    `{appId}/{groupId}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}`
    (0029): uppercase base32hex, unpadded, fixed widths, `groupId` = the first 128 bits of
    `HKDF-SHA256(root, "msuite-group-v1")`, the AAD context (key minus hash). Property tests:
-   charset, widths, round trip, lexicographic sort equals value sort.
-6. [ ] **Simulator Layer 3.** `PlugStore` through the envelope with real keys: the hash over the
+   charset, widths, round trip, lexicographic sort equals value sort. Landed: `a7e3874`.
+6. [x] **Simulator Layer 3.** `PlugStore` through the envelope with real keys: the hash over the
    ciphertext, the AAD from the key, the ciphertext cached per batch so a re-publish is the same
    object. The convergence invariants again, plus 17 (a renamed key fails to decrypt, is not
    merged, and after the bounded retries is flagged corrupt, 0069); named scenarios: a TooNew
    header held back, an unknown `keyGen` skipped without the corrupt flag, a foreign root's object
    corrupt after the bounded retries. `testing.md` Layer 3 row and `architecture.md` → Batch
-   envelope become code.
+   envelope become code. Landed: `8456bbb`.
 
 ## Open questions
 
@@ -94,7 +96,8 @@ question (does it carry the backend config behind?) is step 7's, in `v1-todo.md`
 
 ## How to verify
 
-`./gradlew allTests` green, Layer 3 included. On an emulator: export a snapshot and confirm the
-file holds no plaintext; import it back on the same device after a restart (the root unwraps from
-the KeyStore); import it on another device and see the honest failure — different roots, pairing
-is step 7. A reinstall starts empty; recovery arrives with step 7.
+`./gradlew allTests` green, Layer 3 included — done on 2026-10-17. Still to do on an emulator:
+export a snapshot and confirm the file holds no plaintext; import it back on the same device after a
+restart (the root unwraps from the KeyStore); import it on another device and see the honest
+failure — different roots, pairing is step 7. A reinstall starts empty; recovery arrives with
+step 7.

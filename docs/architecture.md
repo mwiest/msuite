@@ -4,12 +4,12 @@ How the code is organised, and the sync design it is being built towards. What t
 user is in `product.md`; why it is built this way is in `decisions/`. A change in structure updates
 this file in the same commit.
 
-**Status (2026-10-17):** steps 2 to 5 are code: the merge core, the manual plug and the harness in
+**Status (2026-10-17):** steps 2 to 6 are code: the merge core, the manual plug and the harness in
 `core/model`, `core/sync` and `core/sync-testing`; storage (step 3) in `core/storage`; the ToDo app
-in `apps/todo`. Step 6 is in flight: the crypto primitives and the batch envelope are in
-`core/crypto`. The remaining modules are placeholders. The sections from "Sync" on describe the
-agreed design; parts that are code say so. Each part becomes "what the code does" as its step in
-[`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
+in `apps/todo`; the crypto primitives, the batch envelope and the object-key grammar in
+`core/crypto` and `core/sync`, with simulator Layer 3. The remaining modules are placeholders. The
+sections from "Sync" on describe the agreed design; parts that are code say so. Each part becomes
+"what the code does" as its step in [`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
 
 ## Modules
 
