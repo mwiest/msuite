@@ -30,7 +30,14 @@ class KeyStoreRootStore(private val file: File) : RootStore {
     }
 
     override fun save(root: ByteArray) {
-        file.writeBytes(wrap(root))
+        // Write a sibling temp file and rename it in: a crash leaves either the old root or the new
+        // one, never a half-written file (which would look like "no root" and start a fresh group).
+        val temp = File(file.parentFile, "${file.name}.tmp")
+        temp.writeBytes(wrap(root))
+        if (!temp.renameTo(file)) {
+            temp.delete()
+            throw IOException("could not move the wrapped root into place")
+        }
     }
 
     private fun wrap(root: ByteArray): ByteArray {
