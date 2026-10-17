@@ -21,9 +21,9 @@ agreed design; parts that are code say so. Each part becomes "what the code does
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`), `MemoryPlug`, `assertPlugContract`, `TestClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm` and the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
-| `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`, `ListCommands`, `TaskCommands`, `SyncActions`, `SnapshotFiles` |
-| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica)` creates "My Tasks" if missing; `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI) |
-| `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `TodoApplication` opens the one `Replica` and the `TodoSettings`; `MainActivity` calls `TodoApp(replica, settings)`; backup off (decision 0060) |
+| `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`, `ListCommands`, `TaskCommands`, `SyncActions`, `SnapshotFiles`, `StoredIdentity`, `RootStore` |
+| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica, identity)` creates "My Tasks" if missing; `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI) |
+| `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `TodoApplication` opens the one `Replica`, the `TodoSettings` and the `StoredIdentity` over `KeyStoreRootStore`; `MainActivity` calls `TodoApp`; backup off (decision 0060) |
 | `server` | Kotlin/JVM application | The dumb relay, a Ktor CIO binary (decision 0017) | `main` printing a line |
 | `web/` | Not a module | Deferred web app; see `web/README.md` | - |
 
@@ -151,8 +151,8 @@ edit checks that its ID is a record of the right type (hidden ones included) and
 ### ToDo app wiring and UI
 
 The shell's `TodoApplication` is the composition root: one `Replica` per process on `todo.db`
-(decisions 0050, 0058), `TodoSettings` on `SharedPreferences` (decision 0064) and the group root
-behind `IdentityProvider`; `MainActivity`
+(decisions 0050, 0058), `TodoSettings` on `SharedPreferences` (decision 0064) and the group root as
+a `StoredIdentity` over `KeyStoreRootStore` (decision 0039); `MainActivity`
 passes all to `TodoApp` and sets the system bar style from the theme. In `shared`, `TodoContainer`
 holds the commands and `todoStates()`; screens launch commands in their own scope, and the replica
 moves the work off the UI thread (decision 0059). Navigation Compose has two routes: the tasks
@@ -280,6 +280,7 @@ cap namespace size. Cloudflare users need no relay: R2 works with the object-sto
   publishes its full state into the group's namespace (decision 0033).
 - Copying the recovery key marks the clip sensitive and clears it after 60 s (decision 0041).
 - Clients hold a set of roots keyed by `keyGen`, so rotation can come later without a format change.
-- At rest: database under the OS sandbox and file-based encryption. The root is wrapped with a
-  non-exportable AES-256-GCM key in the Android KeyStore and stored in a private file (decision
-  0039).
+- At rest (code: `StoredIdentity` + `RootStore` in `apps/todo/domain`, `KeyStoreRootStore` in the
+  shell): the root is generated on first use, wrapped with a non-exportable AES-256-GCM key in the
+  Android KeyStore, and stored in a private file (decision 0039). The database sits under the OS
+  sandbox and file-based encryption.
