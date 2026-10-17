@@ -51,6 +51,13 @@ lands with the folder plug at step 8. Step 8 also adds a delta-publishing mode o
 with the real key grammar of 0029 — today's `sim/<hash>` keys are flat, so spans, types and
 pruning are not exercised — plus pruning steps asserting invariants 18 and 19.
 
+Layer 3 runs the schedules again through `EnvelopePlugStore` (code, step 6): the real object keys of
+0029, the `hash` over the ciphertext, and the AAD from the key minus its hash (0071), in memory and
+through `Replica`. A fetch is `Fetch.Read`, `Fetch.Skip` (a TooNew header or an unknown `keyGen`,
+held back without the corrupt flag) or `Fetch.Unreadable` (counted, 0069). Named scenarios cover a
+TooNew header held back, an unknown `keyGen` skipped, and a renamed or foreign-root object that
+fails to open, is not merged, and is flagged corrupt after the bounded retries (invariant 17).
+
 The ToDo simulator (`apps/todo/domain/src/jvmTest/.../TodoSimulation.kt`, driven by
 `TodoSimulatorTest.kt`) runs the real `ListCommands`, `TaskCommands` and `projectTodos()` on
 `Replica`s. Every device first runs its first-run setup, alternating English and German, then
@@ -122,7 +129,7 @@ Compaction (decision 0002; the spans of 0029; planned with v1 steps 8 and 9):
 | 1 | v1 step 2 (landed), gating the LWW merge | pure merge and HLC, invariants 1 to 11 and 13 |
 | 1 + ToDo rules | v1 step 4 (landed) | invariants 14 to 16, through the ToDo commands |
 | 2 | v1 step 5 (landed), step 8 (folder plug on plain files, delta mode, pruning) | the real plug wrapped in; invariant 12 with the folder plug, 18 and 19 with pruning |
-| 3 | v1 step 6 | encrypted batches still converge, invariant 17 |
+| 3 | v1 step 6 (landed) | encrypted batches still converge, invariant 17, and the TooNew / unknown-`keyGen` / foreign-root scenarios |
 
 ## Formatting and static analysis
 

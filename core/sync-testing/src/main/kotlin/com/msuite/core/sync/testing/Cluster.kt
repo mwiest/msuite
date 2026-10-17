@@ -165,11 +165,21 @@ open class Cluster(
     }
 
     private fun ingestOne(device: SimDevice, key: String) {
-        // A key that won't decode is recorded and retried, then flagged corrupt (decision 0069).
-        val batch = store.get(key) ?: run {
-            device.state.unreadable(key)
-            return
+        when (val fetched = store.get(key)) {
+            // Absent is a list/get race, not a failed decode: skipped, never recorded (decision 0069).
+            null -> Unit
+
+            // A too-new header or an unknown keyGen is held back without counting as corrupt (0067, 0008).
+            Fetch.Skip -> Unit
+
+            // A key that won't decode is recorded and retried, then flagged corrupt (decision 0069).
+            Fetch.Unreadable -> device.state.unreadable(key)
+
+            is Fetch.Read -> ingest(device, key, fetched.batch)
         }
+    }
+
+    private fun ingest(device: SimDevice, key: String, batch: Batch) {
         when (val result = device.state.ingest(key, batch)) {
             IngestResult.Deferred -> {
                 // Invariant 13: deferred only when more than 24 h ahead of this device's clock.

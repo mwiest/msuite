@@ -24,7 +24,9 @@ class PlugStore(private val plug: BackendPlug) : SimStore {
 
     override fun keys(): List<String> = runBlocking { plug.list(PREFIX) }.sorted()
 
-    override fun get(key: String): Batch? = runBlocking { plug.get(key)?.let { ProtoBatchEncoder.decodeOrNull(it) } }
+    override fun get(key: String): Fetch? = runBlocking {
+        plug.get(key)?.let { bytes -> ProtoBatchEncoder.decodeOrNull(bytes)?.let(Fetch::Read) ?: Fetch.Unreadable }
+    }
 
     private fun ByteArray.sha256(): String = MessageDigest.getInstance("SHA-256")
         .digest(this)

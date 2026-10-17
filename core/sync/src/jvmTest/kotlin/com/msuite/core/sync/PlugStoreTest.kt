@@ -8,6 +8,7 @@ import com.msuite.core.model.FieldId
 import com.msuite.core.model.Hlc
 import com.msuite.core.model.Model
 import com.msuite.core.model.Stamp
+import com.msuite.core.sync.testing.Fetch
 import com.msuite.core.sync.testing.MemoryPlug
 import com.msuite.core.sync.testing.PlugStore
 import io.kotest.core.spec.style.StringSpec
@@ -31,8 +32,8 @@ class PlugStoreTest : StringSpec({
         val keyOne = first.put(batch(1))
         val keyTwo = second.put(batch(2))
         keyOne shouldNotBe keyTwo
-        first.get(keyOne)?.cells shouldBe batch(1).cells
-        second.get(keyTwo)?.cells shouldBe batch(2).cells
+        (first.get(keyOne) as Fetch.Read).batch.cells shouldBe batch(1).cells
+        (second.get(keyTwo) as Fetch.Read).batch.cells shouldBe batch(2).cells
         runBlocking { plug.list("sim/") } shouldContainExactlyInAnyOrder listOf(keyOne, keyTwo)
     }
 

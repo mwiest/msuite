@@ -44,7 +44,7 @@ class EnvelopeTest : StringSpec({
     }
 
     "an unknown keyGen is reported without decrypting" {
-        val sealed = envelope(keyGen = KEY_GEN_V1 + 1).seal(batch(), CONTEXT)
+        val sealed = envelope(keyGen = KEY_GEN_V1 + 1, roots = { root }).seal(batch(), CONTEXT)
         envelope().open(sealed, CONTEXT) shouldBe EnvelopeResult.UnknownKeyGen
     }
 

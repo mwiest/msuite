@@ -4,8 +4,9 @@ import com.msuite.core.model.Batch
 
 /**
  * The shared medium the simulated devices sync through (decision 0057). Layer 1 keeps whole batches
- * in memory ([BatchStore]); Layer 2 pushes encoded bytes through a real plug ([PlugStore]). A key
- * identifies a batch; a device's bookkeeping is the set of keys it has ingested.
+ * in memory ([BatchStore]); Layer 2 pushes encoded bytes through a real plug ([PlugStore]); Layer 3
+ * pushes envelope ciphertext under real object keys ([EnvelopePlugStore]). A key identifies a batch;
+ * a device's bookkeeping is the set of keys it has ingested.
  */
 interface SimStore {
     /** Publishes [batch]; returns the key it landed under. */
@@ -15,18 +16,26 @@ interface SimStore {
     fun keys(): List<String>
 
     /**
-     * The batch under [key], or `null` when no batch can be read. `null` deliberately conflates an
-     * absent key and bytes that won't decode: the harness only seeds garbage, so a listed key never
-     * vanishes and the two are the same case here. The real fetch loop must not copy that: an
-     * absent key is a list/get race, not a failed decode, and is skipped without counting an
-     * attempt toward the corrupt flag (decision 0069); only bytes that are present and won't
-     * decode are recorded.
+     * How the bytes under [key] read, or `null` when the key is absent. An absent key is a list/get
+     * race, not a failed decode: it is skipped without counting an attempt toward the corrupt flag
+     * (decision 0069). A key that is present and won't decode is [Fetch.Unreadable].
      */
-    fun get(key: String): Batch?
+    fun get(key: String): Fetch?
 }
 
-/** Every published batch, oldest first; unreadable keys are skipped (decision 0068). */
-fun SimStore.batches(): List<Batch> = keys().mapNotNull(::get)
+/** What a fetch of one key yielded (decisions 0067, 0068, 0069). */
+sealed interface Fetch {
+    data class Read(val batch: Batch) : Fetch
+
+    /** A header-level skip — TooNew (0067) or an unknown `keyGen` (0008): not a decode failure. */
+    data object Skip : Fetch
+
+    /** Present but unreadable (torn, tampered, renamed, foreign root): counts toward corrupt (0069). */
+    data object Unreadable : Fetch
+}
+
+/** Every published batch, oldest first; absent and unreadable keys are skipped (decision 0068). */
+fun SimStore.batches(): List<Batch> = keys().mapNotNull { (get(it) as? Fetch.Read)?.batch }
 
 /** The default store: whole batches in memory, keyed by position. */
 class BatchStore : SimStore {
@@ -36,5 +45,5 @@ class BatchStore : SimStore {
 
     override fun keys(): List<String> = batches.indices.map(Int::toString)
 
-    override fun get(key: String): Batch? = batches.getOrNull(key.toInt())
+    override fun get(key: String): Fetch? = batches.getOrNull(key.toInt())?.let(Fetch::Read)
 }
