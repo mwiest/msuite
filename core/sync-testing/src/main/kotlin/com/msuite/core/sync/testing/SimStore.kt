@@ -14,7 +14,14 @@ interface SimStore {
     /** Every key, in a deterministic order: merges are commutative, so the order only has to be stable. */
     fun keys(): List<String>
 
-    /** The batch under [key], or `null` if its bytes can't be read (decisions 0068, 0069: skip, retry, then flag). */
+    /**
+     * The batch under [key], or `null` when no batch can be read. `null` deliberately conflates an
+     * absent key and bytes that won't decode: the harness only seeds garbage, so a listed key never
+     * vanishes and the two are the same case here. The real fetch loop must not copy that: an
+     * absent key is a list/get race, not a failed decode, and is skipped without counting an
+     * attempt toward the corrupt flag (decision 0069); only bytes that are present and won't
+     * decode are recorded.
+     */
     fun get(key: String): Batch?
 }
 

@@ -73,7 +73,9 @@ class Replica private constructor(
     /**
      * Records that [batchKey]'s bytes failed to decode; returns true once it is flagged corrupt
      * (decision 0069): after [MAX_DECODE_ATTEMPTS] failures it is not fetched again, the bytes
-     * staying in the backend.
+     * staying in the backend. A failed *fetch* is not a failed decode: a key absent at get time
+     * (a list/get race) is skipped and never recorded, so a pruned or briefly missing object is
+     * not flagged corrupt.
      */
     suspend fun unreadable(plug: PlugId, batchKey: String): Boolean = serialized {
         if (store.plugs.recordUnreadable(plug, batchKey) < MAX_DECODE_ATTEMPTS) return@serialized false
