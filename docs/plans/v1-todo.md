@@ -76,7 +76,8 @@ Each step may take several commits; a step that grows big gets its own plan.
    devices. Plan: [`v1-step5-manual-plug.md`](v1-step5-manual-plug.md).
 6. [ ] **E2E encryption of batches** in `core/crypto`: envelope with the object key in the AAD
    (decision 0029); the manual export becomes encrypted; root at rest via KeyStore (decision
-   0039); simulator Layer 3. Proves: data is opaque to any server.
+   0039); simulator Layer 3. Proves: data is opaque to any server. Plan:
+   [`v1-step6-e2e-encryption.md`](v1-step6-e2e-encryption.md).
 7. [ ] **QR pairing and recovery key.** One QR carrying the root; a joining device merges its data
    (decision 0033); BIP39 recovery; a copied key is marked sensitive and cleared after 60 s
    (decision 0041). Proves: key distribution without accounts.
@@ -94,14 +95,16 @@ Each step may take several commits; a step that grows big gets its own plan.
 
 ## Open questions
 
-- Where the data-model version lives once the envelope exists: today it is in the encoded batch
-  (decision 0045), and the envelope header of step 6 must not repeat it. Decide at step 6.
 - Whether the pairing QR also carries the backend configuration, or the joining device sets it up
   itself. Decide at step 7.
 
 Decided in step 5: a batch from a newer data-model version is held back, not merged (decision
 0067); a batch that fails to decode is skipped and retried a bounded number of times, then flagged
 corrupt (decisions 0068, 0069).
+
+Decided in the step 6 plan: the data-model version moves to the envelope header, and the batch
+body and the plaintext transport carry cells only
+([`v1-step6-e2e-encryption.md`](v1-step6-e2e-encryption.md); record 0070 lands with its slice).
 
 ## How to verify
 
