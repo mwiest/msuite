@@ -4,9 +4,10 @@ How the code is organised, and the sync design it is being built towards. What t
 user is in `product.md`; why it is built this way is in `decisions/`. A change in structure updates
 this file in the same commit.
 
-**Status (2026-10-14):** the merge core (v1 step 2) is code in `core/model` and `core/sync`, and
-storage (step 3) in `core/storage`; the other modules are placeholders. The sections from "Sync" on describe the agreed design; parts that
-are code say so. Each part becomes "what the code does" as its step in
+**Status (2026-10-17):** steps 2 to 5 are code: the merge core, the manual plug and the harness in
+`core/model`, `core/sync` and `core/sync-testing`; storage (step 3) in `core/storage`; the ToDo app
+in `apps/todo`. The other modules are placeholders. The sections from "Sync" on describe the agreed
+design; parts that are code say so. Each part becomes "what the code does" as its step in
 [`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
 
 ## Modules

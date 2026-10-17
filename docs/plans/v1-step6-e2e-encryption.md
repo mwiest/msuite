@@ -14,7 +14,7 @@ renamed batch fails to decrypt (invariant 17).
 
 Out of scope, and why it matters here: pairing and recovery are step 7, so a snapshot file only
 imports back on the device that exported it, and a reinstall starts empty with no way back. The
-step 5 two-device check must land before slice 3, which encrypts the file: from then on, two
+step 5 two-device check landed on 2026-10-17, before slice 3 encrypts the file: from then on, two
 devices without a shared root can no longer exchange it.
 
 ## Decisions

@@ -1,8 +1,8 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 4 done; step 5 (backend-plug interface and the manual plug) in progress:**
-[`v1-step5-manual-plug.md`](v1-step5-manual-plug.md). Started 2026-07-02; reordered 2026-10-11
-(decision 0034).
+Status: **steps 0 to 5 done; step 6 (E2E encryption of batches) is next:**
+[`v1-step6-e2e-encryption.md`](v1-step6-e2e-encryption.md). Started 2026-07-02; reordered
+2026-10-11 (decision 0034).
 
 ## Goal
 
@@ -70,10 +70,12 @@ Each step may take several commits; a step that grows big gets its own plan.
    read-time rules and commands in `apps/todo/domain`, screens in `apps/todo/shared`. Simulator
    invariants 14 to 16. Proves: a usable offline app exists. Decisions 0049 to 0064; the wiring
    and UI are in `architecture.md`. Checked on an emulator. Landed: `674ab59` to `292e00e`.
-5. [ ] **Backend-plug interface and the manual plug.** `put`/`list`/`get`; export/import of one
+5. [x] **Backend-plug interface and the manual plug.** `put`/`list`/`get`; export/import of one
    full-state snapshot (plaintext; a proof of concept until step 6 encrypts it); simulator Layer 2.
-   Proves: merge across two
-   devices. Plan: [`v1-step5-manual-plug.md`](v1-step5-manual-plug.md).
+   Proves: merge across two devices. Decisions 0066 to 0069; the plug design is in
+   `architecture.md` → Backend plugs and Compaction. Checked by hand between a phone and an
+   emulator (export and import both ways, an imported file twice, and a deletion that crossed).
+   Landed: `914580e` to `5789870`.
 6. [ ] **E2E encryption of batches** in `core/crypto`: envelope with the object key in the AAD
    (decision 0029); the manual export becomes encrypted; root at rest via KeyStore (decision
    0039); simulator Layer 3. Proves: data is opaque to any server. Plan:
