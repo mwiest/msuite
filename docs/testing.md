@@ -47,7 +47,9 @@ a far-future batch is held back and merged later.
 Layer 2 runs the same schedules with whole snapshots through a `PlugStore`, in memory and through
 `Replica` (`SimulatorTest.kt`), and checks that an object that won't decode is skipped, retried a
 bounded number of times, then flagged corrupt and left alone (decisions 0068, 0069). Invariant 12
-lands with the folder plug at step 8.
+lands with the folder plug at step 8. Step 8 also adds a delta-publishing mode over `PlugStore`
+with the real key grammar of 0029 — today's `sim/<hash>` keys are flat, so spans, types and
+pruning are not exercised — plus pruning steps asserting invariants 18 and 19.
 
 The ToDo simulator (`apps/todo/domain/src/jvmTest/.../TodoSimulation.kt`, driven by
 `TodoSimulatorTest.kt`) runs the real `ListCommands`, `TaskCommands` and `projectTodos()` on
@@ -107,13 +109,19 @@ ToDo rules (decisions 0031, 0032, 0033):
 Envelope (decision 0029, Layer 3):
 17. A batch renamed or moved to another key fails to decrypt and is not merged.
 
+Compaction (decision 0002; the spans of 0029; planned with v1 steps 8 and 9):
+18. After a writer publishes a snapshot and prunes its earlier objects, every reader converges on
+    the surviving objects alone — no reader still needs a pruned object.
+19. A device that first syncs only after pruning converges to the same state, and each writer's
+    object count stays bounded: a snapshot plus a grace window's worth of deltas.
+
 ### Layers
 
 | Layer | Lands with | Covers |
 |---|---|---|
 | 1 | v1 step 2 (landed), gating the LWW merge | pure merge and HLC, invariants 1 to 11 and 13 |
 | 1 + ToDo rules | v1 step 4 (landed) | invariants 14 to 16, through the ToDo commands |
-| 2 | v1 step 5 (landed), step 8 (synced-folder plug on plain files) | the real plug wrapped in; invariant 12 with the folder plug |
+| 2 | v1 step 5 (landed), step 8 (folder plug on plain files, delta mode, pruning) | the real plug wrapped in; invariant 12 with the folder plug, 18 and 19 with pruning |
 | 3 | v1 step 6 | encrypted batches still converge, invariant 17 |
 
 ## Formatting and static analysis

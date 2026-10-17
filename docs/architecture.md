@@ -225,6 +225,29 @@ multi-object keys are first used at runtime by the synced-folder plug, the v1 mi
 0042). Its logic sits behind a small file-system interface, so the simulator runs it on `jvm` with
 plain files.
 
+### Compaction (planned)
+
+The append-only contract grows three things without bound: backend objects, `list` enumeration and
+the client's `ingested_batch` bookkeeping. All three are bounded by 0002's rule — a writer's
+full-state snapshot subsumes its every earlier object — in three parts, landing with the folder
+plug (v1 step 8) and `delete` (v1 step 9):
+
+- **Span skip.** A reader that has ingested a writer's snapshot skips that writer's objects whose
+  `hlcLo`..`hlcHi` span lies inside it: the key grammar (0029) carries the span, so no `delete` is
+  needed and *fetching* stays bounded on every backend (enumeration is bounded by the delete
+  below). `ingested_batch` and `unreadable_batch` are caches, not correctness (merge is
+  state-based), so rows whose keys are no longer in `list` are pruned with it.
+- **Writer-side pruning.** After publishing a snapshot, a device deletes its own earlier objects,
+  optionally keeping a short grace window (a key absent at `get` is a skip, not corruption —
+  0069). `delete` is capability-gated (0003). The namespace authenticates the group's shared root
+  (0008), so "own objects" is a convention every member could break; the recovery rule covers that
+  and a backend that lost data alike.
+- **Recovery.** A device that finds its published objects gone publishes a fresh snapshot. A delta
+  would not re-expose them — its watermark has moved — but a snapshot re-exposes its whole state.
+
+Steady state publishes deltas, coarsely batched (per idle period, not per edit); snapshots are for
+joins (0033) and the periodic compaction of 0002.
+
 ### Relay
 
 `server/`: one Ktor CIO binary, filesystem blob storage, manual wiring, no reflection (decision

@@ -82,10 +82,14 @@ Each step may take several commits; a step that grows big gets its own plan.
    (decision 0041). Proves: key distribution without accounts.
 8. [ ] **Synced-folder plug (milestone).** SAF plug writing the multi-object keys (decision 0029)
    into a folder that Syncthing, Nextcloud or Dropbox syncs; its logic behind a file-system
-   interface; simulator Layer 2 with invariant 12 on plain files (decision 0042). Proves: live
-   multi-device sync through a backend that sees only ciphertext.
+   interface; simulator Layer 2 with invariant 12 on plain files (decision 0042), then a delta
+   mode over the real key grammar with span skip, coarse deltas and bookkeeping pruning,
+   asserting invariants 18 and 19 (`architecture.md` → Compaction). Proves: live multi-device
+   sync through a backend that sees only ciphertext.
 9. [ ] **Relay and relay plug.** `server/` as a Ktor CIO binary with namespace tokens (decision
-   0030), plus the plug that talks to it. Proves: live self-hosted sync without a sync tool.
+   0030), plus the plug that talks to it; capability-gated `delete` and writer-side pruning with
+   the recovery rule (`architecture.md` → Compaction). Proves: live self-hosted sync without a
+   sync tool.
 10. [ ] **Cloud deploy template for the relay.** Proves: a non-technical hosting path exists.
 
 ## Open questions

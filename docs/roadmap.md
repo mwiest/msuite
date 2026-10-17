@@ -15,7 +15,6 @@ After v1, roughly in this order:
 - A per-field merge (CRDT or 3-way) for fields where LWW loss is unacceptable, e.g. a notes body
   (decision 0005).
 - More plugs: WebDAV, object storage (S3, R2, B2, MinIO).
-- Snapshots with pruning, `delete` and a plug capability descriptor (decisions 0002, 0003).
 - Contacts, then Calendar.
 - First F-Droid release of ToDo, with a privacy policy, release docs and store metadata.
 - Web app (`web/README.md`, decision 0012).
