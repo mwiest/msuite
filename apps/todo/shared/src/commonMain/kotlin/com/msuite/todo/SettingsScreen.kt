@@ -47,6 +47,9 @@ import com.msuite.todo.resources.ic_arrow_back
 import com.msuite.todo.resources.import_file
 import com.msuite.todo.resources.license
 import com.msuite.todo.resources.license_name
+import com.msuite.todo.resources.pair_a_device
+import com.msuite.todo.resources.pairing
+import com.msuite.todo.resources.pairing_hint
 import com.msuite.todo.resources.settings
 import com.msuite.todo.resources.source_code
 import com.msuite.todo.resources.sync
@@ -77,7 +80,13 @@ private const val LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 /** The theme and the manual plug; step 6 encrypts the export, later steps add live plugs (decision 0064). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(settings: TodoSettings, sync: SyncActions, version: String, onBack: () -> Unit) {
+fun SettingsScreen(
+    settings: TodoSettings,
+    sync: SyncActions,
+    version: String,
+    onBack: () -> Unit,
+    onPair: () -> Unit,
+) {
     val theme by settings.themeMode.collectAsState()
     Scaffold(
         topBar = {
@@ -96,6 +105,8 @@ fun SettingsScreen(settings: TodoSettings, sync: SyncActions, version: String, o
             ThemePicker(theme, settings::setThemeMode)
             HorizontalDivider(Modifier.padding(top = 24.dp))
             SyncSection(sync)
+            HorizontalDivider(Modifier.padding(top = 24.dp))
+            PairingSection(onPair)
             HorizontalDivider(Modifier.padding(top = 24.dp))
             About(version)
         }
@@ -140,6 +151,23 @@ private fun SyncSection(sync: SyncActions) {
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 8.dp),
             )
+        }
+    }
+}
+
+/** Pairing a second device (step 7): its own route, since the code carries the root (0008). */
+@Composable
+private fun PairingSection(onPair: () -> Unit) {
+    SectionTitle(stringResource(Res.string.pairing))
+    Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
+        Text(
+            stringResource(Res.string.pairing_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Button(onClick = onPair) {
+            Text(stringResource(Res.string.pair_a_device))
         }
     }
 }

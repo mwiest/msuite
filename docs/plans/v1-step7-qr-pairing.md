@@ -64,11 +64,11 @@ Each slice is one commit, builds, and leaves the build green.
    imports on B — both converge holding both devices' cells (0033, automated).
 4. [ ] **The QR display.** The shell encodes the payload into a ZXing-core matrix behind a seam
    (the SafSnapshotFiles pattern); `apps/todo/shared` adds a route from Settings that draws it on
-   a Canvas. Strings English and German (0027).
+   a Canvas. Strings English and German (0027). Record 0074 lands here, with the dependency.
 5. [ ] **The scan.** The shell scans via zxing-android-embedded behind the same seam; the join
    flow runs scan, parse, confirm (the data-shared copy), adopt, and states the group's transport.
-   Record 0074. Device check: a phone scans the emulator's screen (or an emulator with the host's
-   webcam as camera-back); the emulator's own join is exercised by the words path in slice 6.
+   Device check: a phone scans the emulator's screen (or an emulator with the host's webcam as
+   camera-back); the emulator's own join is exercised by the words path in slice 6.
 6. [ ] **The recovery screen and the clip.** A route showing the 24 words with copy (marked
    sensitive, cleared after 60 s, and the confirmation says so — 0041, shell code) and
    restore-from-words with honest errors. Emulator check: the Android 13+ preview shows dots, the

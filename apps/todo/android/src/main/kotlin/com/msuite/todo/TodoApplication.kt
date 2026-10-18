@@ -2,7 +2,6 @@ package com.msuite.todo
 
 import android.app.Application
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
-import com.msuite.core.crypto.IdentityProvider
 import com.msuite.core.storage.LocalStore
 import com.msuite.core.sync.Replica
 import com.msuite.todo.domain.StoredIdentity
@@ -22,7 +21,7 @@ class TodoApplication : Application() {
     }
 
     /** The group root, generated on first use and wrapped at rest (decisions 0008, 0039). */
-    val identity: IdentityProvider by lazy {
+    val identity: StoredIdentity by lazy {
         StoredIdentity(KeyStoreRootStore(File(filesDir, ROOT_FILE)))
     }
 

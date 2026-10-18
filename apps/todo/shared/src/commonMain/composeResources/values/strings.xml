@@ -62,6 +62,12 @@
     <string name="sync_unknown_key">That file was encrypted with a key this device doesn\'t have.</string>
     <string name="sync_failed">That file could not be read.</string>
     <string name="sync_write_failed">The file could not be written.</string>
+    <string name="pairing">Pairing</string>
+    <string name="pairing_hint">Show a code on this device and scan it with the other one. Both devices then share the same key, and their tasks are shared too.</string>
+    <string name="pair_a_device">Pair a device</string>
+    <string name="pair_devices">Pair devices</string>
+    <string name="pair_show">Show the code</string>
+    <string name="pair_show_hint">Scan this code with the other device\'s camera. Anyone who photographs it has the key.</string>
     <string name="about">About</string>
     <string name="app_name">msuite ToDo</string>
     <string name="version">Version</string>

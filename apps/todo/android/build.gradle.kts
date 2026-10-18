@@ -27,4 +27,5 @@ dependencies {
     implementation(project(":apps:todo:shared"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.sqldelight.android.driver)
+    implementation(libs.zxing.core)
 }

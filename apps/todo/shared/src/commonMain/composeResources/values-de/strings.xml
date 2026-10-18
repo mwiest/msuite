@@ -62,6 +62,12 @@
     <string name="sync_unknown_key">Die Datei wurde mit einem Schlüssel verschlüsselt, den dieses Gerät nicht hat.</string>
     <string name="sync_failed">Die Datei konnte nicht gelesen werden.</string>
     <string name="sync_write_failed">Die Datei konnte nicht geschrieben werden.</string>
+    <string name="pairing">Kopplung</string>
+    <string name="pairing_hint">Einen Code auf diesem Gerät anzeigen und ihn mit dem anderen Gerät scannen. Danach teilen beide Geräte denselben Schlüssel und auch ihre Aufgaben.</string>
+    <string name="pair_a_device">Gerät koppeln</string>
+    <string name="pair_devices">Geräte koppeln</string>
+    <string name="pair_show">Code anzeigen</string>
+    <string name="pair_show_hint">Scannen Sie diesen Code mit der Kamera des anderen Geräts ab. Wer ihn fotografiert, hat den Schlüssel.</string>
     <string name="about">Über</string>
     <string name="app_name">msuite ToDo</string>
     <string name="version">Version</string>
