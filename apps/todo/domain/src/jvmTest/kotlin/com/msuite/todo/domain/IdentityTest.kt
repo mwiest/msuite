@@ -2,23 +2,11 @@ package com.msuite.todo.domain
 
 import com.msuite.core.crypto.KEY_GEN_V1
 import com.msuite.core.crypto.SECRET_SIZE
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-
-/** An in-memory [RootStore]: JVM tests use a plain root (decision 0039 is device-only). */
-private class MemoryRootStore(var stored: ByteArray? = null) : RootStore {
-    var saves = 0
-        private set
-
-    override fun load(): ByteArray? = stored
-
-    override fun save(root: ByteArray) {
-        stored = root
-        saves++
-    }
-}
 
 class IdentityTest : StringSpec({
     "the root is generated once on first use and stored" {
@@ -47,5 +35,23 @@ class IdentityTest : StringSpec({
         val store = MemoryRootStore()
         val first = StoredIdentity(store).root(KEY_GEN_V1).shouldNotBeNull()
         StoredIdentity(store).root(KEY_GEN_V1)?.toList() shouldBe first.toList()
+    }
+
+    "adopting a root saves it and reads it back, before and after a restart" {
+        val store = MemoryRootStore()
+        val identity = StoredIdentity(store)
+        identity.root(KEY_GEN_V1).shouldNotBeNull()
+        val group = ByteArray(SECRET_SIZE) { (it + 7).toByte() }
+
+        identity.adopt(group)
+
+        identity.root(KEY_GEN_V1)?.toList() shouldBe group.toList()
+        store.stored?.toList() shouldBe group.toList()
+        StoredIdentity(store).root(KEY_GEN_V1)?.toList() shouldBe group.toList()
+    }
+
+    "adopting refuses a root that isn't 256 bits" {
+        val identity = StoredIdentity(MemoryRootStore())
+        shouldThrow<IllegalArgumentException> { identity.adopt(ByteArray(16)) }
     }
 })

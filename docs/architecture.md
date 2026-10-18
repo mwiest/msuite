@@ -21,7 +21,7 @@ sections from "Sync" on describe the agreed design; parts that are code say so. 
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`, `EnvelopePlugStore`) with `Fetch`, `MemoryPlug`, `assertPlugContract`, `TestClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) and `RecoveryWords` over `BIP39_ENGLISH` (record 0073) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
-| `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`, `ListCommands`, `TaskCommands`, `SyncActions`, `SnapshotFiles`, `StoredIdentity`, `RootStore` |
+| `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`, `ListCommands`, `TaskCommands`, `SyncActions`, `SnapshotFiles`, `StoredIdentity`, `RootStore`, `PairingActions`/`JoinResult` |
 | `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica, identity)` creates "My Tasks" if missing; `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI) |
 | `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `TodoApplication` opens the one `Replica`, the `TodoSettings` and the `StoredIdentity` over `KeyStoreRootStore`; `MainActivity` calls `TodoApp`; backup off (decision 0060) |
 | `server` | Kotlin/JVM application | The dumb relay, a Ktor CIO binary (decision 0017) | `main` printing a line |
@@ -290,7 +290,8 @@ build that doesn't know the backend type still reads the root and pairs. The typ
 chooser at step 8, and a backend with portable configuration carries it in its section at step 9.
 There is no salt — the same root and backend always produce the same QR.
 - A joining device keeps its data: it switches to the group's root, keeps its `deviceId`, and
-  publishes its full state into the group's namespace (decision 0033).
+  publishes its full state into the group's namespace (decision 0033; code: `StoredIdentity.adopt`
+  and `PairingActions` in `apps/todo/domain`, the one place a scanned QR and typed words both end).
 - Copying the recovery key marks the clip sensitive and clears it after 60 s (decision 0041).
 - Clients hold a set of roots keyed by `keyGen`, so rotation can come later without a format change.
 - At rest (code: `StoredIdentity` + `RootStore` in `apps/todo/domain`, `KeyStoreRootStore` in the
