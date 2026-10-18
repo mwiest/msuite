@@ -1,8 +1,8 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 6 done (code); the step 6 emulator and two-device checks are pending, and
-step 7 (QR pairing) is next. The step 6 plan:**
-[`v1-step6-e2e-encryption.md`](v1-step6-e2e-encryption.md). Started 2026-07-02; reordered
+Status: **steps 0 to 6 done (code); the step 6 device checks are pending, and step 7 (QR pairing)
+is planned.** The plans: step 6 [`v1-step6-e2e-encryption.md`](v1-step6-e2e-encryption.md),
+step 7 [`v1-step7-qr-pairing.md`](v1-step7-qr-pairing.md). Started 2026-07-02; reordered
 2026-10-11 (decision 0034).
 
 ## Goal
@@ -84,9 +84,10 @@ Each step may take several commits; a step that grows big gets its own plan.
    `a4107c5`, `1e76ec5`, `a7e3874`, `8456bbb`; decisions 0070, 0071. `allTests` and Layer 3 green
    on 2026-10-17; the emulator (root survives a restart, the file holds no plaintext) and
    two-device checks are pending.
-7. [ ] **QR pairing and recovery key.** One QR carrying the root; a joining device merges its data
-   (decision 0033); BIP39 recovery; a copied key is marked sensitive and cleared after 60 s
-   (decision 0041). Proves: key distribution without accounts.
+7. [ ] **QR pairing and recovery key.** One QR carrying the root and the group's backend
+   descriptor; a joining device merges its data (decision 0033); BIP39 recovery; a copied key is
+   marked sensitive and cleared after 60 s (decision 0041). Proves: key distribution without
+   accounts. Plan: [`v1-step7-qr-pairing.md`](v1-step7-qr-pairing.md).
 8. [ ] **Synced-folder plug (milestone).** SAF plug writing the multi-object keys (decision 0029)
    into a folder that Syncthing, Nextcloud or Dropbox syncs; its logic behind a file-system
    interface; simulator Layer 2 with invariant 12 on plain files (decision 0042), then a delta
@@ -101,8 +102,12 @@ Each step may take several commits; a step that grows big gets its own plan.
 
 ## Open questions
 
-- Whether the pairing QR also carries the backend configuration, or the joining device sets it up
-  itself. Decide at step 7.
+Decided in the step 7 plan (2026-10-18): the pairing QR carries identity and the group's backend
+descriptor — the backend type today ("manual", nothing portable to carry), the folder type's
+chooser trigger with the folder plug (step 8), portable config when a backend has it (the relay,
+step 9). Recovery words are English BIP39 from an in-repo wordlist; the scanner is
+zxing-android-embedded. Records 0072 to 0074 land with their slices
+([`v1-step7-qr-pairing.md`](v1-step7-qr-pairing.md)).
 
 Decided in step 5: a batch from a newer data-model version is held back, not merged (decision
 0067); a batch that fails to decode is skipped and retried a bounded number of times, then flagged
