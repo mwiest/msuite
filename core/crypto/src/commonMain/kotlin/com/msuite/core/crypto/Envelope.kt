@@ -102,16 +102,3 @@ class BatchEnvelope(
         const val HEADER_SIZE = KEY_GEN_INDEX + INT_BYTES
     }
 }
-
-private const val INT_BYTES = 4
-private const val BITS_PER_BYTE = 8
-private const val BYTE_MASK = 0xFF
-
-private fun Int.toBigEndian(): ByteArray =
-    ByteArray(INT_BYTES) { (this ushr ((INT_BYTES - 1 - it) * BITS_PER_BYTE)).toByte() }
-
-private fun ByteArray.intAt(offset: Int): Int {
-    var value = 0
-    repeat(INT_BYTES) { value = (value shl BITS_PER_BYTE) or (this[offset + it].toInt() and BYTE_MASK) }
-    return value
-}

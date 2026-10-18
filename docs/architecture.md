@@ -19,7 +19,7 @@ sections from "Sync" on describe the agreed design; parts that are code say so. 
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks, the device ID | `LocalStore` over all four tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, `ManualSync`, `ObjectKey`/`ObjectKeyPrefix`/`groupId`, simulator Layer 1 |
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`, `EnvelopePlugStore`) with `Fetch`, `MemoryPlug`, `assertPlugContract`, `TestClock` |
-| `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm` and the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) |
+| `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`, `ListCommands`, `TaskCommands`, `SyncActions`, `SnapshotFiles`, `StoredIdentity`, `RootStore` |
 | `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica, identity)` creates "My Tasks" if missing; `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI) |
@@ -275,8 +275,19 @@ cap namespace size. Cloudflare users need no relay: R2 works with the object-sto
 - Identity is one 256-bit symmetric root secret (decision 0008), sourced behind
   `IdentityProvider` / `SyncConfig`: local key generation in v1, a sibling app later (federation,
   decision 0001).
-- Pairing: one QR code carrying the root plus a checksum. Recovery: the root as BIP39 words, QR or
-  file (decision 0011).
+- Pairing: one QR code carrying the root, and the group's backend descriptor (decision 0072; code:
+  `PairingPayload`). Recovery: the root as BIP39 words, QR or file (decision 0011).
+
+```
+format (1 byte) | keyGen | root (256 bit) | backend type (1 byte) | backend section | checksum
+```
+
+The checksum is the first 4 bytes of SHA-256 over everything before it: it catches a misread code,
+not an attacker, since whoever sees the QR has the root (0008). Identity sits at fixed offsets, so a
+build that doesn't know the backend type still reads the root and pairs. The type today is `manual`
+(the snapshot file, nothing to carry); the folder type makes the joining device offer its folder
+chooser at step 8, and a backend with portable configuration carries it in its section at step 9.
+There is no salt — the same root and backend always produce the same QR.
 - A joining device keeps its data: it switches to the group's root, keeps its `deviceId`, and
   publishes its full state into the group's namespace (decision 0033).
 - Copying the recovery key marks the clip sensitive and clears it after 60 s (decision 0041).
