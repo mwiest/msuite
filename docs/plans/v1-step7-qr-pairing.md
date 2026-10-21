@@ -1,7 +1,7 @@
 # Plan: v1 step 7, QR pairing and the recovery key
 
-Status: **slices 1 to 4 done; slice 5 (the scan) is built and awaits its device check; slices 6 and 7
-remain.** Started 2026-10-18. A slice of [`v1-todo.md`](v1-todo.md) step 7.
+Status: **slices 1 to 4 done; slices 5 and 6 are built and await their device checks; slice 7
+remains.** Started 2026-10-18. A slice of [`v1-todo.md`](v1-todo.md) step 7.
 
 ## Goal
 
@@ -71,10 +71,11 @@ Each slice is one commit, builds, and leaves the build green.
    Device check: a phone scans the emulator's screen (or an emulator with the host's webcam as
    camera-back); the emulator's own join is exercised by the words path in slice 6. Code landed:
    `a6d3e70`; the on-device check is pending.
-6. [ ] **The recovery screen and the clip.** A route showing the 24 words with copy (marked
+6. [x] **The recovery screen and the clip.** A route showing the 24 words with copy (marked
    sensitive, cleared after 60 s, and the confirmation says so — 0041, shell code) and
    restore-from-words with honest errors. Emulator check: the Android 13+ preview shows dots, the
-   clip clears, and a fresh install restored from words imports an old export.
+   clip clears, and a fresh install restored from words imports an old export. Code landed:
+   `51cbcf6`; the emulator check is pending.
 7. [ ] **Two devices, one group.** Pair phone and emulator, then export/import both ways: both
    show the same lists, each device's pre-pairing data included, and a deletion crosses. Closes
    the step 6 two-device check and this plan; updates `product.md`, `architecture.md` → Identity

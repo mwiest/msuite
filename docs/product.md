@@ -4,8 +4,9 @@ What msuite is and what its apps do today. When behaviour changes, this file cha
 commit. What is intended but not built is in `roadmap.md` and the plans.
 
 Checked against the code on 2026-10-21: **the ToDo app works offline on one device, exports an
-encrypted whole-state snapshot file, and pairs a second device by QR, so that file crosses between
-them; recovery words and live sync are not built yet.** On first start it
+encrypted whole-state snapshot file, pairs a second device by QR so that file crosses between them,
+and shows or restores the group key as 24 recovery words; live sync is not built yet.** On first
+start it
 creates "My Tasks" (in the device language). The lists are tabs at the top, and the app reopens on
 the list last shown. The selected list shows its open tasks, newest first, then its done tasks,
 grayed out and struck through; each has a checkbox, a star, and its notes' first line and due date
@@ -18,7 +19,9 @@ how many tasks go with it ("My Tasks" can't be deleted). The gear opens the sett
 (system default, light or dark), a Sync section that exports the device's whole state to an
 encrypted file or merges one in (the file is ciphertext under the group's root, so it imports on
 another device once the two are paired), a Pairing section that shows this device's QR code or scans
-another's with the camera (joining asks first and says the device's tasks will be shared), and an
+another's with the camera (joining asks first and says the device's tasks will be shared), a
+Recovery section that shows this device's 24 words, copies them as a sensitive clipboard entry that
+clears after 60 seconds, or restores the key from typed words (after the same confirmation), and an
 About section with the version, author, licence (GPL v3 or later), a link to the source code and the
 open-source libraries used. Everything is kept on the device; Android backup is off. Its intended
 features are in [`plans/v1-todo.md`](plans/v1-todo.md).

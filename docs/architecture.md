@@ -22,8 +22,8 @@ sections from "Sync" on describe the agreed design; parts that are code say so. 
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) and `RecoveryWords` over `BIP39_ENGLISH` (record 0073) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`, `ListCommands`, `TaskCommands`, `SyncActions`, `SnapshotFiles`, `StoredIdentity`, `RootStore`, `PairingActions`/`JoinResult`/`JoinPreview`, `QrCodes`/`QrMatrix` |
-| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica, settings, version, shell, identity)` creates "My Tasks" if missing; `ShellServices` holds the platform halves (SAF picker, QR codes); `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI), `PairingScreen` (shows and scans a code) |
-| `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `TodoApplication` opens the one `Replica`, the `TodoSettings` and the `StoredIdentity` over `KeyStoreRootStore`; `MainActivity` calls `TodoApp`; `SafSnapshotFiles` (SAF) and `ZxingQrCodes` (record 0074: encoder and camera scanner); backup off (decision 0060) |
+| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica, settings, version, shell, identity)` creates "My Tasks" if missing; `ShellServices` holds the platform halves (SAF picker, QR codes, clipboard); `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI), `PairingScreen` (shows and scans a code), `RecoveryScreen` (words, copy and restore) |
+| `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `TodoApplication` opens the one `Replica`, the `TodoSettings`, the `StoredIdentity` over `KeyStoreRootStore` and the app-scoped clipboard timer; `MainActivity` calls `TodoApp`; `SafSnapshotFiles` (SAF), `ZxingQrCodes` (record 0074: encoder and camera scanner) and `AndroidSensitiveClipboard` (decision 0041); backup off (decision 0060) |
 | `server` | Kotlin/JVM application | The dumb relay, a Ktor CIO binary (decision 0017) | `main` printing a line |
 | `web/` | Not a module | Deferred web app; see `web/README.md` | - |
 
@@ -296,7 +296,11 @@ There is no salt — the same root and backend always produce the same QR.
 - A joining device keeps its data: it switches to the group's root, keeps its `deviceId`, and
   publishes its full state into the group's namespace (decision 0033; code: `StoredIdentity.adopt`
   and `PairingActions` in `apps/todo/domain`, the one place a scanned QR and typed words both end).
-- Copying the recovery key marks the clip sensitive and clears it after 60 s (decision 0041).
+- Copying the recovery key marks the clip sensitive and clears it after 60 s unless something else
+  was copied since (decision 0041; code: `SensitiveClipboard` in the domain, `AndroidSensitiveClipboard`
+  in the shell, the 60 s timer on the application's scope so a rotation does not lose it). The
+  recovery route shows the 24 words on demand and restores typed words through the same preview,
+  confirmation and [adopt] path as a QR (code: `RecoveryScreen`).
 - Clients hold a set of roots keyed by `keyGen`, so rotation can come later without a format change.
 - At rest (code: `StoredIdentity` + `RootStore` in `apps/todo/domain`, `KeyStoreRootStore` in the
   shell): the root is generated on first use, wrapped with a non-exportable AES-256-GCM key in the

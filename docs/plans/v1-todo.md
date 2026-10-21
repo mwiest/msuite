@@ -1,7 +1,7 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
 Status: **steps 0 to 6 done, code and device checks; step 7 (QR pairing) is in progress: slices 1 to
-4 are done and slice 5 (the scan) is built, its device check pending:**
+4 are done and slices 5 and 6 are built, their device checks pending:**
 [`v1-step7-qr-pairing.md`](v1-step7-qr-pairing.md). Started 2026-07-02; reordered 2026-10-11
 (decision 0034).
 
@@ -88,8 +88,8 @@ Each step may take several commits; a step that grows big gets its own plan.
    descriptor; a joining device merges its data (decision 0033); BIP39 recovery; a copied key is
    marked sensitive and cleared after 60 s (decision 0041). Proves: key distribution without
    accounts. Plan: [`v1-step7-qr-pairing.md`](v1-step7-qr-pairing.md). Slices 1 to 4 landed
-   (`71ce6ee`, `978f4ff`, `630be38`, `3bcc9b6`); slice 5's code landed in `a6d3e70` and its device
-   check is pending; slices 6 and 7 remain.
+   (`71ce6ee`, `978f4ff`, `630be38`, `3bcc9b6`); slices 5 and 6 landed in `a6d3e70` and
+   `51cbcf6`, their device checks pending; slice 7 remains.
 8. [ ] **Synced-folder plug (milestone).** SAF plug writing the multi-object keys (decision 0029)
    into a folder that Syncthing, Nextcloud or Dropbox syncs; its logic behind a file-system
    interface; simulator Layer 2 with invariant 12 on plain files (decision 0042), then a delta
