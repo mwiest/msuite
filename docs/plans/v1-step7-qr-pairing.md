@@ -1,7 +1,7 @@
 # Plan: v1 step 7, QR pairing and the recovery key
 
-Status: **not started; drafted while the step 6 device checks are pending.** Started 2026-10-18. A
-slice of [`v1-todo.md`](v1-todo.md) step 7.
+Status: **slices 1 to 4 done; slice 5 (the scan) is built and awaits its device check; slices 6 and 7
+remain.** Started 2026-10-18. A slice of [`v1-todo.md`](v1-todo.md) step 7.
 
 ## Goal
 
@@ -51,24 +51,26 @@ fallback, copied as a sensitive clip that clears after 60 s (decisions 0011, 004
 
 Each slice is one commit, builds, and leaves the build green.
 
-1. [ ] **The pairing payload** in `core/crypto`: build and parse version, `keyGen`, root, backend
+1. [x] **The pairing payload** in `core/crypto`: build and parse version, `keyGen`, root, backend
    type and section, checksum. jvmTest: round trip, every single-bit flip in the covered bytes is
-   rejected, an unknown backend type still yields the identity. Record 0072.
-2. [ ] **Recovery words** in `core/crypto`: BIP39 encode and decode over the 32-byte root, the
+   rejected, an unknown backend type still yields the identity. Record 0072. Landed: `71ce6ee`.
+2. [x] **Recovery words** in `core/crypto`: BIP39 encode and decode over the 32-byte root, the
    in-repo wordlist. jvmTest: the official BIP39 vectors, a wrong word rejected, a bad checksum
-   rejected. Record 0073.
-3. [ ] **Adopting a root** in `apps/todo/domain`: `PairingActions` — parse, confirm, adopt
+   rejected. Record 0073. Landed: `978f4ff`.
+3. [x] **Adopting a root** in `apps/todo/domain`: `PairingActions` — parse, confirm, adopt
    (`StoredIdentity` swaps and saves its secret; the `deviceId` and data stay); scanning your own
    QR reports "already this group"; restoring from words reuses the same path. A cross-replica
    test in `core/sync` jvmTest: two replicas, two roots; B adopts A's root and A's export then
-   imports on B — both converge holding both devices' cells (0033, automated).
-4. [ ] **The QR display.** The shell encodes the payload into a ZXing-core matrix behind a seam
+   imports on B — both converge holding both devices' cells (0033, automated). Landed: `630be38`.
+4. [x] **The QR display.** The shell encodes the payload into a ZXing-core matrix behind a seam
    (the SafSnapshotFiles pattern); `apps/todo/shared` adds a route from Settings that draws it on
    a Canvas. Strings English and German (0027). Record 0074 lands here, with the dependency.
-5. [ ] **The scan.** The shell scans via zxing-android-embedded behind the same seam; the join
+   Landed: `3bcc9b6`.
+5. [x] **The scan.** The shell scans via zxing-android-embedded behind the same seam; the join
    flow runs scan, parse, confirm (the data-shared copy), adopt, and states the group's transport.
    Device check: a phone scans the emulator's screen (or an emulator with the host's webcam as
-   camera-back); the emulator's own join is exercised by the words path in slice 6.
+   camera-back); the emulator's own join is exercised by the words path in slice 6. Code landed:
+   `a6d3e70`; the on-device check is pending.
 6. [ ] **The recovery screen and the clip.** A route showing the 24 words with copy (marked
    sensitive, cleared after 60 s, and the confirmation says so — 0041, shell code) and
    restore-from-words with honest errors. Emulator check: the Android 13+ preview shows dots, the
