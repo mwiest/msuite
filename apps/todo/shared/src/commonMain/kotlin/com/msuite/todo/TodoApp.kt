@@ -28,6 +28,9 @@ private data object SettingsRoute
 @Serializable
 private data object PairingRoute
 
+@Serializable
+private data object RecoveryRoute
+
 /**
  * The whole ToDo UI over [replica] and [settings]; [version] is shown in About, [shell] is the
  * platform half, and [identity] is the group root. Platform shells (apps/todo/android) only host it.
@@ -57,9 +60,19 @@ fun TodoApp(
         NavHost(nav, startDestination = TasksRoute) {
             composable<TasksRoute> { TasksScreen(app) { nav.navigate(SettingsRoute) } }
             composable<SettingsRoute> {
-                SettingsScreen(app.settings, app.sync, version, { nav.popBackStack() }, { nav.navigate(PairingRoute) })
+                SettingsScreen(app.settings, app.sync, version, { nav.popBackStack() }) {
+                    nav.navigate(
+                        when (it) {
+                            SettingsDestination.Pairing -> PairingRoute
+                            SettingsDestination.Recovery -> RecoveryRoute
+                        },
+                    )
+                }
             }
             composable<PairingRoute> { PairingScreen(app.pairing, shell.qr) { nav.popBackStack() } }
+            composable<RecoveryRoute> {
+                RecoveryScreen(app.pairing, shell.clipboard) { nav.popBackStack() }
+            }
         }
     }
 }

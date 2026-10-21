@@ -50,6 +50,9 @@ import com.msuite.todo.resources.license_name
 import com.msuite.todo.resources.pair_a_device
 import com.msuite.todo.resources.pairing
 import com.msuite.todo.resources.pairing_hint
+import com.msuite.todo.resources.recovery
+import com.msuite.todo.resources.recovery_hint
+import com.msuite.todo.resources.recovery_manage
 import com.msuite.todo.resources.settings
 import com.msuite.todo.resources.source_code
 import com.msuite.todo.resources.sync
@@ -77,6 +80,9 @@ private const val AUTHOR = "Marc Wiest"
 private const val SOURCE_URL = "https://github.com/mwiest/msuite"
 private const val LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 
+/** The settings routes that need the root; one callback keeps the screen's parameter list small. */
+enum class SettingsDestination { Pairing, Recovery }
+
 /** The theme and the manual plug; step 6 encrypts the export, later steps add live plugs (decision 0064). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +91,7 @@ fun SettingsScreen(
     sync: SyncActions,
     version: String,
     onBack: () -> Unit,
-    onPair: () -> Unit,
+    onOpen: (SettingsDestination) -> Unit,
 ) {
     val theme by settings.themeMode.collectAsState()
     Scaffold(
@@ -106,7 +112,9 @@ fun SettingsScreen(
             HorizontalDivider(Modifier.padding(top = 24.dp))
             SyncSection(sync)
             HorizontalDivider(Modifier.padding(top = 24.dp))
-            PairingSection(onPair)
+            PairingSection { onOpen(SettingsDestination.Pairing) }
+            HorizontalDivider(Modifier.padding(top = 24.dp))
+            RecoverySection { onOpen(SettingsDestination.Recovery) }
             HorizontalDivider(Modifier.padding(top = 24.dp))
             About(version)
         }
@@ -168,6 +176,23 @@ private fun PairingSection(onPair: () -> Unit) {
         )
         Button(onClick = onPair) {
             Text(stringResource(Res.string.pair_a_device))
+        }
+    }
+}
+
+/** The words behind the root, shown or typed (decisions 0011, 0041; record 0073). */
+@Composable
+private fun RecoverySection(onRecovery: () -> Unit) {
+    SectionTitle(stringResource(Res.string.recovery))
+    Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
+        Text(
+            stringResource(Res.string.recovery_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Button(onClick = onRecovery) {
+            Text(stringResource(Res.string.recovery_manage))
         }
     }
 }

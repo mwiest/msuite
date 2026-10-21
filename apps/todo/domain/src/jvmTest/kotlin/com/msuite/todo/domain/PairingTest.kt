@@ -72,12 +72,46 @@ class PairingTest : StringSpec({
         pairing.join(byteArrayOf(1, 2, 3)) shouldBe JoinResult.Unreadable
     }
 
+    "a device shows its root as the 24 recovery words" {
+        actions(group).words() shouldBe RecoveryWords.encode(group)
+    }
+
     "the words restore the root a code would have carried" {
         val identity = StoredIdentity(MemoryRootStore(other))
 
-        PairingActions(identity).restore(RecoveryWords.encode(group)) shouldBe JoinResult.Joined(null)
+        PairingActions(identity).restore(RecoveryWords.encode(group)) shouldBe JoinResult.Restored
 
         identity.root(KEY_GEN_V1)?.toList() shouldBe group.toList()
+    }
+
+    "restoring on a device with no data adopts the words' root" {
+        val identity = StoredIdentity(MemoryRootStore())
+
+        PairingActions(identity).restore(RecoveryWords.encode(group)) shouldBe JoinResult.Restored
+
+        identity.root(KEY_GEN_V1)?.toList() shouldBe group.toList()
+    }
+
+    "restoring one's own words changes nothing" {
+        val store = MemoryRootStore()
+        val pairing = PairingActions(StoredIdentity(store))
+
+        pairing.restore(RecoveryWords.encode(group)) shouldBe JoinResult.Restored
+        val saves = store.saves
+        pairing.restore(RecoveryWords.encode(group)) shouldBe JoinResult.AlreadyThisGroup
+
+        store.saves shouldBe saves
+    }
+
+    "typed words are previewed before they are restored" {
+        val identity = StoredIdentity(MemoryRootStore(other))
+        val pairing = PairingActions(identity)
+
+        pairing.preview(RecoveryWords.encode(group)) shouldBe JoinPreview.Ready
+        pairing.preview(RecoveryWords.encode(other)) shouldBe JoinPreview.AlreadyThisGroup
+        pairing.preview(listOf("abandon")) shouldBe JoinPreview.Unreadable
+
+        identity.root(KEY_GEN_V1)?.toList() shouldBe other.toList()
     }
 
     "words that don't encode a root are refused" {

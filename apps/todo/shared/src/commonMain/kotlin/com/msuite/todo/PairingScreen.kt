@@ -55,6 +55,7 @@ import com.msuite.todo.resources.pair_show_hint
 import com.msuite.todo.resources.pair_unreadable
 import com.msuite.todo.resources.pair_unsupported
 import com.msuite.todo.resources.pairing_hint
+import com.msuite.todo.resources.restore_done
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -192,8 +193,8 @@ private fun QrCode(matrix: QrMatrix, modifier: Modifier = Modifier) {
     }
 }
 
-/** The same outcome as the matching [JoinResult], so the screen shows every message one way. */
-private fun JoinPreview.message(): JoinResult = when (this) {
+/** The same outcome as the matching [JoinResult], so the screens show every message one way. */
+internal fun JoinPreview.message(): JoinResult = when (this) {
     JoinPreview.Ready -> error("a ready code is confirmed, not reported")
     JoinPreview.AlreadyThisGroup -> JoinResult.AlreadyThisGroup
     JoinPreview.UnsupportedKeyGen -> JoinResult.UnsupportedKeyGen
@@ -205,6 +206,8 @@ private fun JoinResult.label() = when (this) {
         BackendType.Manual -> Res.string.pair_joined_file
         null -> Res.string.pair_joined_unknown
     }
+
+    JoinResult.Restored -> Res.string.restore_done
 
     JoinResult.AlreadyThisGroup -> Res.string.pair_already
 
