@@ -9,8 +9,9 @@ kotlinxDatetime = "0.8.0"
 kotest = "6.2.5"
 sqldelight = "2.4.1"
 androidxActivityCompose = "1.13.0"
-# ZXing: the QR encoder now and the scanner in step 7 slice 5 (record 0074). Apache-2, pure Java.
+# ZXing: the QR encoder, and zxing-android-embedded for the camera scanner (record 0074). Apache-2.
 zxing = "3.5.3"
+zxingAndroidEmbedded = "4.3.0"
 detekt = "1.23.8"
 spotless = "8.10.4"
 
@@ -49,6 +50,7 @@ sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", ver
 sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 # QR codes for pairing, behind the domain seam (record 0074).
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
 
 # --- Gradle plugin artifacts, on the build-logic classpath (convention plugins) ---
 android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }

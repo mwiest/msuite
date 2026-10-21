@@ -68,6 +68,16 @@
     <string name="pair_devices">Geräte koppeln</string>
     <string name="pair_show">Code anzeigen</string>
     <string name="pair_show_hint">Scannen Sie diesen Code mit der Kamera des anderen Geräts ab. Wer ihn fotografiert, hat den Schlüssel.</string>
+    <string name="pair_join_hint">Den Code eines Geräts scannen, das bereits zur Gruppe gehört.</string>
+    <string name="pair_scan">Code scannen</string>
+    <string name="pair_confirm_title">Dieser Gruppe beitreten?</string>
+    <string name="pair_confirm_body">Die Listen und Aufgaben dieses Geräts werden mit allen Geräten der Gruppe geteilt. Sie bleiben auch auf diesem Gerät.</string>
+    <string name="pair_confirm_join">Beitreten</string>
+    <string name="pair_joined_file">Beigetreten. Diese Gruppe synchronisiert per Dateiübertragung.</string>
+    <string name="pair_joined_unknown">Beigetreten. Diese Gruppe nutzt eine Synchronisierungsart, die diese App nicht kennt.</string>
+    <string name="pair_already">Dieses Gerät gehört bereits zu dieser Gruppe.</string>
+    <string name="pair_unsupported">Der Code stammt aus einer neueren App-Version. Zuerst diese App aktualisieren.</string>
+    <string name="pair_unreadable">Der Code ist kein Kopplungscode.</string>
     <string name="about">Über</string>
     <string name="app_name">msuite ToDo</string>
     <string name="version">Version</string>
@@ -76,5 +86,5 @@
     <string name="license_name">GNU GPL v3 oder neuer</string>
     <string name="source_code">Quellcode</string>
     <string name="third_party">Open-Source-Bibliotheken</string>
-    <string name="third_party_licenses">Kotlin, kotlinx (coroutines, datetime, serialization), Compose Multiplatform (Material 3, Navigation), AndroidX, SQLDelight, multiplatform-settings, Reorderable und Material Icons, alle unter der Apache License 2.0</string>
+    <string name="third_party_licenses">Kotlin, kotlinx (coroutines, datetime, serialization), Compose Multiplatform (Material 3, Navigation), AndroidX, SQLDelight, multiplatform-settings, Reorderable, Material Icons und ZXing, alle unter der Apache License 2.0</string>
 </resources>

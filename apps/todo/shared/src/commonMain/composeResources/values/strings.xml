@@ -68,6 +68,16 @@
     <string name="pair_devices">Pair devices</string>
     <string name="pair_show">Show the code</string>
     <string name="pair_show_hint">Scan this code with the other device\'s camera. Anyone who photographs it has the key.</string>
+    <string name="pair_join_hint">Scan the code of a device that is already in the group.</string>
+    <string name="pair_scan">Scan a code</string>
+    <string name="pair_confirm_title">Join this group?</string>
+    <string name="pair_confirm_body">This device\'s lists and tasks will be shared with every device in the group. They stay on this device too.</string>
+    <string name="pair_confirm_join">Join</string>
+    <string name="pair_joined_file">Joined. This group syncs by file transfer.</string>
+    <string name="pair_joined_unknown">Joined. This group uses a sync method this app doesn\'t know.</string>
+    <string name="pair_already">This device is already in that group.</string>
+    <string name="pair_unsupported">That code is from a newer app version. Update this app first.</string>
+    <string name="pair_unreadable">That code is not a pairing code.</string>
     <string name="about">About</string>
     <string name="app_name">msuite ToDo</string>
     <string name="version">Version</string>
@@ -76,5 +86,5 @@
     <string name="license_name">GNU GPL v3 or later</string>
     <string name="source_code">Source code</string>
     <string name="third_party">Open-source libraries</string>
-    <string name="third_party_licenses">Kotlin, kotlinx (coroutines, datetime, serialization), Compose Multiplatform (Material 3, Navigation), AndroidX, SQLDelight, multiplatform-settings, Reorderable and Material icons, all under the Apache License 2.0</string>
+    <string name="third_party_licenses">Kotlin, kotlinx (coroutines, datetime, serialization), Compose Multiplatform (Material 3, Navigation), AndroidX, SQLDelight, multiplatform-settings, Reorderable, Material icons and ZXing, all under the Apache License 2.0</string>
 </resources>

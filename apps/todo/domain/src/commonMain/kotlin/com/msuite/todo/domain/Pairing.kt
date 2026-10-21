@@ -20,6 +20,21 @@ sealed interface JoinResult {
     data object Unreadable : JoinResult
 }
 
+/** What a read code would do, before the user confirms that its data is shared (decision 0033). */
+sealed interface JoinPreview {
+    /** A different group this build can join; the UI asks for confirmation next. */
+    data object Ready : JoinPreview
+
+    /** This device already holds that root — the QR was its own. */
+    data object AlreadyThisGroup : JoinPreview
+
+    /** A root generation this build doesn't hold (decision 0008). */
+    data object UnsupportedKeyGen : JoinPreview
+
+    /** Not a pairing payload (record 0072). */
+    data object Unreadable : JoinPreview
+}
+
 /**
  * Pairing a device by QR (decisions 0008, 0033, 0072) and restoring from the recovery words
  * (decision 0011, record 0073). Both paths end in [StoredIdentity.adopt], so there is one place
@@ -30,6 +45,19 @@ class PairingActions(private val identity: StoredIdentity) {
     /** The bytes this device shows as its QR, or `null` when it holds no root yet. */
     suspend fun code(): ByteArray? =
         identity.root(KEY_GEN_V1)?.let { PairingPayload.build(KEY_GEN_V1, it, BackendType.Manual) }
+
+    /**
+     * Reads a scanned [code] without adopting it, so the UI can refuse a bad code before it asks
+     * the user to share the device's data (0033).
+     */
+    suspend fun preview(code: ByteArray): JoinPreview {
+        val payload = PairingPayload.parse(code) ?: return JoinPreview.Unreadable
+        return when {
+            payload.keyGen != KEY_GEN_V1 -> JoinPreview.UnsupportedKeyGen
+            identity.root(KEY_GEN_V1)?.contentEquals(payload.root) == true -> JoinPreview.AlreadyThisGroup
+            else -> JoinPreview.Ready
+        }
+    }
 
     /** Adopts the group root a scanned [code] carries; the caller confirms the share first (0033). */
     suspend fun join(code: ByteArray): JoinResult {

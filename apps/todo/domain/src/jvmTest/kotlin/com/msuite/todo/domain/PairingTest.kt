@@ -34,6 +34,25 @@ class PairingTest : StringSpec({
         identity.root(KEY_GEN_V1)?.toList() shouldBe group.toList()
     }
 
+    "a preview reads another group's code without adopting anything" {
+        val identity = StoredIdentity(MemoryRootStore(other))
+        val pairing = PairingActions(identity)
+        val code = actions(group).code().shouldNotBeNull()
+
+        pairing.preview(code) shouldBe JoinPreview.Ready
+
+        identity.root(KEY_GEN_V1)?.toList() shouldBe other.toList()
+    }
+
+    "a preview reports the codes that join would refuse" {
+        val pairing = actions(group)
+
+        pairing.preview(pairing.code().shouldNotBeNull()) shouldBe JoinPreview.AlreadyThisGroup
+        pairing.preview(PairingPayload.build(KEY_GEN_V1 + 1, other, BackendType.Manual)) shouldBe
+            JoinPreview.UnsupportedKeyGen
+        pairing.preview(byteArrayOf(1, 2, 3)) shouldBe JoinPreview.Unreadable
+    }
+
     "scanning one's own code changes nothing and writes nothing" {
         val store = MemoryRootStore()
         val pairing = PairingActions(StoredIdentity(store))
