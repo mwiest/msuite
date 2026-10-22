@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -136,7 +137,12 @@ private fun ShowCode(code: ByteArray?, qr: QrCodes, busy: Boolean, onShow: () ->
         modifier = Modifier.padding(top = 16.dp),
     )
     // White with a wide margin whatever the theme: a scanner needs dark modules on a light quiet zone.
-    Surface(color = Color.White, shape = MaterialTheme.shapes.large, modifier = Modifier.padding(top = 16.dp)) {
+    // Capped so the whole code fits above the fold in portrait; the column centres it.
+    Surface(
+        color = Color.White,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.padding(top = 16.dp).widthIn(max = 280.dp),
+    ) {
         QrCode(qr.encode(code), Modifier.padding(24.dp).fillMaxWidth().aspectRatio(1f))
     }
 }
