@@ -232,7 +232,8 @@ The manual plug is a single-file export/import holding one full-state snapshot (
 in `core/sync`; decision 0066). Importing merges `local ⊕ snapshot`; a snapshot is a delta over
 every field, so this exercises the same reducer. The file is a `BatchEnvelope` under the group root
 with the constant manual AAD context (decisions 0010, 0070, 0071), so it holds only ciphertext and
-imports back only where the root is known — pairing a second device is v1 step 7. The live
+imports only where the root is known — pairing gives a second device that root (`Identity, pairing
+and recovery`). The live
 plugs implement `BackendPlug`; the
 multi-object keys are first used at runtime by the synced-folder plug, the v1 milestone (decision
 0042). Its logic sits behind a small file-system interface, so the simulator runs it on `jvm` with
@@ -292,10 +293,12 @@ There is no salt — the same root and backend always produce the same QR.
 - In the UI (code: `PairingScreen` and `QrCodes`): a device shows its code on demand and never
   stores it; the other scans it with zxing-android-embedded behind the domain seam (record 0074),
   reads the payload without adopting it, confirms that its lists and tasks will be shared (0033),
-  and then adopts the root. The join message names the group's transport in words.
-- A joining device keeps its data: it switches to the group's root, keeps its `deviceId`, and
-  publishes its full state into the group's namespace (decision 0033; code: `StoredIdentity.adopt`
-  and `PairingActions` in `apps/todo/domain`, the one place a scanned QR and typed words both end).
+  and then adopts the root. The join message names the group's transport in words. A code or word
+  list that is already this device's own is reported as already in the group, and changes nothing.
+- A joining device keeps its data: it switches to the group's root and keeps its `deviceId`
+  (decision 0033; code: `StoredIdentity.adopt` and `PairingActions` in `apps/todo/domain`, the one
+  place a scanned QR and typed words both end). Pairing moves the key only; the data reaches the
+  other devices through the plug — v1's manual export file, the synced folder from step 8.
 - Copying the recovery key marks the clip sensitive and clears it after 60 s unless something else
   was copied since (decision 0041; code: `SensitiveClipboard` in the domain, `AndroidSensitiveClipboard`
   in the shell, the 60 s timer on the application's scope so a rotation does not lose it). The

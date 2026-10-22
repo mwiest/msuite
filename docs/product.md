@@ -3,7 +3,7 @@
 What msuite is and what its apps do today. When behaviour changes, this file changes in the same
 commit. What is intended but not built is in `roadmap.md` and the plans.
 
-Checked against the code on 2026-10-21: **the ToDo app works offline on one device, exports an
+Checked against the code on 2026-10-22: **the ToDo app works offline on one device, exports an
 encrypted whole-state snapshot file, pairs a second device by QR so that file crosses between them,
 and shows or restores the group key as 24 recovery words; live sync is not built yet.** On first
 start it

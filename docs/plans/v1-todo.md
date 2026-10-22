@@ -1,9 +1,7 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 6 done, code and device checks; step 7 (QR pairing) is in progress: slices 1 to
-4 are done and slices 5 and 6 are built, their device checks pending:**
-[`v1-step7-qr-pairing.md`](v1-step7-qr-pairing.md). Started 2026-07-02; reordered 2026-10-11
-(decision 0034).
+Status: **steps 0 to 7 done, code and device checks; step 8, the synced-folder plug, is next.**
+Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
 
@@ -84,12 +82,15 @@ Each step may take several commits; a step that grows big gets its own plan.
    Layer 3 green on 2026-10-17; checked on 2026-10-18 on an emulator (the root survives a restart,
    the exported file holds no plaintext) and between two devices (the file fails honestly —
    different roots, so pairing it is step 7's job).
-7. [ ] **QR pairing and recovery key.** One QR carrying the root and the group's backend
+7. [x] **QR pairing and recovery key.** One QR carrying the root and the group's backend
    descriptor; a joining device merges its data (decision 0033); BIP39 recovery; a copied key is
    marked sensitive and cleared after 60 s (decision 0041). Proves: key distribution without
-   accounts. Plan: [`v1-step7-qr-pairing.md`](v1-step7-qr-pairing.md). Slices 1 to 4 landed
-   (`71ce6ee`, `978f4ff`, `630be38`, `3bcc9b6`); slices 5 and 6 landed in `a6d3e70` and
-   `51cbcf6`, their device checks pending; slice 7 remains.
+   accounts. Landed: `71ce6ee` to `51cbcf6`, plus `e37b38b` (the scanner read ZXing's codewords,
+   not the payload), `552eaaf` (the QR size) and `69415e7` (the pair-first hint). Checked by hand on
+   2026-10-22 between a phone and an emulator, both Android 16: pair by QR, export/import both ways
+   with each device's pre-pairing data kept and a deletion crossing, the words copied as a sensitive
+   clip that cleared after 60 s, a fresh install restored from words and importing the group's
+   export, and the German strings.
 8. [ ] **Synced-folder plug (milestone).** SAF plug writing the multi-object keys (decision 0029)
    into a folder that Syncthing, Nextcloud or Dropbox syncs; its logic behind a file-system
    interface; simulator Layer 2 with invariant 12 on plain files (decision 0042), then a delta
@@ -104,12 +105,11 @@ Each step may take several commits; a step that grows big gets its own plan.
 
 ## Open questions
 
-Decided in the step 7 plan (2026-10-18): the pairing QR carries identity and the group's backend
+Decided in step 7 (2026-10-18): the pairing QR carries identity and the group's backend
 descriptor — the backend type today ("manual", nothing portable to carry), the folder type's
 chooser trigger with the folder plug (step 8), portable config when a backend has it (the relay,
 step 9). Recovery words are English BIP39 from an in-repo wordlist; the scanner is
-zxing-android-embedded. Records 0072 to 0074 land with their slices
-([`v1-step7-qr-pairing.md`](v1-step7-qr-pairing.md)).
+zxing-android-embedded. Records 0072 to 0074.
 
 Decided in step 5: a batch from a newer data-model version is held back, not merged (decision
 0067); a batch that fails to decode is skipped and retried a bounded number of times, then flagged
