@@ -50,8 +50,11 @@ class ZxingQrCodes(private val activity: ComponentActivity) : QrCodes {
         return scanned.await()
     }
 
-    /** The payload's bytes; the raw bytes keep byte mode 1:1, the string is the fallback. */
-    private fun ScanIntentResult.bytes(): ByteArray? = rawBytes ?: contents?.toByteArray(StandardCharsets.ISO_8859_1)
+    /**
+     * The payload's bytes: the encoder wrote them as an ISO-8859-1 string. ZXing's raw bytes are
+     * the QR's data codewords (mode header, ECI, padding), not the payload (record 0074).
+     */
+    private fun ScanIntentResult.bytes(): ByteArray? = contents?.toByteArray(StandardCharsets.ISO_8859_1)
 
     private companion object {
         /** Byte mode 1:1, the charset ZXing is told to use for the payload (record 0074). */

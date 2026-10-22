@@ -81,6 +81,12 @@ Each slice is one commit, builds, and leaves the build green.
    the step 6 two-device check and this plan; updates `product.md`, `architecture.md` → Identity
    and pairing, `v1-todo.md`, then deletes this plan (its lasting content moved to the docs).
 
+## Findings
+
+- **The QR is too large in portrait** (2026-10-22, stage 2 of the device checks): it takes the full
+  width, so the code and its hint don't fit without scrolling. Cap its size so the whole code is
+  visible at once. Pending, before this plan closes.
+
 ## Open questions
 
 None left: the QR content, the wordlist and the scanner were decided on 2026-10-18 — the QR
