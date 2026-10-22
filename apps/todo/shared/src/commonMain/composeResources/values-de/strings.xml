@@ -51,7 +51,7 @@
     <string name="theme_light">Hell</string>
     <string name="theme_dark">Dunkel</string>
     <string name="sync">Synchronisierung</string>
-    <string name="sync_manual_hint">Den gesamten Stand in eine verschlüsselte Datei exportieren und sie auf einem anderen Gerät importieren. Bis die Geräte gekoppelt sind (später), lässt sich die Datei nur auf diesem Gerät wieder importieren.</string>
+    <string name="sync_manual_hint">Den gesamten Stand in eine verschlüsselte Datei exportieren und sie auf einem anderen Gerät importieren. Beide Geräte müssen zuerst gekoppelt sein, damit sie denselben Schlüssel teilen.</string>
     <string name="export">Exportieren</string>
     <string name="import_file">Importieren</string>
     <string name="sync_exported">Exportiert.</string>
