@@ -46,3 +46,19 @@ SELECT hlc FROM plug_watermark WHERE plug = ?;
 
 setWatermark:
 INSERT OR REPLACE INTO plug_watermark VALUES (?, ?);
+
+-- Get all ingested batch keys for a plug (for pruning)
+ingestedKeys:
+SELECT batch_key FROM ingested_batch WHERE plug = ?;
+
+-- Get all unreadable batch keys for a plug (for pruning)
+unreadableKeys:
+SELECT batch_key FROM unreadable_batch WHERE plug = ?;
+
+-- Delete a specific ingested batch entry
+deleteIngested:
+DELETE FROM ingested_batch WHERE plug = ? AND batch_key = ?;
+
+-- Delete a specific unreadable batch entry
+deleteUnreadable:
+DELETE FROM unreadable_batch WHERE plug = ? AND batch_key = ?;

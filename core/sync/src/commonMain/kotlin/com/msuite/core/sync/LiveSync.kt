@@ -57,6 +57,8 @@ class LiveSync(
             }
             replica.ingest(plugId, key, batch)
         }
+        // Prune bookkeeping: remove entries for keys no longer in the backend (decision 0002).
+        replica.prune(plugId, keys.toSet())
     }
 
     private suspend fun publish() {

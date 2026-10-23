@@ -181,6 +181,38 @@ class LocalStoreTest : StringSpec({
         store.plugs.watermark(relay).shouldBeNull()
     }
 
+    "pruning removes bookkeeping for keys no longer in the backend" {
+        val store = open()
+        store.plugs.markIngested(folder, "k1")
+        store.plugs.markIngested(folder, "k2")
+        store.plugs.markIngested(folder, "k3")
+        store.plugs.recordUnreadable(folder, "u1")
+        store.plugs.recordUnreadable(folder, "u2")
+        
+        // Only k2 and u1 are still in the backend
+        val pruned = store.plugs.prune(folder, setOf("k2", "u1"))
+        
+        pruned shouldBe 3 // k1, k3, u2 were pruned
+        store.plugs.isIngested(folder, "k1") shouldBe false
+        store.plugs.isIngested(folder, "k2") shouldBe true
+        store.plugs.isIngested(folder, "k3") shouldBe false
+        store.plugs.isCorrupt(folder, "u1") shouldBe false // u1 exists but not corrupt yet
+        store.plugs.recordUnreadable(folder, "u1") shouldBe 2 // u1 still has attempts
+        // u2 was pruned, so starting fresh
+        store.plugs.recordUnreadable(folder, "u2") shouldBe 1
+    }
+
+    "pruning on an empty backend removes all bookkeeping" {
+        val store = open()
+        store.plugs.markIngested(folder, "k1")
+        store.plugs.markIngested(relay, "k2")
+        store.plugs.recordUnreadable(folder, "u1")
+        
+        store.plugs.prune(folder, emptySet()) shouldBe 2 // k1 and u1
+        store.plugs.isIngested(folder, "k1") shouldBe false
+        store.plugs.isIngested(relay, "k2") shouldBe true // relay unaffected
+    }
+
     "a failed transaction leaves nothing behind" {
         val store = open()
         shouldThrow<IllegalStateException> {

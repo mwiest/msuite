@@ -91,6 +91,47 @@ class PlugBook internal constructor(private val queries: PlugStateQueries) {
     fun setWatermark(plug: PlugId, hlc: Hlc) {
         queries.setWatermark(plug.id, hlc.toSql())
     }
+
+    /** Get all ingested batch keys for a plug (for pruning). */
+    fun ingestedKeys(plug: PlugId): List<String> = queries.ingestedKeys(plug.id).executeAsList()
+
+    /** Get all unreadable batch keys for a plug (for pruning). */
+    fun unreadableKeys(plug: PlugId): List<String> = queries.unreadableKeys(plug.id).executeAsList()
+
+    /** Delete a specific ingested batch entry (for pruning). */
+    fun deleteIngested(plug: PlugId, batchKey: String) {
+        queries.deleteIngested(plug.id, batchKey)
+    }
+
+    /** Delete a specific unreadable batch entry (for pruning). */
+    fun deleteUnreadable(plug: PlugId, batchKey: String) {
+        queries.deleteUnreadable(plug.id, batchKey)
+    }
+
+    /**
+     * Prune bookkeeping entries that are no longer in the backend. Removes rows from
+     * `ingested_batch` and `unreadable_batch` for keys not in [currentBackendKeys].
+     * This keeps bookkeeping bounded after compaction (decision 0002).
+     */
+    fun prune(plug: PlugId, currentBackendKeys: Set<String>) = queries.transactionWithResult {
+        val ingested = ingestedKeys(plug)
+        val unreadable = unreadableKeys(plug)
+        
+        var prunedCount = 0
+        for (key in ingested) {
+            if (key !in currentBackendKeys) {
+                deleteIngested(plug, key)
+                prunedCount++
+            }
+        }
+        for (key in unreadable) {
+            if (key !in currentBackendKeys) {
+                deleteUnreadable(plug, key)
+                prunedCount++
+            }
+        }
+        prunedCount
+    }
 }
 
 private fun Hlc.toSql(): Long = packed xor Long.MIN_VALUE

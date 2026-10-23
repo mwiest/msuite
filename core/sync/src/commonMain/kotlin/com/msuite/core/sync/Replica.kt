@@ -107,6 +107,15 @@ class Replica private constructor(
         if (recordId == null) store.cells() else store.cells(recordId)
     }
 
+    /**
+     * Prunes bookkeeping entries for keys no longer in the backend (decision 0002).
+     * Removes rows from `ingested_batch` and `unreadable_batch` for keys not in [currentBackendKeys].
+     * Returns the number of entries pruned.
+     */
+    suspend fun prune(plug: PlugId, currentBackendKeys: Set<String>): Int = serialized {
+        store.plugs.prune(plug, currentBackendKeys)
+    }
+
     override fun close() = store.close()
 
     private fun tick() = ticks.update { it + 1 }
