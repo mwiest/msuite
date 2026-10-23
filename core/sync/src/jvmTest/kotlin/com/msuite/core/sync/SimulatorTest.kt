@@ -268,6 +268,46 @@ class SimulatorTest : StringSpec({
         sim.pullAll(sim.devices[1])
         sim.title(1, 0) shouldBe "t1"
     }
+
+    "span skip: a delta covered by an ingested snapshot is skipped" {
+        val plug = MemoryPlug()
+        // Manually put a delta and a snapshot that covers it
+        val deltaBatch = oneCellBatch()
+        val deltaKey = runBlocking {
+            val deltaStore = PlugStore(plug, APP_ID, LAYER3_ROOT, type = BatchType.Delta)
+            deltaStore.put(deltaBatch)
+        }
+        
+        // Create a snapshot with HLC range [1, 2] that covers the delta's [1, 1]
+        // Use different CellKeys to avoid duplicates
+        val snapshotBatch = Batch(
+            Model.DATA_MODEL_VERSION,
+            deltaBatch.cells + listOf(
+                Cell(
+                    CellKey(Uuid.fromLongs(2, 2), FieldId(20)),
+                    byteArrayOf(2),
+                    Stamp(Hlc.of(2, 0), DeviceId(1))
+                )
+            )
+        )
+        val snapshotKey = runBlocking {
+            val snapshotStore = PlugStore(plug, APP_ID, LAYER3_ROOT, type = BatchType.Snapshot)
+            snapshotStore.put(snapshotBatch)
+        }
+        
+        // Device 0 ingests the snapshot
+        val sim = Simulation(listOf(0L), seed = 101, backend = ::MemoryState, store = PlugStore(plug, APP_ID, LAYER3_ROOT))
+        sim.devices[0].ingested.add(snapshotKey)
+        sim.devices[0].state.ingest(snapshotKey, snapshotBatch)
+        
+        // When device 0 pulls, it should skip the delta (covered by snapshot)
+        val pullsBefore = sim.devices[0].ingested.size
+        sim.pullAll(sim.devices[0])
+        
+        // Should not have fetched the delta
+        sim.devices[0].ingested.contains(deltaKey) shouldBe false
+        sim.devices[0].ingested.size shouldBe pullsBefore
+    }
 })
 
 private suspend fun prefixFor(batch: Batch, root: ByteArray): ObjectKeyPrefix = ObjectKeyPrefix(

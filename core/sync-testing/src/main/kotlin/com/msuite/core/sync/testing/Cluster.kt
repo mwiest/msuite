@@ -6,8 +6,10 @@ import com.msuite.core.model.CellKey
 import com.msuite.core.model.DeviceId
 import com.msuite.core.model.Model
 import com.msuite.core.model.ProtoBatchEncoder
+import com.msuite.core.sync.BatchType
 import com.msuite.core.sync.HlcClock
 import com.msuite.core.sync.IngestResult
+import com.msuite.core.sync.ObjectKey
 import com.msuite.core.sync.hlcHi
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -119,7 +121,10 @@ open class Cluster(
 
     fun pull(device: SimDevice, random: Random) {
         val unseen = store.keys().filter {
-            it !in device.ingested && !device.state.isCorrupt(it) && random.nextInt(TENTHS) < FETCH_TENTHS
+            it !in device.ingested &&
+                !device.state.isCorrupt(it) &&
+                random.nextInt(TENTHS) < FETCH_TENTHS &&
+                !isCoveredBySnapshot(it, device.ingested)
         }
         val again = device.ingested.filter { random.nextInt(TENTHS) < REFETCH_TENTHS }
         for (key in (unseen + again).shuffled(random)) ingestOne(device, key)
@@ -127,7 +132,46 @@ open class Cluster(
 
     /** Downloads every unseen batch, in store order. */
     fun pullAll(device: SimDevice) {
-        store.keys().filter { it !in device.ingested && !device.state.isCorrupt(it) }.forEach { ingestOne(device, it) }
+        store.keys().filter {
+            it !in device.ingested &&
+                !device.state.isCorrupt(it) &&
+                !isCoveredBySnapshot(it, device.ingested)
+        }.forEach { ingestOne(device, it) }
+    }
+
+    /**
+     * Span skip: a delta is covered if the device has ingested a snapshot from the same writer
+     * whose HLC span contains the delta's span. Only applies when using real key grammar (0029).
+     */
+    private fun isCoveredBySnapshot(key: String, ingested: Set<String>): Boolean {
+        val objKey = try {
+            ObjectKey.parse(key)
+        } catch (e: IllegalArgumentException) {
+            return false // Not a real key (e.g., Layer 1 uses numeric keys)
+        }
+
+        if (objKey.prefix.type != BatchType.Delta) return false
+
+        // Find all ingested snapshots from the same writer
+        val writerSnapshots = ingested.mapNotNull { ingestedKey ->
+            try {
+                val ingestedObjKey = ObjectKey.parse(ingestedKey)
+                if (ingestedObjKey.prefix.type == BatchType.Snapshot &&
+                    ingestedObjKey.prefix.deviceId == objKey.prefix.deviceId
+                ) {
+                    ingestedObjKey.prefix.hlcLo to ingestedObjKey.prefix.hlcHi
+                } else {
+                    null
+                }
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+        }
+
+        // Check if any snapshot covers this delta's span
+        return writerSnapshots.any { (snapLo, snapHi) ->
+            snapLo <= objKey.prefix.hlcLo && objKey.prefix.hlcHi <= snapHi
+        }
     }
 
     /** Connects everyone, moves every wall clock past the 24 h bound, and syncs to a fixpoint. */
