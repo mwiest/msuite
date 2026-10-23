@@ -25,26 +25,30 @@ private fun batch(value: Byte, record: Long = 0x1111) = Batch(
 )
 
 class PlugStoreTest : StringSpec({
+    val appId = "todo"
+    val root = ByteArray(32) { it.toByte() }
+
     "two stores over one plug publish without clashing" {
         val plug = MemoryPlug()
-        val first = PlugStore(plug)
-        val second = PlugStore(plug)
+        val first = PlugStore(plug, appId, root)
+        val second = PlugStore(plug, appId, root)
         val keyOne = first.put(batch(1))
         val keyTwo = second.put(batch(2))
         keyOne shouldNotBe keyTwo
         (first.get(keyOne) as Fetch.Read).batch.cells shouldBe batch(1).cells
         (second.get(keyTwo) as Fetch.Read).batch.cells shouldBe batch(2).cells
-        runBlocking { plug.list("sim/") } shouldContainExactlyInAnyOrder listOf(keyOne, keyTwo)
+        val namespace = runBlocking { "$appId/${groupId(root)}/" }
+        runBlocking { plug.list(namespace) } shouldContainExactlyInAnyOrder listOf(keyOne, keyTwo)
     }
 
     "publishing the same batch twice is one object under one key" {
-        val store = PlugStore(MemoryPlug())
+        val store = PlugStore(MemoryPlug(), appId, root)
         store.put(batch(1)) shouldBe store.put(batch(1))
         store.keys() shouldContainExactly listOf(store.put(batch(1)))
     }
 
     "keys come back sorted even though the plug lists them jumbled" {
-        val store = PlugStore(MemoryPlug(seed = 7))
+        val store = PlugStore(MemoryPlug(seed = 7), appId, root)
         val keys = (0..9).map { store.put(batch(it.toByte(), record = it.toLong())) }
         store.keys() shouldBe keys.sorted()
         store.keys().toSet() shouldBe keys.toSet()

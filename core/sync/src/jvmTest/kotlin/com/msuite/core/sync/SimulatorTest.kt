@@ -84,12 +84,12 @@ private fun Scenario.check(backend: SimBackend) {
 
 // Layer 2: whole snapshots through a real plug, instead of deltas into a memory list (docs/testing.md).
 // The folder plug on plain files asserts invariant 12: concurrent puts give distinct objects, list
-// returns only fully published keys.
+// returns only fully published keys. Uses the real object key grammar (decision 0029).
 private fun Scenario.checkLayer2(backend: SimBackend) {
     val tempDir = Files.createTempDirectory("sim-layer2").toFile()
     try {
         val plug = FolderPlug(PlainFileStore(tempDir))
-        Simulation(offsets, seed, backend = backend, store = PlugStore(plug), snapshots = true)
+        Simulation(offsets, seed, backend = backend, store = PlugStore(plug, APP_ID, LAYER3_ROOT), snapshots = true)
             .use { runSchedule(it) }
     } finally {
         tempDir.deleteRecursively()
@@ -139,13 +139,24 @@ class SimulatorTest : StringSpec({
 
     "an object that won't decode is skipped, then flagged and left alone" {
         val plug = MemoryPlug()
-        Simulation(listOf(0L), seed = 9, backend = ::MemoryState, store = PlugStore(plug)).use { sim ->
+        val namespace = runBlocking { "$APP_ID/${groupId(LAYER3_ROOT)}/" }
+        Simulation(
+            listOf(0L),
+            seed = 9,
+            backend = ::MemoryState,
+            store = PlugStore(plug, APP_ID, LAYER3_ROOT),
+        ).use { sim ->
             val device = sim.devices[0]
-            runBlocking { plug.put("sim/garbage", byteArrayOf(0x08)) }
+            val garbageKey = buildString {
+                append(namespace)
+                append("v1_d_0000000000000001_0000000000000001_0000000000000001_")
+                append("0000000000000000000000000000000000000000000000000000000000000000")
+            }
+            runBlocking { plug.put(garbageKey, byteArrayOf(0x08)) }
             repeat(MAX_DECODE_ATTEMPTS) { sim.pullAll(device) }
             device.cells() shouldBe emptyMap()
             device.ingested shouldBe emptySet<String>()
-            device.state.isCorrupt("sim/garbage") shouldBe true
+            device.state.isCorrupt(garbageKey) shouldBe true
             val getsBefore = plug.gets
             sim.pullAll(device)
             plug.gets shouldBe getsBefore
