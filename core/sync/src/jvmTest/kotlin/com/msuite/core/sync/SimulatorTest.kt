@@ -16,6 +16,7 @@ import com.msuite.core.sync.testing.EnvelopePlugStore
 import com.msuite.core.sync.testing.MemoryPlug
 import com.msuite.core.sync.testing.MemoryState
 import com.msuite.core.sync.testing.NetStep
+import com.msuite.core.sync.testing.PlainFileStore
 import com.msuite.core.sync.testing.PlugStore
 import com.msuite.core.sync.testing.ReplicaState
 import com.msuite.core.sync.testing.SimBackend
@@ -34,6 +35,7 @@ import io.kotest.property.arbitrary.long
 import io.kotest.property.arbitrary.map
 import io.kotest.property.checkAll
 import kotlinx.coroutines.runBlocking
+import java.nio.file.Files
 import kotlin.uuid.Uuid
 
 private const val HOUR = NetStep.HOUR
@@ -81,9 +83,17 @@ private fun Scenario.check(backend: SimBackend) {
 }
 
 // Layer 2: whole snapshots through a real plug, instead of deltas into a memory list (docs/testing.md).
+// The folder plug on plain files asserts invariant 12: concurrent puts give distinct objects, list
+// returns only fully published keys.
 private fun Scenario.checkLayer2(backend: SimBackend) {
-    Simulation(offsets, seed, backend = backend, store = PlugStore(MemoryPlug()), snapshots = true)
-        .use { runSchedule(it) }
+    val tempDir = Files.createTempDirectory("sim-layer2").toFile()
+    try {
+        val plug = FolderPlug(PlainFileStore(tempDir))
+        Simulation(offsets, seed, backend = backend, store = PlugStore(plug), snapshots = true)
+            .use { runSchedule(it) }
+    } finally {
+        tempDir.deleteRecursively()
+    }
 }
 
 // Layer 3: the same, sealed into envelopes under real object keys (docs/testing.md).
