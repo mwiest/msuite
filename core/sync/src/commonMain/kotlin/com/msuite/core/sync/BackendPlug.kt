@@ -25,4 +25,10 @@ interface BackendPlug {
 
     /** The bytes under [key], or `null` if it is absent. */
     suspend fun get(key: String): ByteArray?
+
+    /**
+     * Deletes the object under [key]. A no-op if the key is absent. Used for writer-side pruning
+     * after publishing a snapshot (invariants 18, 19).
+     */
+    suspend fun delete(key: String)
 }

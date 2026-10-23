@@ -24,6 +24,9 @@ class Batch(val dataModelVersion: Int, cells: List<Cell>) {
     companion object {
         /** Canonical order, so the same batch always encodes to the same bytes (decision 0016). */
         val CELL_ORDER: Comparator<Cell> = compareBy<Cell> { it.key.recordId }.thenBy { it.key.fieldId.id }
+
+        /** An empty batch with no cells, used as a tombstone for deleted batches. */
+        val EMPTY: Batch = Batch(Model.DATA_MODEL_VERSION, emptyList())
     }
 }
 

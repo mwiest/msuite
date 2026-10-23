@@ -39,6 +39,10 @@ class PlugStore(
         plug.get(key)?.let { bytes -> ProtoBatchEncoder.decodeOrNull(bytes)?.let(Fetch::Read) ?: Fetch.Unreadable }
     }
 
+    override fun delete(key: String) = runBlocking {
+        plug.delete(key)
+    }
+
     private fun prefixFor(batch: Batch): ObjectKeyPrefix {
         val cells = batch.cells
         require(cells.isNotEmpty()) { "an empty batch has no writer or span" }

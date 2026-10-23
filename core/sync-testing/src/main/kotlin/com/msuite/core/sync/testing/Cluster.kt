@@ -140,6 +140,46 @@ open class Cluster(
     }
 
     /**
+     * Writer-side pruning (invariants 18, 19): publishes a snapshot and deletes the device's own
+     * earlier deltas. The snapshot subsumes all earlier state, so the deleted deltas are redundant.
+     * Grace window keeps the last [graceCount] deltas to allow slow readers.
+     */
+    fun prune(device: SimDevice, graceCount: Int = 0) {
+        if (!device.online) return
+        
+        // Publish a snapshot of current state
+        val snapshot = device.snapshot()
+        val snapshotKey = store.put(snapshot)
+        device.ingested += snapshotKey
+        
+        // Find this device's earlier deltas and prune them
+        val deviceId = device.id
+        val deviceKeys = store.keys().filter { key ->
+            try {
+                val objKey = ObjectKey.parse(key)
+                objKey.prefix.deviceId == deviceId && 
+                objKey.prefix.type == BatchType.Delta &&
+                key != snapshotKey
+            } catch (e: IllegalArgumentException) {
+                false
+            }
+        }.sorted() // Sort by key (which sorts by HLC)
+        
+        // Keep the last graceCount deltas, delete the rest
+        val toDelete = if (graceCount >= deviceKeys.size) {
+            emptyList()
+        } else {
+            deviceKeys.dropLast(graceCount)
+        }
+        
+        toDelete.forEach { key ->
+            store.delete(key)
+            // Remove from all devices' ingested sets since the object is gone
+            devices.forEach { it.ingested.remove(key) }
+        }
+    }
+
+    /**
      * Span skip: a delta is covered if the device has ingested a snapshot from the same writer
      * whose HLC span contains the delta's span. Only applies when using real key grammar (0029).
      */

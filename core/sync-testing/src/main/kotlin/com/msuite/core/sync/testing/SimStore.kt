@@ -21,6 +21,9 @@ interface SimStore {
      * (decision 0069). A key that is present and won't decode is [Fetch.Unreadable].
      */
     fun get(key: String): Fetch?
+
+    /** Deletes the batch under [key]. A no-op if the key is absent. Used for writer-side pruning. */
+    fun delete(key: String)
 }
 
 /** What a fetch of one key yielded (decisions 0067, 0068, 0069). */
@@ -43,7 +46,20 @@ class BatchStore : SimStore {
 
     override fun put(batch: Batch): String = batches.size.also { batches += batch }.toString()
 
-    override fun keys(): List<String> = batches.indices.map(Int::toString)
+    override fun keys(): List<String> = batches.indices
+        .filter { batches[it] !== Batch.EMPTY }
+        .map(Int::toString)
 
-    override fun get(key: String): Fetch? = batches.getOrNull(key.toInt())?.let(Fetch::Read)
+    override fun get(key: String): Fetch? {
+        val batch = batches.getOrNull(key.toInt()) ?: return null
+        if (batch === Batch.EMPTY) return null // Deleted
+        return Fetch.Read(batch)
+    }
+
+    override fun delete(key: String) {
+        val index = key.toIntOrNull() ?: return
+        if (index in batches.indices) {
+            batches[index] = Batch.EMPTY // Mark as deleted
+        }
+    }
 }

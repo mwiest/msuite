@@ -24,6 +24,10 @@ class FolderPlug(private val store: FileStore) : BackendPlug {
 
     override suspend fun get(key: String): ByteArray? = store.read(key)
 
+    override suspend fun delete(key: String) {
+        store.delete(key)
+    }
+
     private fun directory(keyOrPrefix: String): String {
         val lastSlash = keyOrPrefix.lastIndexOf('/')
         return if (lastSlash >= 0) keyOrPrefix.substring(0, lastSlash) else ""

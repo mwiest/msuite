@@ -25,4 +25,8 @@ class MemoryPlug(private val seed: Long = 0) : BackendPlug {
         objects.keys.filter { it.startsWith(prefix) }.shuffled(Random(seed))
 
     override suspend fun get(key: String): ByteArray? = objects[key]?.also { gets++ }?.copyOf()
+
+    override suspend fun delete(key: String) {
+        objects.remove(key)
+    }
 }

@@ -63,6 +63,13 @@ class EnvelopePlugStore(
         }
     }
 
+    override fun delete(key: String) {
+        runBlocking {
+            plug.delete(key)
+            published.values.remove(key)
+        }
+    }
+
     private fun prefixFor(batch: Batch): ObjectKeyPrefix {
         val cells = batch.cells
         require(cells.isNotEmpty()) { "an empty batch has no writer or span" }
