@@ -1,6 +1,6 @@
 # Plan: v1 step 8, the synced-folder plug (milestone)
 
-Status: **not started.** Planned.
+Status: **Slices 1-11 done (commits `49f3d12` to `1e3a542`); slices 12-15 pending.** Slices 1-11 code is written but build verification was incomplete due to environment timeouts — needs testing and potential fixes before proceeding.
 
 ## Goal
 
@@ -82,6 +82,21 @@ Each slice is one commit (or a few), builds, and leaves the build green.
   10 s timer while visible.)
 - Should the folder plug publish a snapshot on first sync (after pairing or after switching from
   manual), or only deltas? (Planned: a snapshot on first sync, then deltas.)
+- **Debounce vs. app lifecycle**: The 10 s debounce for coarse deltas means a user who adds a todo
+  and closes the app immediately might not publish that change. Should `LiveSync` flush pending
+  changes on app pause/stop (e.g., via Lifecycle observer), or accept the 10 s window as a known
+  trade-off? The manual "Sync now" button in slice 12 would mitigate this, but automatic flush on
+  lifecycle events might be safer.
+
+## Build verification needed
+
+**Status**: Slices 1-11 code is written and committed, but build verification was incomplete due to
+environment timeouts during development. Before proceeding to slices 12-15:
+
+1. Run `./gradlew :apps:todo:android:compileDebugKotlin` to verify the SAF wrapper compiles
+2. Run `./gradlew :core:sync:jvmTest` to verify all simulator tests still pass
+3. Fix any compilation or test failures that surface
+4. Only then proceed to slice 12 (Settings UI)
 
 ## How to verify
 
