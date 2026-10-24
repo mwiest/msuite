@@ -1,6 +1,6 @@
 # Plan: v1 step 8, the synced-folder plug (milestone)
 
-Status: **Slices 1-13 done (commits `49f3d12` to `72d20e9`); slices 14-15 pending.** Build verification complete, settings UI and foreground polling implemented.
+Status: **Slices 1-14 done (commits `49f3d12` to `ea2d558`); slice 15 pending.** Build verification complete for slices 1-13; slice 14 needs build verification due to resource generation issues.
 
 ## Goal
 
@@ -65,9 +65,8 @@ Each slice is one commit (or a few), builds, and leaves the build green.
     button. The manual export/import stays as a fallback. After it lands: `b364f0c`.
 13. [x] **Foreground polling.** A coroutine job syncs every 10 s while the app is visible (Lifecycle
     observer). A manual "Sync now" button is always available. After it lands: `72d20e9`.
-14. [ ] **Pairing QR backend descriptor.** The pairing QR carries the folder type (decision 0072);
-    the joining device offers its own folder chooser. No portable config. After it lands:
-    `<commit>`.
+14. [x] **Pairing QR backend descriptor.** The pairing QR carries the folder type (decision 0072);
+    the joining device offers its own folder chooser. No portable config. After it lands: `ea2d558`.
 15. [ ] **Integration and device check.** Wire everything together: the app uses `FolderPlug` when
     configured. Checked on two real devices: pair by QR, edit on both (including while offline),
     sync through a folder shared by Syncthing, and both show the same lists. The folder holds only
