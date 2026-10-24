@@ -103,4 +103,12 @@ class FolderSyncActions(
         pollingJob?.cancel()
         pollingJob = null
     }
+
+    /**
+     * Immediately publishes any pending changes, bypassing the debounce. Called when the app goes
+     * to background to ensure edits are synced before suspension.
+     */
+    suspend fun flushPendingChanges() {
+        liveSync?.flush()
+    }
 }

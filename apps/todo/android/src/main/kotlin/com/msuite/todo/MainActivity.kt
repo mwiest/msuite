@@ -46,7 +46,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        folderSync.stopPolling()
+        // Flush any pending changes before going to background (addresses the 10s debounce gap).
+        // Await the flush before stopping polling to avoid race conditions.
+        lifecycleScope.launch {
+            folderSync.flushPendingChanges()
+            folderSync.stopPolling()
+        }
     }
 }
 
