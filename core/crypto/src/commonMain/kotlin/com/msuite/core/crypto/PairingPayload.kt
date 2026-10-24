@@ -19,6 +19,9 @@ private const val MIN_BYTES = BODY_BYTES + CHECKSUM_BYTES
 enum class BackendType(val id: Int) {
     /** The manual snapshot file: the only plug so far, and one with nothing to carry (decision 0066). */
     Manual(0),
+
+    /** The synced-folder plug: no config carried, the joining device picks its own folder (0042, 0072). */
+    Folder(1),
 }
 
 /**

@@ -82,6 +82,7 @@
     <string name="pair_confirm_body">This device\'s lists and tasks will be shared with every device in the group. They stay on this device too.</string>
     <string name="pair_confirm_join">Join</string>
     <string name="pair_joined_file">Joined. This group syncs by file transfer.</string>
+    <string name="pair_joined_folder">Joined. This group syncs through a folder.</string>
     <string name="pair_joined_unknown">Joined. This group uses a sync method this app doesn\'t know.</string>
     <string name="pair_already">This device is already in that group.</string>
     <string name="pair_unsupported">That code is from a newer app version. Update this app first.</string>

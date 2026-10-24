@@ -1,5 +1,6 @@
 package com.msuite.todo
 
+import com.msuite.core.crypto.BackendType
 import com.msuite.core.sync.FileStore
 import com.msuite.core.sync.ManualSync
 import com.msuite.core.sync.Replica
@@ -28,6 +29,8 @@ class TodoContainer(
     val tasks = TaskCommands(replica)
     val states: Flow<TodoState> = replica.todoStates()
     val sync = SyncActions(ManualSync(replica, identity), files)
-    val pairing = PairingActions(identity)
+    val pairing = PairingActions(identity) {
+        if (settings.syncedFolderUri.value != null) BackendType.Folder else BackendType.Manual
+    }
     val folder = folderSync
 }

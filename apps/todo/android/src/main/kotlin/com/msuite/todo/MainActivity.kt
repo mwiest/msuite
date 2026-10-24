@@ -36,7 +36,14 @@ class MainActivity : ComponentActivity() {
             scope = lifecycleScope,
         )
         folderSync.startSyncIfConfigured()
-        setContent { TodoApp(app.replica, app.settings, version, shell, app.identity, folderSync) }
+        val container = TodoContainer(
+            replica = app.replica,
+            settings = app.settings,
+            files = shell.files,
+            identity = app.identity,
+            folderSync = folderSync,
+        )
+        setContent { TodoApp(container, version, shell) }
     }
 
     override fun onStart() {

@@ -210,6 +210,7 @@ internal fun JoinPreview.message(): JoinResult = when (this) {
 private fun JoinResult.label() = when (this) {
     is JoinResult.Joined -> when (backend) {
         BackendType.Manual -> Res.string.pair_joined_file
+        BackendType.Folder -> Res.string.pair_joined_folder
         null -> Res.string.pair_joined_unknown
     }
 

@@ -47,10 +47,13 @@ sealed interface JoinPreview {
  * that takes a group root. Neither path touches the stored data: a joining device keeps its lists
  * and tasks and shares them (0033) — the app only has to say so before it joins.
  */
-class PairingActions(private val identity: StoredIdentity) {
+class PairingActions(
+    private val identity: StoredIdentity,
+    private val backendType: () -> BackendType,
+) {
     /** The bytes this device shows as its QR, or `null` when it holds no root yet. */
     suspend fun code(): ByteArray? =
-        identity.root(KEY_GEN_V1)?.let { PairingPayload.build(KEY_GEN_V1, it, BackendType.Manual) }
+        identity.root(KEY_GEN_V1)?.let { PairingPayload.build(KEY_GEN_V1, it, backendType()) }
 
     /** The 24 recovery words for this device's root, or `null` when it holds none (record 0073). */
     suspend fun words(): List<String>? = identity.root(KEY_GEN_V1)?.let { RecoveryWords.encode(it) }

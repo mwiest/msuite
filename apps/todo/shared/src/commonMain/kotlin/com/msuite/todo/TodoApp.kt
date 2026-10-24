@@ -5,17 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.msuite.core.design.MsuiteTheme
-import com.msuite.core.sync.Replica
-import com.msuite.todo.domain.FolderSyncActions
-import com.msuite.todo.domain.StoredIdentity
 import com.msuite.todo.domain.ThemeMode
-import com.msuite.todo.domain.TodoSettings
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.my_tasks
 import kotlinx.serialization.Serializable
@@ -34,25 +28,14 @@ private data object PairingRoute
 private data object RecoveryRoute
 
 /**
- * The whole ToDo UI over [replica] and [settings]; [version] is shown in About, [shell] is the
- * platform half, [identity] is the group root, and [folderSync] manages the synced folder.
+ * The whole ToDo UI over [container]; [version] is shown in About, [shell] is the platform half.
  * Platform shells (apps/todo/android) only host it.
  */
 @Composable
-fun TodoApp(
-    replica: Replica,
-    settings: TodoSettings,
-    version: String,
-    shell: ShellServices,
-    identity: StoredIdentity,
-    folderSync: FolderSyncActions,
-) {
-    val app = remember(replica, settings, shell, identity, folderSync) {
-        TodoContainer(replica, settings, shell.files, identity, folderSync)
-    }
+fun TodoApp(container: TodoContainer, version: String, shell: ShellServices) {
     val myTasks = stringResource(Res.string.my_tasks)
-    LaunchedEffect(app) { app.lists.createMyTasksIfMissing(myTasks) }
-    val theme by settings.themeMode.collectAsState()
+    LaunchedEffect(container) { container.lists.createMyTasksIfMissing(myTasks) }
+    val theme by container.settings.themeMode.collectAsState()
     val dark = when (theme) {
         ThemeMode.System -> isSystemInDarkTheme()
         ThemeMode.Light -> false
@@ -62,9 +45,9 @@ fun TodoApp(
     MsuiteTheme(dark) {
         val nav = rememberNavController()
         NavHost(nav, startDestination = TasksRoute) {
-            composable<TasksRoute> { TasksScreen(app) { nav.navigate(SettingsRoute) } }
+            composable<TasksRoute> { TasksScreen(container) { nav.navigate(SettingsRoute) } }
             composable<SettingsRoute> {
-                SettingsScreen(app.settings, app.sync, app.folder, version, { nav.popBackStack() }) {
+                SettingsScreen(container, version, { nav.popBackStack() }) {
                     nav.navigate(
                         when (it) {
                             SettingsDestination.Pairing -> PairingRoute
@@ -73,9 +56,9 @@ fun TodoApp(
                     )
                 }
             }
-            composable<PairingRoute> { PairingScreen(app.pairing, shell.qr) { nav.popBackStack() } }
+            composable<PairingRoute> { PairingScreen(container.pairing, shell.qr) { nav.popBackStack() } }
             composable<RecoveryRoute> {
-                RecoveryScreen(app.pairing, shell.clipboard) { nav.popBackStack() }
+                RecoveryScreen(container.pairing, shell.clipboard) { nav.popBackStack() }
             }
         }
     }

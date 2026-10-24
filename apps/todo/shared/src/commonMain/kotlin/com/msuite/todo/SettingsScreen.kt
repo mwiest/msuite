@@ -96,14 +96,12 @@ enum class SettingsDestination { Pairing, Recovery }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    settings: TodoSettings,
-    sync: SyncActions,
-    folder: FolderSyncActions,
+    container: TodoContainer,
     version: String,
     onBack: () -> Unit,
     onOpen: (SettingsDestination) -> Unit,
 ) {
-    val theme by settings.themeMode.collectAsState()
+    val theme by container.settings.themeMode.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -117,12 +115,17 @@ fun SettingsScreen(
         },
     ) { padding ->
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState())) {
-            SectionTitle(stringResource(Res.string.theme))
-            ThemePicker(theme, settings::setThemeMode)
+            Text(
+                stringResource(Res.string.theme),
+                Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            ThemePicker(theme, container.settings::setThemeMode)
             HorizontalDivider(Modifier.padding(top = 24.dp))
-            SyncSection(sync)
+            SyncSection(container.sync)
             HorizontalDivider(Modifier.padding(top = 24.dp))
-            FolderPlugSection(folder)
+            FolderPlugSection(container.folder)
             HorizontalDivider(Modifier.padding(top = 24.dp))
             PairingSection { onOpen(SettingsDestination.Pairing) }
             HorizontalDivider(Modifier.padding(top = 24.dp))
@@ -149,7 +152,12 @@ private fun SyncSection(sync: SyncActions) {
             busy = false
         }
     }
-    SectionTitle(stringResource(Res.string.sync))
+    Text(
+        stringResource(Res.string.sync),
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
     Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
         Text(
             stringResource(Res.string.sync_manual_hint),
@@ -175,85 +183,15 @@ private fun SyncSection(sync: SyncActions) {
     }
 }
 
-/** The folder plug (slice 12): pick a synced folder, show status, manual sync. */
-@Composable
-private fun FolderPlugSection(folder: FolderSyncActions) {
-    val status by folder.status.collectAsState()
-    val folderUri by folder.folderUri.collectAsState()
-    val scope = rememberCoroutineScope()
-    var busy by remember { mutableStateOf(false) }
-
-    SectionTitle(stringResource(Res.string.folder_sync))
-    Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
-        if (folderUri == null) {
-            Text(
-                stringResource(Res.string.folder_sync_not_configured),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        } else {
-            Text(
-                stringResource(Res.string.folder_sync_configured),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 4.dp),
-            )
-            Text(
-                folderUri ?: "",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        }
-
-        if (status.lastSync != null) {
-            Text(
-                stringResource(Res.string.folder_last_sync, status.lastSync.toString()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        } else {
-            Text(
-                stringResource(Res.string.folder_never_synced),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(enabled = !busy, onClick = {
-                scope.launch {
-                    busy = true
-                    folder.pickFolder()
-                    busy = false
-                }
-            }) {
-                Text(stringResource(Res.string.folder_pick))
-            }
-            if (folderUri != null) {
-                Button(enabled = !busy, onClick = { folder.clearFolder() }) {
-                    Text(stringResource(Res.string.folder_clear))
-                }
-                Button(enabled = !busy && folderUri != null, onClick = {
-                    scope.launch {
-                        busy = true
-                        folder.syncNow()
-                        busy = false
-                    }
-                }) {
-                    Text(stringResource(Res.string.folder_sync_now))
-                }
-            }
-        }
-    }
-}
-
 /** Pairing a second device (step 7): its own route, since the code carries the root (0008). */
 @Composable
 private fun PairingSection(onPair: () -> Unit) {
-    SectionTitle(stringResource(Res.string.pairing))
+    Text(
+        stringResource(Res.string.pairing),
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
     Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
         Text(
             stringResource(Res.string.pairing_hint),
@@ -270,7 +208,12 @@ private fun PairingSection(onPair: () -> Unit) {
 /** The words behind the root, shown or typed (decisions 0011, 0041; record 0073). */
 @Composable
 private fun RecoverySection(onRecovery: () -> Unit) {
-    SectionTitle(stringResource(Res.string.recovery))
+    Text(
+        stringResource(Res.string.recovery),
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
     Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
         Text(
             stringResource(Res.string.recovery_hint),
@@ -305,7 +248,12 @@ private fun ThemePicker(theme: ThemeMode, onPick: (ThemeMode) -> Unit) {
 @Composable
 private fun About(version: String) {
     val uris = LocalUriHandler.current
-    SectionTitle(stringResource(Res.string.about))
+    Text(
+        stringResource(Res.string.about),
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
     Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
         Text(stringResource(Res.string.app_name), style = MaterialTheme.typography.titleMedium)
         AboutRow(stringResource(Res.string.version), version)
@@ -336,16 +284,6 @@ private fun AboutRow(label: String, value: String, onClick: (() -> Unit)? = null
             color = if (onClick != null) MaterialTheme.colorScheme.primary else Color.Unspecified,
         )
     }
-}
-
-@Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text,
-        Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-    )
 }
 
 private fun ThemeMode.label() = when (this) {

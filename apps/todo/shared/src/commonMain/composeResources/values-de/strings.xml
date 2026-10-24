@@ -82,6 +82,7 @@
     <string name="pair_confirm_body">Die Listen und Aufgaben dieses Geräts werden mit allen Geräten der Gruppe geteilt. Sie bleiben auch auf diesem Gerät.</string>
     <string name="pair_confirm_join">Beitreten</string>
     <string name="pair_joined_file">Beigetreten. Diese Gruppe synchronisiert per Dateiübertragung.</string>
+    <string name="pair_joined_folder">Beigetreten. Diese Gruppe synchronisiert über einen Ordner.</string>
     <string name="pair_joined_unknown">Beigetreten. Diese Gruppe nutzt eine Synchronisierungsart, die diese App nicht kennt.</string>
     <string name="pair_already">Dieses Gerät gehört bereits zu dieser Gruppe.</string>
     <string name="pair_unsupported">Der Code stammt aus einer neueren App-Version. Zuerst diese App aktualisieren.</string>
