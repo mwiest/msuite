@@ -82,11 +82,10 @@ Each slice is one commit (or a few), builds, and leaves the build green.
   10 s timer while visible.)
 - Should the folder plug publish a snapshot on first sync (after pairing or after switching from
   manual), or only deltas? (Planned: a snapshot on first sync, then deltas.)
-- **Debounce vs. app lifecycle**: The 10 s debounce for coarse deltas means a user who adds a todo
-  and closes the app immediately might not publish that change. Should `LiveSync` flush pending
-  changes on app pause/stop (e.g., via Lifecycle observer), or accept the 10 s window as a known
-  trade-off? The manual "Sync now" button in slice 12 would mitigate this, but automatic flush on
-  lifecycle events might be safer.
+- ~~**Debounce vs. app lifecycle**~~: **Resolved** (commit `bc45388`). `LiveSync.flush()` publishes
+  pending changes immediately, bypassing the debounce. `MainActivity.onStop` awaits the flush
+  before stopping polling, so edits are synced before suspension while the 10 s debounce still
+  batches bursts during active use.
 
 ## Build verification
 
