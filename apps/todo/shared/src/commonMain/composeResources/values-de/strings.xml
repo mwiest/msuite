@@ -52,6 +52,14 @@
     <string name="theme_dark">Dunkel</string>
     <string name="sync">Synchronisierung</string>
     <string name="sync_manual_hint">Den gesamten Stand in eine verschlüsselte Datei exportieren und sie auf einem anderen Gerät importieren. Beide Geräte müssen zuerst gekoppelt sein, damit sie denselben Schlüssel teilen.</string>
+    <string name="folder_sync">Ordner-Synchronisierung</string>
+    <string name="folder_sync_not_configured">Kein Ordner konfiguriert. Wählen Sie einen synchronisierten Ordner, um mit anderen Geräten zu synchronisieren.</string>
+    <string name="folder_sync_configured">Synchronisierung mit Ordner:</string>
+    <string name="folder_pick">Ordner wählen</string>
+    <string name="folder_clear">Löschen</string>
+    <string name="folder_sync_now">Jetzt synchronisieren</string>
+    <string name="folder_last_sync">Letzte Synchronisierung: %1$s</string>
+    <string name="folder_never_synced">Nie synchronisiert</string>
     <string name="export">Exportieren</string>
     <string name="import_file">Importieren</string>
     <string name="sync_exported">Exportiert.</string>

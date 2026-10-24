@@ -52,6 +52,14 @@
     <string name="theme_dark">Dark</string>
     <string name="sync">Sync</string>
     <string name="sync_manual_hint">Export your whole state to an encrypted file and import it on another device. Both devices must be paired first, so they share the key.</string>
+    <string name="folder_sync">Folder Sync</string>
+    <string name="folder_sync_not_configured">No folder configured. Pick a synced folder to sync with other devices.</string>
+    <string name="folder_sync_configured">Syncing with folder:</string>
+    <string name="folder_pick">Pick folder</string>
+    <string name="folder_clear">Clear</string>
+    <string name="folder_sync_now">Sync now</string>
+    <string name="folder_last_sync">Last sync: %1$s</string>
+    <string name="folder_never_synced">Never synced</string>
     <string name="export">Export</string>
     <string name="import_file">Import</string>
     <string name="sync_exported">Exported.</string>

@@ -32,8 +32,23 @@ class TodoSettings(private val settings: Settings) {
         last.value = id
     }
 
+    private val folderUri = MutableStateFlow(settings.getStringOrNull(SYNCED_FOLDER_URI))
+
+    /** The synced folder's URI, or `null` if not configured (decision 0042). */
+    val syncedFolderUri: StateFlow<String?> = folderUri.asStateFlow()
+
+    fun setSyncedFolderUri(uri: String?) {
+        if (uri != null) {
+            settings.putString(SYNCED_FOLDER_URI, uri)
+        } else {
+            settings.remove(SYNCED_FOLDER_URI)
+        }
+        folderUri.value = uri
+    }
+
     private companion object {
         const val THEME = "theme"
         const val LAST_LIST = "lastList"
+        const val SYNCED_FOLDER_URI = "syncedFolderUri"
     }
 }

@@ -17,7 +17,13 @@ class MainActivity : ComponentActivity() {
         // The bar icons must contrast with the app's theme, which may differ from the system's.
         lifecycleScope.launch { app.settings.themeMode.collect { enableEdgeToEdge(it.barStyle(), it.barStyle()) } }
         val version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
-        val shell = ShellServices(SafSnapshotFiles(this), ZxingQrCodes(this), app.clipboard)
+        val shell = ShellServices(
+            files = SafSnapshotFiles(this),
+            folder = SafFolderPick(this),
+            qr = ZxingQrCodes(this),
+            clipboard = app.clipboard,
+            fileStoreFactory = { uri -> SafFileStore(applicationContext, android.net.Uri.parse(uri)) },
+        )
         setContent { TodoApp(app.replica, app.settings, version, shell, app.identity) }
     }
 }

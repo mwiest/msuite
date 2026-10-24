@@ -6,11 +6,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.msuite.core.design.MsuiteTheme
 import com.msuite.core.sync.Replica
+import com.msuite.todo.domain.FolderSyncActions
 import com.msuite.todo.domain.StoredIdentity
 import com.msuite.todo.domain.ThemeMode
 import com.msuite.todo.domain.TodoSettings
@@ -43,11 +45,23 @@ fun TodoApp(
     shell: ShellServices,
     identity: StoredIdentity,
 ) {
-    val app = remember(replica, settings, shell, identity) {
-        TodoContainer(replica, settings, shell.files, identity)
+    val scope = rememberCoroutineScope()
+    val folderSync = remember(replica, identity, settings, shell, scope) {
+        FolderSyncActions(
+            replica = replica,
+            identity = identity,
+            settings = settings,
+            folderPick = shell.folder,
+            fileStoreFactory = shell.fileStoreFactory,
+            scope = scope,
+        )
+    }
+    val app = remember(replica, settings, shell, identity, folderSync) {
+        TodoContainer(replica, settings, shell.files, identity, folderSync)
     }
     val myTasks = stringResource(Res.string.my_tasks)
     LaunchedEffect(app) { app.lists.createMyTasksIfMissing(myTasks) }
+    LaunchedEffect(folderSync) { folderSync.startSyncIfConfigured() }
     val theme by settings.themeMode.collectAsState()
     val dark = when (theme) {
         ThemeMode.System -> isSystemInDarkTheme()
@@ -60,7 +74,7 @@ fun TodoApp(
         NavHost(nav, startDestination = TasksRoute) {
             composable<TasksRoute> { TasksScreen(app) { nav.navigate(SettingsRoute) } }
             composable<SettingsRoute> {
-                SettingsScreen(app.settings, app.sync, version, { nav.popBackStack() }) {
+                SettingsScreen(app.settings, app.sync, app.folder, version, { nav.popBackStack() }) {
                     nav.navigate(
                         when (it) {
                             SettingsDestination.Pairing -> PairingRoute

@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.msuite.todo.domain.FolderSyncActions
 import com.msuite.todo.domain.SyncActions
 import com.msuite.todo.domain.SyncResult
 import com.msuite.todo.domain.ThemeMode
@@ -43,6 +44,14 @@ import com.msuite.todo.resources.app_name
 import com.msuite.todo.resources.author
 import com.msuite.todo.resources.back
 import com.msuite.todo.resources.export
+import com.msuite.todo.resources.folder_clear
+import com.msuite.todo.resources.folder_last_sync
+import com.msuite.todo.resources.folder_never_synced
+import com.msuite.todo.resources.folder_pick
+import com.msuite.todo.resources.folder_sync
+import com.msuite.todo.resources.folder_sync_configured
+import com.msuite.todo.resources.folder_sync_not_configured
+import com.msuite.todo.resources.folder_sync_now
 import com.msuite.todo.resources.ic_arrow_back
 import com.msuite.todo.resources.import_file
 import com.msuite.todo.resources.license
@@ -89,6 +98,7 @@ enum class SettingsDestination { Pairing, Recovery }
 fun SettingsScreen(
     settings: TodoSettings,
     sync: SyncActions,
+    folder: FolderSyncActions,
     version: String,
     onBack: () -> Unit,
     onOpen: (SettingsDestination) -> Unit,
@@ -111,6 +121,8 @@ fun SettingsScreen(
             ThemePicker(theme, settings::setThemeMode)
             HorizontalDivider(Modifier.padding(top = 24.dp))
             SyncSection(sync)
+            HorizontalDivider(Modifier.padding(top = 24.dp))
+            FolderPlugSection(folder)
             HorizontalDivider(Modifier.padding(top = 24.dp))
             PairingSection { onOpen(SettingsDestination.Pairing) }
             HorizontalDivider(Modifier.padding(top = 24.dp))
@@ -159,6 +171,81 @@ private fun SyncSection(sync: SyncActions) {
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 8.dp),
             )
+        }
+    }
+}
+
+/** The folder plug (slice 12): pick a synced folder, show status, manual sync. */
+@Composable
+private fun FolderPlugSection(folder: FolderSyncActions) {
+    val status by folder.status.collectAsState()
+    val folderUri by folder.folderUri.collectAsState()
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+
+    SectionTitle(stringResource(Res.string.folder_sync))
+    Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
+        if (folderUri == null) {
+            Text(
+                stringResource(Res.string.folder_sync_not_configured),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        } else {
+            Text(
+                stringResource(Res.string.folder_sync_configured),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+            Text(
+                folderUri ?: "",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
+
+        if (status.lastSync != null) {
+            Text(
+                stringResource(Res.string.folder_last_sync, status.lastSync.toString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        } else {
+            Text(
+                stringResource(Res.string.folder_never_synced),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(enabled = !busy, onClick = {
+                scope.launch {
+                    busy = true
+                    folder.pickFolder()
+                    busy = false
+                }
+            }) {
+                Text(stringResource(Res.string.folder_pick))
+            }
+            if (folderUri != null) {
+                Button(enabled = !busy, onClick = { folder.clearFolder() }) {
+                    Text(stringResource(Res.string.folder_clear))
+                }
+                Button(enabled = !busy && folderUri != null, onClick = {
+                    scope.launch {
+                        busy = true
+                        folder.syncNow()
+                        busy = false
+                    }
+                }) {
+                    Text(stringResource(Res.string.folder_sync_now))
+                }
+            }
         }
     }
 }
