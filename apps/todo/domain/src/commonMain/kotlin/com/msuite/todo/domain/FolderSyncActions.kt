@@ -7,9 +7,12 @@ import com.msuite.core.sync.FolderPlug
 import com.msuite.core.sync.LiveSync
 import com.msuite.core.sync.Replica
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
@@ -45,6 +48,7 @@ class FolderSyncActions(
     val folderUri: StateFlow<String?> = settings.syncedFolderUri
 
     private var liveSync: LiveSync? = null
+    private var pollingJob: Job? = null
 
     /** Opens the folder picker and stores the result in settings. */
     suspend fun pickFolder() {
@@ -56,6 +60,7 @@ class FolderSyncActions(
     /** Clears the folder configuration and stops the sync. */
     fun clearFolder() {
         settings.setSyncedFolderUri(null)
+        stopPolling()
         liveSync?.stop()
         liveSync = null
         _status.value = FolderSyncStatus(lastSync = null, pendingChanges = 0)
@@ -79,5 +84,23 @@ class FolderSyncActions(
         val sync = liveSync ?: return
         sync.pull()
         _status.value = _status.value.copy(lastSync = clock.now())
+    }
+
+    /** Starts polling for changes every 10 seconds (foreground only). */
+    fun startPolling() {
+        if (pollingJob != null || liveSync == null) return
+        pollingJob = scope.launch {
+            while (isActive) {
+                liveSync?.pull()
+                _status.value = _status.value.copy(lastSync = clock.now())
+                delay(10.seconds)
+            }
+        }
+    }
+
+    /** Stops the polling job. */
+    fun stopPolling() {
+        pollingJob?.cancel()
+        pollingJob = null
     }
 }

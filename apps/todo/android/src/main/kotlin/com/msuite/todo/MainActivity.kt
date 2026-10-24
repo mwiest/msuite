@@ -7,10 +7,13 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
+import com.msuite.todo.domain.FolderSyncActions
 import com.msuite.todo.domain.ThemeMode
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private lateinit var folderSync: FolderSyncActions
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val app = application as TodoApplication
@@ -24,7 +27,26 @@ class MainActivity : ComponentActivity() {
             clipboard = app.clipboard,
             fileStoreFactory = { uri -> SafFileStore(applicationContext, android.net.Uri.parse(uri)) },
         )
-        setContent { TodoApp(app.replica, app.settings, version, shell, app.identity) }
+        folderSync = FolderSyncActions(
+            replica = app.replica,
+            identity = app.identity,
+            settings = app.settings,
+            folderPick = shell.folder,
+            fileStoreFactory = shell.fileStoreFactory,
+            scope = lifecycleScope,
+        )
+        folderSync.startSyncIfConfigured()
+        setContent { TodoApp(app.replica, app.settings, version, shell, app.identity, folderSync) }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        folderSync.startPolling()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        folderSync.stopPolling()
     }
 }
 

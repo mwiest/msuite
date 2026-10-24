@@ -35,7 +35,8 @@ private data object RecoveryRoute
 
 /**
  * The whole ToDo UI over [replica] and [settings]; [version] is shown in About, [shell] is the
- * platform half, and [identity] is the group root. Platform shells (apps/todo/android) only host it.
+ * platform half, [identity] is the group root, and [folderSync] manages the synced folder.
+ * Platform shells (apps/todo/android) only host it.
  */
 @Composable
 fun TodoApp(
@@ -44,24 +45,13 @@ fun TodoApp(
     version: String,
     shell: ShellServices,
     identity: StoredIdentity,
+    folderSync: FolderSyncActions,
 ) {
-    val scope = rememberCoroutineScope()
-    val folderSync = remember(replica, identity, settings, shell, scope) {
-        FolderSyncActions(
-            replica = replica,
-            identity = identity,
-            settings = settings,
-            folderPick = shell.folder,
-            fileStoreFactory = shell.fileStoreFactory,
-            scope = scope,
-        )
-    }
     val app = remember(replica, settings, shell, identity, folderSync) {
         TodoContainer(replica, settings, shell.files, identity, folderSync)
     }
     val myTasks = stringResource(Res.string.my_tasks)
     LaunchedEffect(app) { app.lists.createMyTasksIfMissing(myTasks) }
-    LaunchedEffect(folderSync) { folderSync.startSyncIfConfigured() }
     val theme by settings.themeMode.collectAsState()
     val dark = when (theme) {
         ThemeMode.System -> isSystemInDarkTheme()

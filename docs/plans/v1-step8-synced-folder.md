@@ -1,6 +1,6 @@
 # Plan: v1 step 8, the synced-folder plug (milestone)
 
-Status: **Slices 1-11 done (commits `49f3d12` to `1e3a542`, build verified at `acdc0e1`); slices 12-15 pending.** All sync tests pass, SAF wrapper compiles.
+Status: **Slices 1-12 done (commits `49f3d12` to `b364f0c`); slices 13-15 pending.** Build verification complete, settings UI for folder plug implemented.
 
 ## Goal
 
@@ -60,9 +60,9 @@ Each slice is one commit (or a few), builds, and leaves the build green.
 11. [ ] **SAF `FileStore` wrapper.** In `apps/todo/android`, wrap `DocumentFile` and
     `ContentResolver` into `FileStore`. Handle persistable URI permissions across restarts. After it
     lands: `<commit>`.
-12. [ ] **Settings UI for the folder plug.** In `apps/todo/shared`, add a route to pick the synced
+12. [x] **Settings UI for the folder plug.** In `apps/todo/shared`, add a route to pick the synced
     folder (SAF picker), show sync status (last sync time, pending changes), and a manual "Sync now"
-    button. The manual export/import stays as a fallback. After it lands: `<commit>`.
+    button. The manual export/import stays as a fallback. After it lands: `b364f0c`.
 13. [ ] **Foreground polling.** A coroutine job syncs every 10 s while the app is visible (Lifecycle
     observer). A manual "Sync now" button is always available. After it lands: `<commit>`.
 14. [ ] **Pairing QR backend descriptor.** The pairing QR carries the folder type (decision 0072);
