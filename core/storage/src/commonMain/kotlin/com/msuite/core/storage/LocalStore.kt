@@ -116,7 +116,7 @@ class PlugBook internal constructor(private val queries: PlugStateQueries) {
     fun prune(plug: PlugId, currentBackendKeys: Set<String>) = queries.transactionWithResult {
         val ingested = ingestedKeys(plug)
         val unreadable = unreadableKeys(plug)
-        
+
         var prunedCount = 0
         for (key in ingested) {
             if (key !in currentBackendKeys) {

@@ -1,6 +1,6 @@
 package com.msuite.todo
 
-import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.msuite.core.sync.FileStore
@@ -15,13 +15,15 @@ import java.io.IOException
  * this base. Uses persistable URI permissions to survive restarts (decision 0042).
  */
 class SafFileStore(
-    private val contentResolver: ContentResolver,
+    private val context: Context,
     private val baseUri: Uri,
 ) : FileStore {
-    
+
+    private val contentResolver get() = context.contentResolver
+
     private fun resolve(path: String): DocumentFile? {
-        if (path.isEmpty()) return DocumentFile.fromTreeUri(contentResolver, baseUri)
-        val base = DocumentFile.fromTreeUri(contentResolver, baseUri) ?: return null
+        if (path.isEmpty()) return DocumentFile.fromTreeUri(context, baseUri)
+        val base = DocumentFile.fromTreeUri(context, baseUri) ?: return null
         val segments = path.split('/')
         var current = base
         for (segment in segments) {
@@ -30,10 +32,10 @@ class SafFileStore(
         }
         return current
     }
-    
+
     private fun resolveOrCreate(path: String): DocumentFile? {
-        if (path.isEmpty()) return DocumentFile.fromTreeUri(contentResolver, baseUri)
-        val base = DocumentFile.fromTreeUri(contentResolver, baseUri) ?: return null
+        if (path.isEmpty()) return DocumentFile.fromTreeUri(context, baseUri)
+        val base = DocumentFile.fromTreeUri(context, baseUri) ?: return null
         val segments = path.split('/')
         var current = base
         for (segment in segments) {
@@ -42,7 +44,7 @@ class SafFileStore(
         }
         return current
     }
-    
+
     override suspend fun read(path: String): ByteArray? = withContext(Dispatchers.IO) {
         val file = resolve(path) ?: return@withContext null
         if (!file.isFile) return@withContext null
@@ -60,12 +62,12 @@ class SafFileStore(
             null
         }
     }
-    
+
     override suspend fun write(path: String, bytes: ByteArray) = withContext(Dispatchers.IO) {
         val lastSlash = path.lastIndexOf('/')
         val dir = if (lastSlash > 0) path.substring(0, lastSlash) else ""
         val name = if (lastSlash >= 0) path.substring(lastSlash + 1) else path
-        
+
         val parent = resolveOrCreate(dir) ?: throw IOException("cannot create directory $dir")
         val existing = parent.findFile(name)
         if (existing != null && existing.isFile) {
@@ -76,33 +78,35 @@ class SafFileStore(
             stream.write(bytes)
         } ?: throw IOException("cannot open output stream for $path")
     }
-    
+
     override suspend fun list(directory: String): List<String> = withContext(Dispatchers.IO) {
         val dir = resolve(directory) ?: return@withContext emptyList()
         if (!dir.isDirectory) return@withContext emptyList()
         dir.listFiles().mapNotNull { it.name }.toList()
     }
-    
+
     override suspend fun delete(path: String) = withContext(Dispatchers.IO) {
         val file = resolve(path) ?: return@withContext
         file.delete()
     }
-    
+
     override suspend fun mkdir(path: String) = withContext(Dispatchers.IO) {
         resolveOrCreate(path) ?: throw IOException("cannot create directory $path")
+        Unit
     }
-    
+
     override suspend fun rename(from: String, to: String) = withContext(Dispatchers.IO) {
         val source = resolve(from) ?: throw IOException("source not found: $from")
         val lastSlash = to.lastIndexOf('/')
         val targetName = if (lastSlash >= 0) to.substring(lastSlash + 1) else to
         source.renameTo(targetName)
+        Unit
     }
-    
+
     override suspend fun exists(path: String): Boolean = withContext(Dispatchers.IO) {
         resolve(path) != null
     }
-    
+
     private companion object {
         const val MIME_TYPE = "application/octet-stream"
     }

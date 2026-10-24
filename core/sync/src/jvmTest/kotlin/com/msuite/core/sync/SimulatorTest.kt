@@ -313,33 +313,33 @@ class SimulatorTest : StringSpec({
     "invariant 18: after pruning, readers converge on surviving objects alone" {
         val plug = MemoryPlug()
         val store = PlugStore(plug, APP_ID, LAYER3_ROOT, type = BatchType.Delta)
-        
+
         Simulation(listOf(0L, 0L), seed = 200, backend = ::MemoryState, store = store).use { sim ->
             // Device 0 writes some deltas
             sim.run(Write(device = 0, record = 0, field = 0, seed = 1))
             sim.run(NetStep.Push(device = 0, fails = false))
             sim.run(Write(device = 0, record = 0, field = 0, seed = 2))
             sim.run(NetStep.Push(device = 0, fails = false))
-            
+
             // Device 1 pulls and ingests the deltas
             sim.pullAll(sim.devices[1])
             sim.quiesce()
             sim.checkConverged()
-            
+
             val stateBefore = sim.devices[1].cells()
             val keysBefore = store.keys().size
-            
+
             // Device 0 publishes a snapshot and prunes its earlier deltas
             sim.prune(sim.devices[0], graceCount = 0)
-            
+
             // Device 1 should still converge to the same state
             sim.pullAll(sim.devices[1])
             sim.quiesce()
             sim.checkConverged()
-            
+
             // State should be identical
             sim.devices[1].cells() shouldBe stateBefore
-            
+
             // Store should have fewer objects (pruned)
             store.keys().size shouldBe keysBefore - 1 // Two deltas pruned, one snapshot added
         }
@@ -348,25 +348,25 @@ class SimulatorTest : StringSpec({
     "invariant 19: late-joining device converges after pruning" {
         val plug = MemoryPlug()
         val store = PlugStore(plug, APP_ID, LAYER3_ROOT, type = BatchType.Delta)
-        
+
         Simulation(listOf(0L, 0L), seed = 201, backend = ::MemoryState, store = store).use { sim ->
             // Device 0 writes some deltas
             sim.run(Write(device = 0, record = 0, field = 0, seed = 1))
             sim.run(NetStep.Push(device = 0, fails = false))
             sim.run(Write(device = 0, record = 0, field = 0, seed = 2))
             sim.run(NetStep.Push(device = 0, fails = false))
-            
+
             // Device 0 publishes a snapshot and prunes its earlier deltas
             sim.prune(sim.devices[0], graceCount = 0)
-            
+
             val keysAfterPrune = store.keys()
             keysAfterPrune.size shouldBe 1 // Only snapshot remains
-            
+
             // Device 1 joins late (after pruning) and should converge
             sim.pullAll(sim.devices[1])
             sim.quiesce()
             sim.checkConverged()
-            
+
             // Both devices should have the same state
             sim.devices[0].cells() shouldBe sim.devices[1].cells()
         }
@@ -375,20 +375,20 @@ class SimulatorTest : StringSpec({
     "invariant 19: object count stays bounded with grace window" {
         val plug = MemoryPlug()
         val store = PlugStore(plug, APP_ID, LAYER3_ROOT, type = BatchType.Delta)
-        
+
         Simulation(listOf(0L), seed = 202, backend = ::MemoryState, store = store).use { sim ->
             // Device 0 writes multiple deltas
             repeat(5) { i ->
                 sim.run(Write(device = 0, record = 0, field = 0, seed = i.toLong()))
                 sim.run(NetStep.Push(device = 0, fails = false))
             }
-            
+
             val keysBefore = store.keys().size
             keysBefore shouldBe 5 // Five deltas
-            
+
             // Prune with grace window of 2
             sim.prune(sim.devices[0], graceCount = 2)
-            
+
             val keysAfter = store.keys()
             // Should have: 1 snapshot + 2 grace deltas = 3 objects
             keysAfter.size shouldBe 3

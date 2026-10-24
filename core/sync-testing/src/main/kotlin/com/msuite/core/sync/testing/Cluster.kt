@@ -146,32 +146,32 @@ open class Cluster(
      */
     fun prune(device: SimDevice, graceCount: Int = 0) {
         if (!device.online) return
-        
+
         // Publish a snapshot of current state
         val snapshot = device.snapshot()
         val snapshotKey = store.put(snapshot)
         device.ingested += snapshotKey
-        
+
         // Find this device's earlier deltas and prune them
         val deviceId = device.id
         val deviceKeys = store.keys().filter { key ->
             try {
                 val objKey = ObjectKey.parse(key)
-                objKey.prefix.deviceId == deviceId && 
-                objKey.prefix.type == BatchType.Delta &&
-                key != snapshotKey
+                objKey.prefix.deviceId == deviceId &&
+                    objKey.prefix.type == BatchType.Delta &&
+                    key != snapshotKey
             } catch (e: IllegalArgumentException) {
                 false
             }
         }.sorted() // Sort by key (which sorts by HLC)
-        
+
         // Keep the last graceCount deltas, delete the rest
         val toDelete = if (graceCount >= deviceKeys.size) {
             emptyList()
         } else {
             deviceKeys.dropLast(graceCount)
         }
-        
+
         toDelete.forEach { key ->
             store.delete(key)
             // Remove from all devices' ingested sets since the object is gone

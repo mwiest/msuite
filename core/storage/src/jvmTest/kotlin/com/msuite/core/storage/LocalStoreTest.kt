@@ -188,10 +188,10 @@ class LocalStoreTest : StringSpec({
         store.plugs.markIngested(folder, "k3")
         store.plugs.recordUnreadable(folder, "u1")
         store.plugs.recordUnreadable(folder, "u2")
-        
+
         // Only k2 and u1 are still in the backend
         val pruned = store.plugs.prune(folder, setOf("k2", "u1"))
-        
+
         pruned shouldBe 3 // k1, k3, u2 were pruned
         store.plugs.isIngested(folder, "k1") shouldBe false
         store.plugs.isIngested(folder, "k2") shouldBe true
@@ -207,7 +207,7 @@ class LocalStoreTest : StringSpec({
         store.plugs.markIngested(folder, "k1")
         store.plugs.markIngested(relay, "k2")
         store.plugs.recordUnreadable(folder, "u1")
-        
+
         store.plugs.prune(folder, emptySet()) shouldBe 2 // k1 and u1
         store.plugs.isIngested(folder, "k1") shouldBe false
         store.plugs.isIngested(relay, "k2") shouldBe true // relay unaffected
