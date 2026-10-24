@@ -1,6 +1,6 @@
 # Plan: v1 step 8, the synced-folder plug (milestone)
 
-Status: **Slices 1-11 done (commits `49f3d12` to `1e3a542`); slices 12-15 pending.** Slices 1-11 code is written but build verification was incomplete due to environment timeouts — needs testing and potential fixes before proceeding.
+Status: **Slices 1-11 done (commits `49f3d12` to `1e3a542`, build verified at `acdc0e1`); slices 12-15 pending.** All sync tests pass, SAF wrapper compiles.
 
 ## Goal
 
@@ -88,15 +88,15 @@ Each slice is one commit (or a few), builds, and leaves the build green.
   trade-off? The manual "Sync now" button in slice 12 would mitigate this, but automatic flush on
   lifecycle events might be safer.
 
-## Build verification needed
+## Build verification
 
-**Status**: Slices 1-11 code is written and committed, but build verification was incomplete due to
-environment timeouts during development. Before proceeding to slices 12-15:
+**Status: ✅ Complete** (commit `acdc0e1`).
 
-1. Run `./gradlew :apps:todo:android:compileDebugKotlin` to verify the SAF wrapper compiles
-2. Run `./gradlew :core:sync:jvmTest` to verify all simulator tests still pass
-3. Fix any compilation or test failures that surface
-4. Only then proceed to slice 12 (Settings UI)
+1. ✅ `./gradlew :core:sync:jvmTest` passes (all simulator tests green)
+2. ✅ `./gradlew :apps:todo:android:compileDebugKotlin` passes (SafFileStore fixed: `Context` not `ContentResolver`, `Unit` return from `mkdir`/`rename`)
+3. ✅ `./gradlew spotlessCheck detekt` passes
+
+Proceeding to slice 12 (Settings UI).
 
 ## How to verify
 
