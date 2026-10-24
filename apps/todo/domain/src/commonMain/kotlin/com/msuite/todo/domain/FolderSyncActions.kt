@@ -68,8 +68,8 @@ class FolderSyncActions(
 
     /** Starts the folder sync if a folder is configured. Called on app startup. */
     fun startSyncIfConfigured() {
-        val uri = settings.syncedFolderUri.value ?: return
-        if (liveSync != null) return
+        val uri = settings.syncedFolderUri.value
+        if (uri == null || liveSync != null) return
         val root = identity.root(KEY_GEN_V1) ?: return
         val store = fileStoreFactory(uri)
         val plug = FolderPlug(store)

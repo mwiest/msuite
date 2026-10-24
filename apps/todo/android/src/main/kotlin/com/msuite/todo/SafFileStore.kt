@@ -22,25 +22,35 @@ class SafFileStore(
     private val contentResolver get() = context.contentResolver
 
     private fun resolve(path: String): DocumentFile? {
-        if (path.isEmpty()) return DocumentFile.fromTreeUri(context, baseUri)
-        val base = DocumentFile.fromTreeUri(context, baseUri) ?: return null
+        val base = if (path.isEmpty()) {
+            DocumentFile.fromTreeUri(context, baseUri)
+        } else {
+            DocumentFile.fromTreeUri(context, baseUri) ?: return null
+        }
+
         val segments = path.split('/')
-        var current = base
+        var current: DocumentFile? = base
         for (segment in segments) {
-            if (segment.isEmpty()) continue
-            current = current.findFile(segment) ?: return null
+            if (segment.isNotEmpty()) {
+                current = current?.findFile(segment)
+            }
         }
         return current
     }
 
     private fun resolveOrCreate(path: String): DocumentFile? {
-        if (path.isEmpty()) return DocumentFile.fromTreeUri(context, baseUri)
-        val base = DocumentFile.fromTreeUri(context, baseUri) ?: return null
+        val base = if (path.isEmpty()) {
+            DocumentFile.fromTreeUri(context, baseUri)
+        } else {
+            DocumentFile.fromTreeUri(context, baseUri) ?: return null
+        }
+
         val segments = path.split('/')
-        var current = base
+        var current: DocumentFile? = base
         for (segment in segments) {
-            if (segment.isEmpty()) continue
-            current = current.findFile(segment) ?: current.createDirectory(segment) ?: return null
+            if (segment.isNotEmpty()) {
+                current = current?.findFile(segment) ?: current?.createDirectory(segment)
+            }
         }
         return current
     }
@@ -51,7 +61,7 @@ class SafFileStore(
         try {
             contentResolver.openInputStream(file.uri)?.use { stream ->
                 val out = ByteArrayOutputStream()
-                val buffer = ByteArray(8192)
+                val buffer = ByteArray(BUFFER_SIZE)
                 var read: Int
                 while (stream.read(buffer).also { read = it } != -1) {
                     out.write(buffer, 0, read)
@@ -59,7 +69,7 @@ class SafFileStore(
                 out.toByteArray()
             }
         } catch (e: IOException) {
-            null
+            throw IOException("Failed to read file at $path", e)
         }
     }
 
@@ -109,5 +119,6 @@ class SafFileStore(
 
     private companion object {
         const val MIME_TYPE = "application/octet-stream"
+        const val BUFFER_SIZE = 8192
     }
 }

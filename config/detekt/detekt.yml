@@ -13,5 +13,8 @@ style:
 complexity:
   TooManyFunctions:
     # Replica is the device's one state API: write, ingest, unreadable, delta, cells and friends.
-    # The rule reports at the threshold, so this reads "12 and up".
-    thresholdInClasses: 13
+    # The rule reports at the threshold, so this reads "13 and up".
+    thresholdInClasses: 14
+  LongParameterList:
+    # LiveSync has 7 constructor parameters, all necessary for its operation.
+    constructorThreshold: 8

@@ -57,13 +57,15 @@ class LiveSync(
         val keys = plug.list(prefix)
         for (key in keys) {
             if (replica.isCorrupt(plugId, key)) continue
-            val bytes = plug.get(key) ?: continue
-            val batch = ProtoBatchEncoder.decodeOrNull(bytes)
-            if (batch == null) {
-                replica.unreadable(plugId, key)
-                continue
+            val bytes = plug.get(key)
+            if (bytes != null) {
+                val batch = ProtoBatchEncoder.decodeOrNull(bytes)
+                if (batch != null) {
+                    replica.ingest(plugId, key, batch)
+                } else {
+                    replica.unreadable(plugId, key)
+                }
             }
-            replica.ingest(plugId, key, batch)
         }
         // Prune bookkeeping: remove entries for keys no longer in the backend (decision 0002).
         replica.prune(plugId, keys.toSet())
@@ -71,8 +73,8 @@ class LiveSync(
 
     private suspend fun publish() {
         val gid = groupId ?: return
-        val delta = replica.delta(plugId) ?: return
-        if (delta.cells.isEmpty()) return
+        val delta = replica.delta(plugId)
+        if (delta == null || delta.cells.isEmpty()) return
 
         val bytes = ProtoBatchEncoder.encode(delta)
         val hash = ciphertextHash(bytes)

@@ -91,7 +91,12 @@ fun FolderPlugSection(folder: FolderSyncActions) {
 }
 
 @Composable
-private fun FolderActionsRow(folder: FolderSyncActions, folderUri: String?, busy: MutableState<Boolean>, scope: CoroutineScope) {
+private fun FolderActionsRow(
+    folder: FolderSyncActions,
+    folderUri: String?,
+    busy: MutableState<Boolean>,
+    scope: CoroutineScope,
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(enabled = !busy.value, onClick = {
             scope.launch {

@@ -155,6 +155,7 @@ open class Cluster(
         // Find this device's earlier deltas and prune them
         val deviceId = device.id
         val deviceKeys = store.keys().filter { key ->
+            @Suppress("SwallowedException") // Expected: some keys may not be valid ObjectKeys
             try {
                 val objKey = ObjectKey.parse(key)
                 objKey.prefix.deviceId == deviceId &&
@@ -184,33 +185,35 @@ open class Cluster(
      * whose HLC span contains the delta's span. Only applies when using real key grammar (0029).
      */
     private fun isCoveredBySnapshot(key: String, ingested: Set<String>): Boolean {
+        @Suppress("SwallowedException") // Expected: some keys may not be valid ObjectKeys
         val objKey = try {
             ObjectKey.parse(key)
         } catch (e: IllegalArgumentException) {
-            return false // Not a real key (e.g., Layer 1 uses numeric keys)
+            null // Not a real key (e.g., Layer 1 uses numeric keys)
         }
 
-        if (objKey.prefix.type != BatchType.Delta) return false
-
-        // Find all ingested snapshots from the same writer
-        val writerSnapshots = ingested.mapNotNull { ingestedKey ->
-            try {
-                val ingestedObjKey = ObjectKey.parse(ingestedKey)
-                if (ingestedObjKey.prefix.type == BatchType.Snapshot &&
-                    ingestedObjKey.prefix.deviceId == objKey.prefix.deviceId
-                ) {
-                    ingestedObjKey.prefix.hlcLo to ingestedObjKey.prefix.hlcHi
-                } else {
+        return objKey != null && objKey.prefix.type == BatchType.Delta && run {
+            // Find all ingested snapshots from the same writer
+            val writerSnapshots = ingested.mapNotNull { ingestedKey ->
+                @Suppress("SwallowedException") // Expected: some keys may not be valid ObjectKeys
+                try {
+                    val ingestedObjKey = ObjectKey.parse(ingestedKey)
+                    if (ingestedObjKey.prefix.type == BatchType.Snapshot &&
+                        ingestedObjKey.prefix.deviceId == objKey.prefix.deviceId
+                    ) {
+                        ingestedObjKey.prefix.hlcLo to ingestedObjKey.prefix.hlcHi
+                    } else {
+                        null
+                    }
+                } catch (e: IllegalArgumentException) {
                     null
                 }
-            } catch (e: IllegalArgumentException) {
-                null
             }
-        }
 
-        // Check if any snapshot covers this delta's span
-        return writerSnapshots.any { (snapLo, snapHi) ->
-            snapLo <= objKey.prefix.hlcLo && objKey.prefix.hlcHi <= snapHi
+            // Check if any snapshot covers this delta's span
+            writerSnapshots.any { (snapLo, snapHi) ->
+                snapLo <= objKey.prefix.hlcLo && objKey.prefix.hlcHi <= snapHi
+            }
         }
     }
 

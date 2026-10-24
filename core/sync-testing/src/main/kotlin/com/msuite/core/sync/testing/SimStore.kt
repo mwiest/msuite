@@ -51,8 +51,8 @@ class BatchStore : SimStore {
         .map(Int::toString)
 
     override fun get(key: String): Fetch? {
-        val batch = batches.getOrNull(key.toInt()) ?: return null
-        if (batch === Batch.EMPTY) return null // Deleted
+        val batch = batches.getOrNull(key.toInt())
+        if (batch == null || batch === Batch.EMPTY) return null // Absent or deleted
         return Fetch.Read(batch)
     }
 

@@ -13,7 +13,8 @@ import kotlinx.coroutines.runBlocking
 /**
  * A [SimStore] over a real [BackendPlug] and the real codec (decision 0057): Layer 2 pushes encoded
  * bytes through the plug and reads them back, so the contract and `decodeOrNull` are exercised.
- * Keys use the real object key grammar (decision 0029): `{appId}/{groupId}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}`,
+ * Keys use the real object key grammar (decision 0029):
+ * `{appId}/{groupId}/v{fmt}_{type}_{deviceId}_{hlcLo}_{hlcHi}_{hash}`,
  * so spans, types and pruning are exercised. The hash is over the encoded bytes.
  */
 class PlugStore(
