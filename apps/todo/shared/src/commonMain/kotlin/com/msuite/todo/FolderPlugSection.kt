@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -19,10 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.msuite.todo.domain.FolderSyncActions
 import com.msuite.todo.resources.Res
+import com.msuite.todo.resources.cancel
 import com.msuite.todo.resources.folder_clear
 import com.msuite.todo.resources.folder_last_sync
 import com.msuite.todo.resources.folder_never_synced
 import com.msuite.todo.resources.folder_pick
+import com.msuite.todo.resources.folder_pick_continue
+import com.msuite.todo.resources.folder_pick_hint
+import com.msuite.todo.resources.folder_pick_title
 import com.msuite.todo.resources.folder_sync
 import com.msuite.todo.resources.folder_sync_configured
 import com.msuite.todo.resources.folder_sync_not_configured
@@ -38,6 +44,7 @@ fun FolderPlugSection(folder: FolderSyncActions) {
     val folderUri by folder.folderUri.collectAsState()
     val scope = rememberCoroutineScope()
     val busy = remember { mutableStateOf(false) }
+    val showPickDialog = remember { mutableStateOf(false) }
 
     Text(
         stringResource(Res.string.folder_sync),
@@ -86,8 +93,45 @@ fun FolderPlugSection(folder: FolderSyncActions) {
         }
 
         // Actions
-        FolderActionsRow(folder, folderUri, busy, scope)
+        FolderActionsRow(folder, folderUri, busy, scope, showPickDialog)
     }
+
+    // Show a one-off explanation before opening the SAF picker, so the user knows to pick their
+    // cloud-sync root (Syncthing, Nextcloud, ...) rather than a random folder.
+    if (showPickDialog.value) {
+        FolderPickDialog(showPickDialog, folder, busy, scope)
+    }
+}
+
+@Composable
+private fun FolderPickDialog(
+    showPickDialog: MutableState<Boolean>,
+    folder: FolderSyncActions,
+    busy: MutableState<Boolean>,
+    scope: CoroutineScope,
+) {
+    AlertDialog(
+        onDismissRequest = { showPickDialog.value = false },
+        title = { Text(stringResource(Res.string.folder_pick_title)) },
+        text = { Text(stringResource(Res.string.folder_pick_hint)) },
+        confirmButton = {
+            Button(onClick = {
+                showPickDialog.value = false
+                scope.launch {
+                    busy.value = true
+                    folder.pickFolder()
+                    busy.value = false
+                }
+            }) {
+                Text(stringResource(Res.string.folder_pick_continue))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { showPickDialog.value = false }) {
+                Text(stringResource(Res.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -96,15 +140,10 @@ private fun FolderActionsRow(
     folderUri: String?,
     busy: MutableState<Boolean>,
     scope: CoroutineScope,
+    showPickDialog: MutableState<Boolean>,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(enabled = !busy.value, onClick = {
-            scope.launch {
-                busy.value = true
-                folder.pickFolder()
-                busy.value = false
-            }
-        }) {
+        Button(enabled = !busy.value, onClick = { showPickDialog.value = true }) {
             Text(stringResource(Res.string.folder_pick))
         }
         if (folderUri != null) {

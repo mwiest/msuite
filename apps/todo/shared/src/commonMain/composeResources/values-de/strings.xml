@@ -56,6 +56,9 @@
     <string name="folder_sync_not_configured">Kein Ordner konfiguriert. Wählen Sie einen synchronisierten Ordner, um mit anderen Geräten zu synchronisieren.</string>
     <string name="folder_sync_configured">Synchronisierung mit Ordner:</string>
     <string name="folder_pick">Ordner wählen</string>
+    <string name="folder_pick_title">Sync-Ordner wählen</string>
+    <string name="folder_pick_hint">Wähle den Ordner, den dein Sync-Tool nutzt (z.B. Syncthing, Nextcloud, Dropbox). Wir erstellen darin einen „msuite"-Ordner für deine synchronisierten Daten.</string>
+    <string name="folder_pick_continue">Weiter</string>
     <string name="folder_clear">Löschen</string>
     <string name="folder_sync_now">Jetzt synchronisieren</string>
     <string name="folder_last_sync">Letzte Synchronisierung: %1$s</string>

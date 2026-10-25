@@ -56,6 +56,9 @@
     <string name="folder_sync_not_configured">No folder configured. Pick a synced folder to sync with other devices.</string>
     <string name="folder_sync_configured">Syncing with folder:</string>
     <string name="folder_pick">Pick folder</string>
+    <string name="folder_pick_title">Pick your sync folder</string>
+    <string name="folder_pick_hint">Pick the folder your sync tool uses (e.g. Syncthing, Nextcloud, Dropbox). We\'ll create an \"msuite\" folder inside it for your synced data.</string>
+    <string name="folder_pick_continue">Continue</string>
     <string name="folder_clear">Clear</string>
     <string name="folder_sync_now">Sync now</string>
     <string name="folder_last_sync">Last sync: %1$s</string>
