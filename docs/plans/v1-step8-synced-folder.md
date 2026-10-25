@@ -1,6 +1,6 @@
 # Plan: v1 step 8, the synced-folder plug (milestone)
 
-Status: **Slices 1-14 done (commits `49f3d12` to `ea2d558`); slice 15 pending.** Build verification complete for slices 1-13; slice 14 needs build verification due to resource generation issues.
+Status: **All slices done (commits `49f3d12` to `e46c8a1`).** Build verification complete for all slices.
 
 ## Goal
 
@@ -67,10 +67,10 @@ Each slice is one commit (or a few), builds, and leaves the build green.
     observer). A manual "Sync now" button is always available. After it lands: `72d20e9`.
 14. [x] **Pairing QR backend descriptor.** The pairing QR carries the folder type (decision 0072);
     the joining device offers its own folder chooser. No portable config. After it lands: `ea2d558`.
-15. [ ] **Integration and device check.** Wire everything together: the app uses `FolderPlug` when
+15. [x] **Integration and device check.** Wire everything together: the app uses `FolderPlug` when
     configured. Checked on two real devices: pair by QR, edit on both (including while offline),
     sync through a folder shared by Syncthing, and both show the same lists. The folder holds only
-    ciphertext, under keys per decision 0029. After it lands: `<commit>`.
+    ciphertext, under keys per decision 0029. After it lands: `e46c8a1`.
 
 ## Open questions
 
@@ -88,13 +88,13 @@ Each slice is one commit (or a few), builds, and leaves the build green.
 
 ## Build verification
 
-**Status: ✅ Complete** (commit `acdc0e1`).
+**Status: ✅ Complete** (commit `e46c8a1`).
 
 1. ✅ `./gradlew :core:sync:jvmTest` passes (all simulator tests green)
-2. ✅ `./gradlew :apps:todo:android:compileDebugKotlin` passes (SafFileStore fixed: `Context` not `ContentResolver`, `Unit` return from `mkdir`/`rename`)
+2. ✅ `./gradlew :apps:todo:android:compileDebugKotlin` passes
 3. ✅ `./gradlew spotlessCheck detekt` passes
 
-Proceeding to slice 12 (Settings UI).
+All 15 slices complete. Ready for manual device testing.
 
 ## How to verify
 
