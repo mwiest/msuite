@@ -57,7 +57,7 @@
     <string name="folder_sync_configured">Synchronisierung mit Ordner:</string>
     <string name="folder_pick">Ordner wählen</string>
     <string name="folder_pick_title">Sync-Ordner wählen</string>
-    <string name="folder_pick_hint">Wähle den Ordner, den dein Sync-Tool nutzt (z.B. Syncthing, Nextcloud, Dropbox). Wir erstellen darin einen „msuite"-Ordner für deine synchronisierten Daten.</string>
+    <string name="folder_pick_hint">Wähle den Ordner, den dein Sync-Tool nutzt (z.B. Syncthing, Nextcloud, Dropbox). Du kannst zuerst einen eigenen Ordner wie „msuite-todo" erstellen oder einen vorhandenen wählen. Deine Daten werden über diesen Ordner synchronisiert.</string>
     <string name="folder_pick_continue">Weiter</string>
     <string name="folder_clear">Löschen</string>
     <string name="folder_sync_now">Jetzt synchronisieren</string>
