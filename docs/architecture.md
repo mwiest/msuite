@@ -223,7 +223,7 @@ the rest.
 | Plug | One batch is | Namespace is | Atomic publish | Create-only | `list` |
 |---|---|---|---|---|---|
 | Manual (v1) | the whole full-state snapshot, one file | - | file write | each export is a fresh compacted snapshot | - |
-| Synced folder (SAF) | a file | nested subfolders | write `.tmp_*`, then rename | unique names; a retry resends identical bytes | list children |
+| Synced folder (SAF) | a file | nested subfolders | write `.tmp_*` to local cache, then copy to cloud target | unique names; a retry resends identical bytes | list children |
 | WebDAV | a resource | nested collections | `PUT`, or `PUT` temp + `MOVE` | `If-None-Match: *` | `PROPFIND Depth:1` |
 | Object storage (S3, R2, B2, MinIO) | an object | a key prefix | native | `If-None-Match: *` | `ListObjectsV2(prefix)` |
 | Relay | a file on disk | nested directories | relay does temp + rename | relay rejects existing names and checks the hash | relay lists the namespace |

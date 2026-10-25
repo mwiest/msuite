@@ -1,6 +1,6 @@
 # Plan: v1 step 8, the synced-folder plug (milestone)
 
-Status: **All slices done (commits `49f3d12` to `e46c8a1`).** Build verification complete for all slices.
+Status: **Complete** (2026-10-25). All slices done and verified on real devices with Dropbox sync.
 
 ## Goal
 
