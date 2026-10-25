@@ -81,6 +81,11 @@ Each slice is one commit (or a few), builds, and leaves the build green.
   10 s timer while visible.)
 - Should the folder plug publish a snapshot on first sync (after pairing or after switching from
   manual), or only deltas? (Planned: a snapshot on first sync, then deltas.)
+- **Initial sync for existing local data.** When a user enables folder sync after using the app
+  locally, existing local data should be synced to the backend. Currently, `LiveSync.start()` only
+  listens to `replica.changes` for new changes, so existing data created before `LiveSync` started
+  won't be published. Fix: call `publish()` once when `LiveSync.start()` is called to publish any
+  existing unsynced data via `replica.delta(plugId)`.
 - ~~**Debounce vs. app lifecycle**~~: **Resolved** (commit `bc45388`). `LiveSync.flush()` publishes
   pending changes immediately, bypassing the debounce. `MainActivity.onStop` awaits the flush
   before stopping polling, so edits are synced before suspension while the 10 s debounce still
