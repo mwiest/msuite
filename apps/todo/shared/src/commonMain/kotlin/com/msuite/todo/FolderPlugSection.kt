@@ -111,7 +111,7 @@ private fun FolderActionsRow(
             Button(enabled = !busy.value, onClick = { folder.clearFolder() }) {
                 Text(stringResource(Res.string.folder_clear))
             }
-            Button(enabled = !busy.value && folderUri != null, onClick = {
+            Button(enabled = !busy.value, onClick = {
                 scope.launch {
                     busy.value = true
                     folder.syncNow()

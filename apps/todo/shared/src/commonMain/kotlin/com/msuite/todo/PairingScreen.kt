@@ -49,6 +49,7 @@ import com.msuite.todo.resources.pair_confirm_title
 import com.msuite.todo.resources.pair_devices
 import com.msuite.todo.resources.pair_join_hint
 import com.msuite.todo.resources.pair_joined_file
+import com.msuite.todo.resources.pair_joined_folder
 import com.msuite.todo.resources.pair_joined_unknown
 import com.msuite.todo.resources.pair_scan
 import com.msuite.todo.resources.pair_show
