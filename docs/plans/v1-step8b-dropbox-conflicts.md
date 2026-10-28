@@ -308,6 +308,12 @@ fresh salt, so a half-landed put leaves a duplicate); needs a safe "same delta" 
 peer cell can land inside the same HLC range. Rollout: wipe `msuite/todo/{gid}` (plaintext)
 and reset both devices' `plug_watermark` + `ingested_batch` so they re-publish encrypted.
 
+Rolled out 2026-10-28 22:52: folder wiped (plus the stale root `todo/` tree), bookkeeping
+reset. Each device published one full-state batch (same HLC span, different hashes from the
+fresh salt); both list the same 2 names, `field_state` 36 rows identical cell for cell,
+`ingested_batch` 2, `unreadable_batch` 0, no errors or crashes. No echo, as both published
+before ingesting and the peer's cells changed nothing. This is the new T2 baseline.
+
 ## Instrumentation status (stripped, fix committed in bc0ff76)
 
 The debug-only instrumentation (SafFileStore TRACE[1..5]/traceFiles/traceFlags/TRACE delay/
