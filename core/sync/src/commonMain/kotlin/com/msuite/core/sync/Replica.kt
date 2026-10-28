@@ -35,7 +35,7 @@ const val MAX_DECODE_ATTEMPTS = 3
  */
 class Replica private constructor(
     private val store: LocalStore,
-    private val deviceId: DeviceId,
+    val deviceId: DeviceId,
     wallClock: Clock,
     private val context: CoroutineContext,
 ) : AutoCloseable {

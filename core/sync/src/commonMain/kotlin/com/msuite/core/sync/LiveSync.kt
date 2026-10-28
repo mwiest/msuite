@@ -82,7 +82,7 @@ class LiveSync(
             appId = appId,
             groupId = gid,
             type = BatchType.Delta,
-            deviceId = delta.cells.first().stamp.deviceId,
+            deviceId = replica.deviceId,
             hlcLo = delta.cells.minOf { it.stamp.hlc },
             hlcHi = delta.cells.maxOf { it.stamp.hlc },
         )
