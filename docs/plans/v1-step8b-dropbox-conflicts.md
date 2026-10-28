@@ -20,7 +20,7 @@ we can start fresh with good instrumentation.
    identical record IDs on both).
 4. Bidirectional sync: Nord→Motorola and Motorola→Nord both deliver edits.
 5. Offline edits: created offline, synced after reconnecting.
-6. Ciphertext only in the folder: batch files are binary, no plaintext found.
+6. ~~Ciphertext only in the folder~~: wrong, the files are plaintext protobuf (F9).
 7. Key grammar matches decision 0029: `todo/{groupId}/v1_d_{deviceId}_{hlcLo}_{hlcHi}_{hash}`.
 8. **A single-device write does NOT create `(1)` conflict files** (proven by TRACE, see F3).
 
@@ -267,6 +267,37 @@ before T2: both `list()` = the same 13 names (incl. three 0-byte `(1)` and the `
 `field_state` 28 on both, `unreadable_batch` 0 on both, `ingested_batch` Nord 15 / Moto 14, no
 provider or grant errors. Builds now come from Windows: the Windows debug keystore was replaced
 by WSL's (backup `~/.android/debug.keystore.windows-backup`) so `install -r` keeps app data.
+
+### T2 round 1 (2026-10-28 22:29, simultaneous taps)
+
+Result: converged (36 `field_state` rows on both, same 16 file names), **no new `(1)` or `_N`
+copies**, no crashes. Two devices writing *different* keys at once do not make Dropbox create
+conflict files. Three new files:
+
+| Key (device, HLC) | Writer | Content |
+|---|---|---|
+| `TDG38GH04SLS2`, 19:29:35 | Nord | T2-Nord |
+| `UN28KG7BECNL2`, 22:30:16 | Moto | T2-Moto |
+| `TDG38GH04SLS2`, 22:30:16, **same hash as the Moto's** | Nord | T2-Moto again: the **echo** |
+
+- **Echo mechanism (F2's real root):** the Nord published T2-Nord (watermark 19:29), ingested
+  T2-Moto (22:30, above the watermark); the ingest ticked `changes`, the debounce fired and the
+  delta re-published the peer's cells. Before 5521754 that echo carried the Moto's key, which
+  is exactly F2 and the `_N` data-bearing copies of F8. Since the fix it is a harmless
+  duplicate under the Nord's key. The Moto did not echo T2-Nord (19:29 is below its watermark).
+- **Clock skew:** the Nord's time zone is `Asia/Dubai` with the local time set to match CET, so
+  its UTC clock is 3 h 0 m 42 s behind the Moto. HLC handles it, but the Nord's edits lose LWW
+  against Moto edits from the previous 3 h. Device config, not an app bug.
+
+### F9: folder sync uploads plaintext (found 2026-10-28)
+
+The identical hash above means the bytes are deterministic: `LiveSync.publish()` puts
+`ProtoBatchEncoder.encode(delta)` straight into the plug, and `pull()` decodes it straight
+back. No `BatchEnvelope` exists anywhere in the folder path (only `ManualSync` seals). Todo
+titles sit in Dropbox as plaintext protobuf, contradicting the step 8 milestone ("a synced
+folder that holds only ciphertext") and the 2026-10-27 check (6), which mistook binary
+protobuf for ciphertext. Likely also why `unreadable_batch` stays 0 with three 0-byte `(1)`
+files: an empty protobuf decodes as an empty batch.
 
 ## Instrumentation status (stripped, fix committed in bc0ff76)
 
