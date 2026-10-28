@@ -307,6 +307,9 @@ wrote (S1-Nord and its echo of S1-Moto); none on the Moto's keys.
 - **Echo again:** the Nord echoed all three Moto batches (S1, S5, S10), the Moto none, because
   only the Moto's batches landed above the receiver's watermark. Duplicates, no conflicts.
 - Staggering (1/5/10 s) made no visible difference; the `(1)`s hit the first two Nord writes.
+- **Decided 2026-10-28:** sweep conflict copies on pull (`key (N)` and `key_<digits>`, only while
+  `key` is listed), drop `SafFileStore`'s post-write cleanup (it ran before the copy existed);
+  keep the echo for now and revisit with relay/multi-plug work. Done in 3eb5dac.
 
 ### F9: folder sync uploads plaintext (found 2026-10-28)
 
