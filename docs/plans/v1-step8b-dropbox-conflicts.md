@@ -57,7 +57,7 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
   `Dropbox/msuite/todo/`; wiped 2026-10-28 22:50.
 - **Clock skew:** the Nord's time zone is `Asia/Dubai` with the local time set to match CET, so
   its UTC clock is ~3 h behind. HLC copes, but the Nord's edits lose LWW against Moto edits from
-  the previous 3 h. Device config; Marc to switch the Nord to automatic time and zone.
+  the previous 3 h. Device config, fixed 2026-10-28 (automatic time and zone).
 - **T2 results:** round 1 (simultaneous) and round 2 (staggered 1 / 5 / 10 s) both converged,
   no crashes, no `_N` copies; only the writer-made `(1)`s above.
 
@@ -81,8 +81,9 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
    failing `FileStore`.
 6. [ ] **T1 residual:** reboot and `adb install -r` on the Nord keep the folder healthy (the
    `<queries>` fix).
-7. [ ] Reset the investigation settings on both devices: `svc power stayon false`,
-   `dumpsys deviceidle enable`.
+7. [x] Reset the investigation settings on both devices (done 2026-10-28 23:30: `stay_on` 0,
+   Doze enabled). They never helped: stay-on only works while charging, and polling stops when
+   the screen goes off anyway.
 8. [ ] Close the plan: move what lasts into `architecture.md` / `testing.md`, tick step 8 in
    `v1-todo.md`, delete this plan.
 
@@ -112,7 +113,7 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
 - Group `IQEPVMM8EU8S8OHP84ADCE77N8`; device ids Nord `TDG38GH04SLS2`, Moto `UN28KG7BECNL2`.
 - adb: wireless, transport ids change on reconnect (last: Nord 3, Moto 2); check
   `adb devices -l` first. Screens lock and doze when unplugged; adb can't unlock (PIN).
-- `svc power stayon true` and `dumpsys deviceidle disable` are still set (next session, step 7).
+- Stay-on and Doze are back to defaults; the Nord's clock is on automatic time and zone (2026-10-28).
 - Dropbox app v494.2.2 on both.
 - DB backups before the F9 rollout: `%TEMP%\f9\t{2,3}-todo.db`.
 
