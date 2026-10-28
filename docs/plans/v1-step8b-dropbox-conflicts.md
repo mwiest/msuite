@@ -1,9 +1,11 @@
 # Plan: v1 step 8b, Dropbox conflict-file investigation
 
 Status: **In progress** (2026-10-28). The 2026-10-27 session defined the problem; the
-2026-10-28 session root-caused U1/U2 with traces and found three new issues (F6–F8).
-Remaining work: repair the Nord (manual folder re-pick), run T2–T4 on healthy devices,
-then implement the fixes. See [Current device state](#current-device-state-at-handoff-2026-10-28-evening).## Context
+2026-10-28 session root-caused U1/U2, found F6–F8, fixed F2's key (5521754) and repaired the
+Nord (22:25). Remaining: run T2–T4, then implement the fixes. See
+[Repaired 2026-10-28 22:25](#repaired-2026-10-28-2225).
+
+## Context
 
 Step 8's milestone verification on two real devices (OnePlus Nord AC2003, Motorola edge 70 pro,
 Android 16, Dropbox as the synced-folder backend) surfaced several issues around conflict files
@@ -148,7 +150,7 @@ TREE instrumentation (`TREE[dir=...] treeDocId=... rootName=...`) resolved every
 | `b7422704` | Moto | account root (`Privat`) | the step-3 re-pick — **picked ROOT, not msuite** (yesterday's note that it was msuite was wrong) |
 | `a1d3faef` | Moto | `msuite` | healthy — holds the live tree, 13 files |
 | `ed1a838b` | Nord | account root | Nord's current pref — **wrong folder**, data lives under `msuite` |
-| `c900964f` | Nord | original pre-clean root pick | dead path (data moved to `msuite`), 0 files |
+| `c900964f` | Nord | `msuite` (corrected 2026-10-28 22:25: the re-pick of `msuite` returned this id, `list()` = 13 files matching Moto) | healthy; the "dead path, 0 files" reading earlier that day was the F6 tier-1 failure, not a wrong folder |
 | `a1d3faef` (Moto's id) written by hand to Nord | Nord | (same folder, different device) | `SecurityException` — no grant; **grants and docIds are per-device**, cannot be copied |
 
 So: docIds are stable per folder × provider × device; trees valid on one device are worthless
@@ -257,6 +259,14 @@ grants, DB snapshots, crash logs).
   Note stayon only holds while plugged in; devices were on wireless adb, so plan for screens
   going dark + doze unless plugged.
 - Dropbox app v494.2.2 on both, same version, not updated overnight.
+
+### Repaired 2026-10-28 22:25
+
+Nord re-picked `msuite` (pref `c900964f`); both devices run the F2 key fix (5521754). Baseline
+before T2: both `list()` = the same 13 names (incl. three 0-byte `(1)` and the `_5110...` copy),
+`field_state` 28 on both, `unreadable_batch` 0 on both, `ingested_batch` Nord 15 / Moto 14, no
+provider or grant errors. Builds now come from Windows: the Windows debug keystore was replaced
+by WSL's (backup `~/.android/debug.keystore.windows-backup`) so `install -r` keeps app data.
 
 ## Instrumentation status (stripped, fix committed in bc0ff76)
 
