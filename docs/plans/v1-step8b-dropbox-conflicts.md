@@ -259,7 +259,7 @@ grants, DB snapshots, crash logs).
 
 The debug-only instrumentation (SafFileStore TRACE[1..5]/traceFiles/traceFlags/TRACE delay/
 createFile-rename warning/traceRoot TREE lines, MainActivity `traceDropboxAccess()`) was
-stripped and the kept changes committed as 0faea55 (2026-10-28):
+stripped and the kept changes committed as bc0ff76 (2026-10-28):
 
 - AndroidManifest `<queries>` fix (decision 0076) — kept, validated on-device.
 - FolderPlug `list()` single-log simplification — kept.
