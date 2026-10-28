@@ -255,7 +255,7 @@ grants, DB snapshots, crash logs).
   going dark + doze unless plugged.
 - Dropbox app v494.2.2 on both, same version, not updated overnight.
 
-## Instrumentation status (stripped, fix committed in b9378c1)
+## Instrumentation status (stripped, fix committed in bc0ff76)
 
 The debug-only instrumentation (SafFileStore TRACE[1..5]/traceFiles/traceFlags/TRACE delay/
 createFile-rename warning/traceRoot TREE lines, MainActivity `traceDropboxAccess()`) was
