@@ -131,21 +131,7 @@ class SafFileStore(
             contentResolver.openOutputStream(file.uri, "w")?.use { stream ->
                 stream.write(bytes)
             } ?: throw IOException("cannot open output stream for $path")
-
-            cleanupConflictCopies(parent, name)
-        }
-    }
-
-    /** Deletes stale `name (N)` conflict copies Dropbox leaves next to [name] after writes. */
-    private fun cleanupConflictCopies(parent: DocumentFile, name: String) {
-        // Other forms exist too (`name_<digits>`); see docs/plans/v1-step8b-dropbox-conflicts.md.
-        val pattern = Regex("""^${Regex.escape(name)} \(\d+\)$""")
-        parent.listFiles().forEach { docFile ->
-            val fileName = docFile.name
-            if (fileName.isNullOrEmpty() || fileName == name) return@forEach
-            if (!fileName.startsWith(name) || !fileName.matches(pattern)) return@forEach
-            android.util.Log.w("SafFileStore", "write() deleting duplicate file: $fileName")
-            docFile.delete()
+            Unit
         }
     }
 

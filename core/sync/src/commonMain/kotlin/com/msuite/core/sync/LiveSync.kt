@@ -61,13 +61,28 @@ class LiveSync(
         val gid = groupId ?: return
         val prefix = "$appId/$gid/"
         val keys = plug.list(prefix)
-        for (key in keys) {
-            // Names that don't parse aren't ours, e.g. a sync client's conflict copy (`name (1)`).
-            val parsed = runCatching { ObjectKey.parse(key) }.getOrNull()
-            if (parsed != null) pullOne(key, parsed)
+        val parsed = keys.associateWith { runCatching { ObjectKey.parse(it) }.getOrNull() }
+        for ((key, objectKey) in parsed) {
+            if (objectKey != null) pullOne(key, objectKey)
         }
+        sweepConflictCopies(parsed.filterValues { it != null }.keys, parsed.filterValues { it == null }.keys)
         // Prune bookkeeping: remove entries for keys no longer in the backend (decision 0002).
         replica.prune(plugId, keys.toSet())
+    }
+
+    /**
+     * Deletes a sync client's conflict copies (`key (N)`, `key_<digits>`) of a key that is still
+     * listed; Dropbox makes them seconds after some writes. Copies of an absent key are kept.
+     */
+    private suspend fun sweepConflictCopies(keys: Set<String>, others: Set<String>) {
+        for (name in others) {
+            val original = CONFLICT_COPY.matchEntire(name)?.groupValues?.get(1)
+            if (original != null && original in keys) plug.delete(name)
+        }
+    }
+
+    private companion object {
+        val CONFLICT_COPY = Regex("""^(.+)(?: \(\d+\)|_\d+)$""")
     }
 
     private suspend fun pullOne(key: String, parsed: ObjectKey) {

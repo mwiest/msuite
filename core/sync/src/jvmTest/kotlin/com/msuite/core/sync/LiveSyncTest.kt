@@ -144,4 +144,25 @@ class LiveSyncTest : StringSpec({
         reader.cells() shouldContainExactlyInAnyOrder written
         reader.isCorrupt(plugId, "$key (1)") shouldBe false
     }
+
+    "a pull deletes conflict copies of a listed key, and nothing else" {
+        val writer = Replica(driver(), local, TestClock(1_000))
+        val plug = MemoryPlug()
+        writer.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to title))
+        publish(writer, plug)
+        val key = plug.list("todo/").single()
+        val absent = key.dropLast(1) + if (key.last() == 'A') 'B' else 'A'
+        val namespace = key.substringBeforeLast('/')
+        plug.put("$key (1)", ByteArray(0))
+        plug.put("$key (12)", ByteArray(0))
+        plug.put("${key}_5110404403298289004", plug.get(key)!!)
+        plug.put("$absent (1)", ByteArray(0))
+        plug.put("$namespace/notes.txt", byteArrayOf(1))
+        plug.put("$key (copy)", ByteArray(0))
+
+        pull(Replica(driver(), peer, TestClock(1_000)), plug)
+
+        plug.list("todo/") shouldContainExactlyInAnyOrder
+            listOf(key, "$absent (1)", "$namespace/notes.txt", "$key (copy)")
+    }
 })

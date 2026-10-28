@@ -219,7 +219,9 @@ Object keys (decision 0029; code: `ObjectKey`, `ObjectKeyPrefix` and `groupId` i
 
 Syncing is list-and-diff: `list({appId}/{groupId}/)` minus the keys already ingested, then `get`
 the rest. A name that doesn't parse as a key (a sync client's conflict copy, `name (1)` or
-`name_<n>`) is skipped; an object that fails to open counts as unreadable (decision 0069).
+`name_<n>`) is skipped, and deleted while its original key is still listed (Dropbox makes 0-byte
+`(1)` copies on its own, seconds after some writes); an object that fails to open counts as
+unreadable (decision 0069).
 
 | Plug | One batch is | Namespace is | Atomic publish | Create-only | `list` |
 |---|---|---|---|---|---|
