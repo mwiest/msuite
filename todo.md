@@ -1,6 +1,7 @@
 # msuite Todo List
 
 [ ] General: Color scheme and adaptive colors setting
+[ ] Give an "account" (key) a name, that is visible in paired devices to recognize for the user
 [ ] Settings: screen with icon and popup for design choice (like Voclet)
 [ ] Settings: move "Sync" into "Export/Import" item with icon in Section "Backup & Recovery"
 [ ] Settings: move Recovery key into "Account backup & recovery" in Section "Backup & Recovery"
