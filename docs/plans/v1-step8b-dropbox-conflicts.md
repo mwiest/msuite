@@ -289,6 +289,25 @@ conflict files. Three new files:
   its UTC clock is 3 h 0 m 42 s behind the Moto. HLC handles it, but the Nord's edits lose LWW
   against Moto edits from the previous 3 h. Device config, not an app bug.
 
+### T2 round 2 (2026-10-28 22:54–22:58, staggered 1 s / 5 s / 10 s, encrypted build)
+
+Result: converged (`field_state` 60 rows identical, `ingested_batch` 11 on both,
+`unreadable_batch` 0), no crashes or errors. **Two new `(1)` copies**, both of keys the *Nord*
+wrote (S1-Nord and its echo of S1-Moto); none on the Moto's keys.
+
+- **Writer-created, answers U3's open half and F3:** on the Nord each `(1)` appears in the
+  *same* `list()` as its original (the first list after the write); the Moto sees them 12–60 s
+  later via Dropbox. The Nord's log shows exactly one `write() CLOUD` per key and no cleanup
+  line, so the `(1)` was not visible when `cleanupConflictCopies` ran right after the write: the
+  Dropbox provider creates it asynchronously, within seconds, from a single delete → createFile →
+  write. 2 of the Nord's 6 writes, 0 of the Moto's 3. Most likely the empty `createFile` revision
+  and the content revision upload as two revisions that Dropbox treats as a conflict (fits F3:
+  the `(1)` is 0 bytes, the original holds the data). The writer can't prevent it through SAF.
+- **Harmless since 891630f:** pull skips names that don't parse as keys, so they are clutter only.
+- **Echo again:** the Nord echoed all three Moto batches (S1, S5, S10), the Moto none, because
+  only the Moto's batches landed above the receiver's watermark. Duplicates, no conflicts.
+- Staggering (1/5/10 s) made no visible difference; the `(1)`s hit the first two Nord writes.
+
 ### F9: folder sync uploads plaintext (found 2026-10-28)
 
 The identical hash above means the bytes are deterministic: `LiveSync.publish()` puts
