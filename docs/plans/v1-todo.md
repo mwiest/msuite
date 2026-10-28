@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 7 done, code and device checks; step 8, the synced-folder plug, is next.**
+Status: **steps 0 to 7 done; step 8 built, its device check continues in [`v1-step8b-dropbox-conflicts.md`](v1-step8b-dropbox-conflicts.md).**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal

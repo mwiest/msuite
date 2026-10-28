@@ -242,7 +242,8 @@ multi-object keys are first used at runtime by the synced-folder plug, the v1 mi
 0042). Its logic sits behind a small file-system interface, so the simulator runs it on `jvm` with
 plain files. On Android, the documents provider behind a picked tree must stay visible even when
 grant-derived package visibility decays — every app using the plug declares document providers in
-its manifest (decision 0076).
+its manifest (decision 0076). Dropbox's provider reports `rename` as supported but `renameTo()`
+throws, so the atomic publish stages in local temp (decision 0075).
 
 ### Compaction (planned)
 

@@ -1,6 +1,6 @@
 # Plan: v1 step 8, the synced-folder plug (milestone)
 
-Status: **Complete** (2026-10-25). All slices done and verified on real devices with Dropbox sync.
+Status: **Slices done** (2026-10-25), but the device check missed that the folder held plaintext (fixed `891630f`); the Dropbox device check continues in [`v1-step8b-dropbox-conflicts.md`](v1-step8b-dropbox-conflicts.md).
 
 ## Goal
 

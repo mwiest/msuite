@@ -1,445 +1,142 @@
 # Plan: v1 step 8b, Dropbox conflict-file investigation
 
-Status: **In progress** (2026-10-28). The 2026-10-27 session defined the problem; the
-2026-10-28 session root-caused U1/U2, found F6–F8, fixed F2's key (5521754) and repaired the
-Nord (22:25). Remaining: run T2–T4, then implement the fixes. See
-[Repaired 2026-10-28 22:25](#repaired-2026-10-28-2225).
+Status: **In progress** (handoff 2026-10-28, 23:20). Started 2026-10-27. F2 key, F9 (plaintext)
+and F8 (conflict copies) fixed and verified on both devices; T2 done. Next session: check CI,
+then T3, T4, F7. See [Next session](#next-session).
 
-## Context
+## Goal
 
-Step 8's milestone verification on two real devices (OnePlus Nord AC2003, Motorola edge 70 pro,
-Android 16, Dropbox as the synced-folder backend) surfaced several issues around conflict files
-and folder-URI stability. Some are understood, some are not. This plan captures everything so
-we can start fresh with good instrumentation.
+Step 8's milestone check on two real devices (OnePlus Nord AC2003 and Motorola edge 70 pro,
+Android 16, Dropbox as the synced folder) surfaced conflict files, lost folder access and
+crashes. Done when two devices sync through Dropbox over a 10-minute soak with converged state,
+no crash, no data-bearing duplicates, and every finding below is fixed or a recorded later todo.
 
-## What was verified working (2026-10-27)
+## Fixed so far
 
-1. Pairing by QR on both devices.
-2. Fresh start (`pm clear` + re-pick) works.
-3. Sync through a shared Dropbox folder: both devices converge (field_state 7 → 15 → 28 rows,
-   identical record IDs on both).
-4. Bidirectional sync: Nord→Motorola and Motorola→Nord both deliver edits.
-5. Offline edits: created offline, synced after reconnecting.
-6. ~~Ciphertext only in the folder~~: wrong, the files are plaintext protobuf (F9).
-7. Key grammar matches decision 0029: `todo/{groupId}/v1_d_{deviceId}_{hlcLo}_{hlcHi}_{hash}`.
-8. **A single-device write does NOT create `(1)` conflict files** (proven by TRACE, see F3).
-
-## Device IDs and paths used throughout
-
-- Group id: `IQEPVMM8EU8S8OHP84ADCE77N8`.
-- Nord device id `TDG38GH04SLS2`, Moto `UN28KG7BECNL2`.
-- Keys: `todo/{groupId}/v1_d_{deviceId}_{hlcLo}_{hlcHi}_{hash}`.
-- adb: Windows via WSL (`adb.exe`); transport IDs change across reconnects — verify with
-  `adb.exe devices -l` first (last seen: Nord 3, Moto 2).
-- App DB access: `run-as com.msuite.todo`; read DBs with `python3 sqlite3` (no sqlite3 CLI).
-
-## Findings from 2026-10-27 (understood)
-
-### F1: Two group folders created when both devices race to mkdir
-
-When both devices picked the *root of Dropbox* and started sync at the same time, both tried
-to create `todo/{groupId}/`. Dropbox created two folders: `{groupId}` and
-`{groupId}_840897305336667523` (conflict suffix). Each device then wrote only into its own
-folder — sync silently broke.
-
-**Workaround used**: delete everything, create a dedicated parent folder (`msuite`) in Dropbox,
-pick that folder on both devices. Then only the `{groupId}` subfolder gets created once.
-
-**Open question**: is folder creation itself racy even with a dedicated parent? Not retested (T3).
-
-### F2: Both devices published the same object key (device_id duplication)
-
-After the fresh start, both devices' `field_state` rows carried the Motorola's `device_id`
-(-737312427549184175 → `UN28KG7BECNL2`), even on the Nord. Both devices then derived identical
-object keys (`v1_d_UN28KG7BECNL2_06GNUDO884000_...`), and Dropbox created a
-`_5110404403298289004`-suffixed conflict copy **with real data** (150 bytes).
-
-Mechanism: both devices created the same default list (same `record_id FE8696E34E7F4D53`)
-independently after pairing; the Nord ingested the Motorola's batch, whose cells won the merge
-(higher HLC), so the Nord's own stamps were overwritten in `field_state`. The Nord's next
-delta then contained cells stamped with the Motorola's device_id → same key as the Motorola.
-
-Root-cause site: `LiveSync.publish()` takes `deviceId = delta.cells.first().stamp.deviceId`
-(the peer's stamp) instead of the local device id
-(`core/sync/.../LiveSync.kt`). **Key fix done** (2026-10-28, 5521754): the key now names
-`replica.deviceId`, as `architecture.md` (key grammar, "the single writer") requires.
-Still open: the delta still *echoes* ingested peer cells above the watermark back to the same
-plug (needed for cross-plug relay) — decide whether to filter.
-
-Recent recurrence: the Nord sat on a pending 1257-byte delta (stamped
-`v1_d_UN28KG7BECNL2_...`) that finally published at 21:31 on 2026-10-28 — into the wrong,
-stale tree (see U4 / folder map). Re-publishing that existing key also produced an
-`_992501984378458056` conflict copy (F8).
-
-**Workaround used**: create fresh data on the Nord so it publishes its own device_id.
-
-### F3: `(1)` conflict files are 0 bytes and are NOT created by a single write
-
-Instrumented `SafFileStore.write()` with TRACE at five steps plus a FLAGS probe. A
-single-device write never produced a conflict at any step (before / after-delete /
-after-create / after-write / after-3s-delay). Every `(1)` file in the folder is 0 bytes; its
-original has content.
-
-**Conclusion**: the SAF write path (delete → create → openOutputStream → write) does not
-itself trigger Dropbox conflict copies. The `(1)` files must come from cross-device sync or
-Dropbox's engine reacting to two devices' state. Two-device simultaneous-write experiment
-(T2) is needed to prove it. (Update 2026-10-28: F8 shows a *re-publish of the same key* does
-produce a conflict — at createFile time, as a `_N` copy with data, not a 0-byte `(1)`. T2
-still decides the `(1)` question.)
-
-### F4: Dropbox's SAF flags contradict reality
-
-`FLAGS[before-write]` on real Dropbox files reports `raw=324`:
-
-- `rename=true` — but decision 0075 proved `renameTo()` throws
-  `FileNotFoundException: invalid path`. The flag lies.
-- `copy=false` — `copyDocument()` genuinely unsupported.
-- `delete=true`, `move=true`.
-
-So there is no rename- or copy-based atomic-publish workaround on Dropbox. Decision 0075's
-local-temp approach stands.
-
-### F5: ingested_batch pruning wipes bookkeeping when the folder goes empty
-
-When the Nord's folder view broke (F6 tier 1) and `list()` returned 0 files, the pruning logic
-removed **all** `ingested_batch` rows (they're "no longer in list"). `field_state` survived,
-so the UI still showed all todos — but the device had no record of what it had ingested.
-On recovery it must re-read everything; correctness held (create-only keys, idempotent
-ingest), but this interaction turns any silent folder failure into a full re-scan.
-
-## Resolved on 2026-10-28
-
-### U1 (root-caused and fixed): the Nord's folder access died from package-visibility loss
-
-Yesterday's symptom: the Nord's `syncedFolderUri` appeared to "revert" to the pre-clear value
-`c900964f` and `list()` returned 0 files. Two parts of that were misdiagnoses:
-
-- **A real re-pick happened at 23:52** (grant re-taken proves it) — the pref-changed feeling
-  of mystery was real, but the newly picked value later drifting to `c900964f` was **not**
-  the root cause; grants and prefs had stayed intact.
-- **Root cause**: the OnePlus (Android 16) build dropped the app's grant-derived package
-  visibility of `com.dropbox.android`. `getPackageInfo` → `NameNotFoundException`,
-  `resolveContentProvider` → null, and `E ActivityThread: Failed to find provider info for
-  com.dropbox.product.android.dbapp.document_provider.documents` on every poll. All SAF
-  queries silently returned empty folders while prefs and grants looked perfect. H-b
-  (revoked grants) refuted; H-a "URI instability" refuted; docIds are stable per folder
-  and provider.
-
-**Fix (kept, validated on the Nord without re-picking)**: declare the provider in
-`AndroidManifest.xml`:
-
-```xml
-<queries>
-    <intent>
-        <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
-    </intent>
-</queries>
-```
-
-First attempt used `android.intent.action.OPEN_DOCUMENT_TREE` and failed — that intent is
-served by the system picker, not by documents providers. What *triggered* the loss of
-grant-derived visibility is not pinned (suspect: provider/app restart path on the OnePlus
-build); the `<queries>` declaration makes it robust regardless. Decision record pending.
-
-### U2 (root-caused): URI → folder map
-
-TREE instrumentation (`TREE[dir=...] treeDocId=... rootName=...`) resolved every docId:
-
-| docId | On device | Dropbox folder | State |
-|---|---|---|---|
-| `b7422704` | Moto | account root (`Privat`) | the step-3 re-pick — **picked ROOT, not msuite** (yesterday's note that it was msuite was wrong) |
-| `a1d3faef` | Moto | `msuite` | healthy — holds the live tree, 13 files |
-| `ed1a838b` | Nord | account root | Nord's current pref — **wrong folder**, data lives under `msuite` |
-| `c900964f` | Nord | `msuite` (corrected 2026-10-28 22:25: the re-pick of `msuite` returned this id, `list()` = 13 files matching Moto) | healthy; the "dead path, 0 files" reading earlier that day was the F6 tier-1 failure, not a wrong folder |
-| `a1d3faef` (Moto's id) written by hand to Nord | Nord | (same folder, different device) | `SecurityException` — no grant; **grants and docIds are per-device**, cannot be copied |
-
-So: docIds are stable per folder × provider × device; trees valid on one device are worthless
-on another; the repair is always a real picker pick on that device. The provider serves
-`children` queries in the form
-`content://com.dropbox.product.android.dbapp.document_provider.documents/tree/<docId>/document/<docId>/children`.
-
-### U3 (partially answered): when are conflicts created?
-
-Proven on 2026-10-28: a **single-device re-publish of a key whose server copy is not yet
-visible to SAF** produced a Dropbox conflict copy **at createFile time** — `createFile()`
-returned a RENAMED document, suffixed `_992501984378458056` (with real data). That means:
-
-- Dropbox conflict copies can appear even with no second device actually writing, whenever
-  the writer's view is behind the folder's server state (eventual consistency).
-- They appear as `name_<n>` **and** as `name (n)`; see F8 for what our cleanup catches.
-- What is still unproven: whether two devices writing *different* keys simultaneously (T2)
-  produce 0-byte `(1)` files (F3 suspects so), and the race window.
-
-### U4 (resolved): the lost Nord ingest + two parallel data trees
-
-The overnight mystery was not one folder changing under us but **two parallel data trees**
-in the Dropbox account:
-
-```
-Dropbox/
-├── todo/{gid}/              ← STALE: 1 file (Nord's late F2-stamped delta publish + _9925... copy)
-└── msuite/
-    └── todo/{gid}/          ← LIVE: 13 files (+ yesterday's residue, see F8)
-```
-
-Yesterday's "cleanup" emptied `Dropbox/todo/{gid}` but `root/todo/{gid}` — the tree both
-devices had been pointed at when picking ROOT — kept existing with one file. The Nord's
-pending delta finally published there at 21:31, opportunistically, when its folder briefly
-worked again. The Nord lost nothing; the data it "ingested with the wrong folder" question
-is moot. Lesson: never clear logcat before dumping it (that is how the 21:05/21:18 evidence
-was almost lost; today's U4-adjacent crash-loop evidence was captured because we dumped
-first).
-
-## New findings from 2026-10-28
-
-### F6: the three failure tiers of a Dropbox SAF folder (all silent)
-
-| Tier | Trigger | What surfaces | What the app sees |
-|---|---|---|---|
-| 1 | provider invisible (U1) | `E ActivityThread: Failed to find provider info ...` per poll | queries succeed; folder reads as empty (`DocumentFile` swallows exceptions) → F5 pruning kicks in |
-| 2 | provider visible, URI grant missing | `E DatabaseUtils: SecurityException: ... requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs` | also reads as empty, same silent path |
-| 3 | healthy | — | files visible |
-
-Health checks that distinguish them (see cheat sheet): `TREE[dir=...]` line
-(`rootName="<SECURITY-EXCEPTION: grant dead>"` = tier 2, `rootName="null" children=[]` = tier 1)
-and the `DROPBOX-ACCESS` trace (visibility + persisted grants). Without instrumentation,
-**a tier-1 or tier-2 failure is indistinguishable from an empty folder** — that was yesterday's
-trap.
-
-### F7: crash loop when a pending publish meets a dead folder
-
-When the Nord had a pending delta and its folder was in tier 1, on every app start
-(~10 s in, `Dispatchers.Main.immediate` from the debounce collect):
-
-```
-java.io.IOException: cannot create directory todo/IQEPVMM8EU8S8OHP84ADCE77N8
-    at SafFileStore$write$2.invokeSuspend(SafFileStore.kt:121)
-    at SafFileStore$rename$2.invokeSuspend(SafFileStore.kt:275)
-    → FATAL
-```
-
-Observed twice on 2026-10-28 (21:05:46, 21:18:35). The pending publish cannot land until the
-folder is repaired, and each app start re-runs it into the same fatal. Fix direction: the
-`resolveOrCreate`/`write` path must treat "provider unreachable / no such directory" as a
-retriable sync error (degrade to skip this round + report), never an app-crashing condition.
-Not yet fixed.
-
-### F8: Dropbox conflict copies come in `_N` form too, and our cleanup misses them
-
-The cleanup inside `SafFileStore.write()` (lines 152–161) deletes duplicates matching
-`^name (\d+)$` only. Both forms exist in the wild:
-
-- `name (1)` etc., 0 bytes (yesterday's three in `msuite/todo/{gid}`, origin still T2's question).
-- `name_<digits>` **with real data**, created by Dropbox at createFile time when the server
-  already has that key but the client's SAF view doesn't (U3's `_992501984378458056`;
-  F2's `_5110404403298289004`). These are the dangerous ones — they contain a full batch
-  copy that will get re-ingested as `unreadable_batch` or duplicate data depending on timing.
-
-Note: an `_N` conflict happens *even on a re-publish that is logically idempotent for us*.
-Fix direction (not implemented): broaden the cleanup to also catch `^name_\d+$`, and/or stop
-tripping moot re-publishes (F2's publish-side fix shrinks the windows). Not band-aided yet;
-needs the T2 data to decide handling of 0-byte `(1)` vs data-bearing `_N`.
-
-## Current device state at handoff (2026-10-28 evening)
-
-Logcat dump for the whole session in `/tmp/opencode/t1/logcat-nord-*.txt` (plus prefs,
-grants, DB snapshots, crash logs).
-
-- **Moto**: pref `a1d3faef` (`msuite`, healthy, 13 files), `<queries>` manifest fix installed,
-  app force-stopped. This device is ready to run the test plan.
-- **Nord**: pref `ed1a838b` (account **root** — the re-picks were of the root, not msuite;
-  WRONG for our data), grants `c900964f` + `ed1a838b` persisted, DB converged (28
-  `field_state` rows), `<queries>` manifest fix installed, app force-stopped.
-  **Cannot sync until Marc re-picks the `msuite` folder in the SAF picker on the Nord**
-  (grants can't be teleported; adb can't drive the picker, PIN lock blocks screen control).
-  After the re-pick, verify: TREE line says `rootName="msuite" children=[todo]` and
-  `list()` = 13 files matching Moto.
-- Both: `svc power stayon true` + `dumpsys deviceidle disable` (deep + light) set during
-  investigation — **reset at the end** (`svc power stayon false`, `dumpsys deviceidle enable`).
-  Note stayon only holds while plugged in; devices were on wireless adb, so plan for screens
-  going dark + doze unless plugged.
-- Dropbox app v494.2.2 on both, same version, not updated overnight.
-
-### Repaired 2026-10-28 22:25
-
-Nord re-picked `msuite` (pref `c900964f`); both devices run the F2 key fix (5521754). Baseline
-before T2: both `list()` = the same 13 names (incl. three 0-byte `(1)` and the `_5110...` copy),
-`field_state` 28 on both, `unreadable_batch` 0 on both, `ingested_batch` Nord 15 / Moto 14, no
-provider or grant errors. Builds now come from Windows: the Windows debug keystore was replaced
-by WSL's (backup `~/.android/debug.keystore.windows-backup`) so `install -r` keeps app data.
-
-### T2 round 1 (2026-10-28 22:29, simultaneous taps)
-
-Result: converged (36 `field_state` rows on both, same 16 file names), **no new `(1)` or `_N`
-copies**, no crashes. Two devices writing *different* keys at once do not make Dropbox create
-conflict files. Three new files:
-
-| Key (device, HLC) | Writer | Content |
+| What | Commit | Verified |
 |---|---|---|
-| `TDG38GH04SLS2`, 19:29:35 | Nord | T2-Nord |
-| `UN28KG7BECNL2`, 22:30:16 | Moto | T2-Moto |
-| `TDG38GH04SLS2`, 22:30:16, **same hash as the Moto's** | Nord | T2-Moto again: the **echo** |
+| U1: Dropbox provider went invisible on the OnePlus; `<queries>` for `DOCUMENTS_PROVIDER` (decision 0076) | `bc0ff76` | Nord, without re-picking |
+| F2: published keys named a peer's device id; now `replica.deviceId` | `5521754` | T2 round 1 |
+| F9: folder sync uploaded **plaintext**; `LiveSync` now seals every batch in `BatchEnvelope` (AAD = key minus hash, hash over the ciphertext) and skips names that don't parse as keys | `891630f` | rollout 22:52, folder wiped and republished |
+| F8: conflict copies `key (N)` / `key_<digits>` are deleted on pull while `key` is listed; `SafFileStore`'s post-write cleanup removed | `3eb5dac` | both devices 23:14, copies gone |
+| `PairingTest` didn't compile since `ea2d558` (`backendType`), so `allTests` was red | `891630f` | `allTests` green |
 
-- **Echo mechanism (F2's real root):** the Nord published T2-Nord (watermark 19:29), ingested
-  T2-Moto (22:30, above the watermark); the ingest ticked `changes`, the debounce fired and the
-  delta re-published the peer's cells. Before 5521754 that echo carried the Moto's key, which
-  is exactly F2 and the `_N` data-bearing copies of F8. Since the fix it is a harmless
-  duplicate under the Nord's key. The Moto did not echo T2-Nord (19:29 is below its watermark).
+## Findings (condensed)
+
+- **F1 folder-creation race:** both devices picking the Dropbox *root* and creating
+  `todo/{gid}/` at once got two folders (`{gid}` and `{gid}_<n>`), each device writing into its
+  own. Workaround: pick a dedicated parent (`msuite`). Whether it races with a dedicated parent
+  too is T3.
+- **F2 / echo:** a delta is every cell above the plug watermark, so a peer's batch whose HLC lands
+  above the receiver's watermark is re-published by the receiver (the *echo*). Before `5521754`
+  the echo carried the peer's key, which produced same-key publishes and the data-bearing `_N`
+  copies. Now it is a duplicate under the receiver's key. **Decided 2026-10-28: keep the echo**,
+  revisit with relay/multi-plug work (needs per-plug origin per cell).
+- **F3 / U3 `(1)` copies are writer-created:** T2 round 2 showed each `(1)` in the *writer's*
+  first `list()` after a single delete → createFile → write, 0 bytes, appearing asynchronously
+  seconds later (2 of the Nord's 6 writes, 0 of the Moto's 3). Most likely Dropbox uploads the
+  empty `createFile` revision and the content revision as two conflicting revisions. Not
+  preventable through SAF; swept since `3eb5dac` (see [Later](#later)).
+- **F4 Dropbox SAF flags lie:** `raw=324` claims `rename=true`, but `renameTo()` throws
+  `FileNotFoundException: invalid path`; `copy=false` is true. Decision 0075's local-temp publish
+  stands.
+- **F5 pruning on a silently empty folder:** when `list()` wrongly returns nothing (F6), pruning
+  wipes all `ingested_batch` rows; correctness holds (create-only keys, idempotent ingest), but
+  recovery re-reads everything.
+- **F6 three silent failure tiers of a SAF folder:** (1) provider invisible: `E ActivityThread:
+  Failed to find provider info ...`, folder reads as empty; (2) grant missing:
+  `SecurityException ... ACTION_OPEN_DOCUMENT`, also reads as empty; (3) healthy. Without a
+  folder-identity log line, tiers 1 and 2 look like an empty folder.
+- **F7 crash loop:** a pending publish against a tier-1 folder throws
+  `IOException: cannot create directory todo/{gid}` from `SafFileStore.write` (via `rename`)
+  ~10 s after every app start, FATAL. **Not fixed.**
+- **U2 docIds:** stable per folder × provider × device; grants and tree URIs can't be copied
+  between devices, the only repair is a real picker pick on that device. On the Nord, `c900964f`
+  is `msuite` (its earlier "0 files" was F6 tier 1).
+- **U4 two data trees:** picking the root and later `msuite` left `Dropbox/todo/` and
+  `Dropbox/msuite/todo/`; wiped 2026-10-28 22:50.
 - **Clock skew:** the Nord's time zone is `Asia/Dubai` with the local time set to match CET, so
-  its UTC clock is 3 h 0 m 42 s behind the Moto. HLC handles it, but the Nord's edits lose LWW
-  against Moto edits from the previous 3 h. Device config, not an app bug.
+  its UTC clock is ~3 h behind. HLC copes, but the Nord's edits lose LWW against Moto edits from
+  the previous 3 h. Device config; Marc to switch the Nord to automatic time and zone.
+- **T2 results:** round 1 (simultaneous) and round 2 (staggered 1 / 5 / 10 s) both converged,
+  no crashes, no `_N` copies; only the writer-made `(1)`s above.
 
-### T2 round 2 (2026-10-28 22:54–22:58, staggered 1 s / 5 s / 10 s, encrypted build)
+## Next session
 
-Result: converged (`field_state` 60 rows identical, `ingested_batch` 11 on both,
-`unreadable_batch` 0), no crashes or errors. **Two new `(1)` copies**, both of keys the *Nord*
-wrote (S1-Nord and its echo of S1-Moto); none on the Moto's keys.
+1. [ ] **Check why the GitHub Actions pipeline failed lately** (`gh run list`, `gh run view
+   --log-failed`). Likely suspect: `allTests` was red from `ea2d558` until `891630f`
+   (`PairingTest`); confirm and fix whatever else fails. Update `roadmap.md` → Known problems.
+2. [ ] **Device prep:** both plugged in, screens on, app in the foreground (sync polls only in
+   the foreground). Health check: `FolderPlug: list()` count equal on both (11 at handoff), no
+   `(1)` / `_N` names. Dump logcat before anything clears it.
+3. [ ] **T3, folder-creation race (F1):** force-stop both apps, delete `msuite/todo/{gid}` in
+   Dropbox, wait until both devices' views of `msuite/todo/` are empty, start both apps within
+   the same second, then check `msuite/todo/` for one `{gid}` or two. If two: serialize creation
+   (existence check, settle delay, retry) and adopt or merge a `{gid}_<n>` twin.
+4. [ ] **T4, soak:** 10+ minutes of alternating edits (~30 s apart). Verify identical
+   `field_state` on both, `unreadable_batch` 0, no conflict copies surviving a pull, no
+   `syncedFolderUri` change, no crash.
+5. [ ] **F7 fix:** a write against an unreachable folder becomes a retriable sync error (skip
+   the round, surface it in the sync status), never FATAL. Test-first in `core/sync` with a
+   failing `FileStore`.
+6. [ ] **T1 residual:** reboot and `adb install -r` on the Nord keep the folder healthy (the
+   `<queries>` fix).
+7. [ ] Reset the investigation settings on both devices: `svc power stayon false`,
+   `dumpsys deviceidle enable`.
+8. [ ] Close the plan: move what lasts into `architecture.md` / `testing.md`, tick step 8 in
+   `v1-todo.md`, delete this plan.
 
-- **Writer-created, answers U3's open half and F3:** on the Nord each `(1)` appears in the
-  *same* `list()` as its original (the first list after the write); the Moto sees them 12–60 s
-  later via Dropbox. The Nord's log shows exactly one `write() CLOUD` per key and no cleanup
-  line, so the `(1)` was not visible when `cleanupConflictCopies` ran right after the write: the
-  Dropbox provider creates it asynchronously, within seconds, from a single delete → createFile →
-  write. 2 of the Nord's 6 writes, 0 of the Moto's 3. Most likely the empty `createFile` revision
-  and the content revision upload as two revisions that Dropbox treats as a conflict (fits F3:
-  the `(1)` is 0 bytes, the original holds the data). The writer can't prevent it through SAF.
-- **Harmless since 891630f:** pull skips names that don't parse as keys, so they are clutter only.
-- **Echo again:** the Nord echoed all three Moto batches (S1, S5, S10), the Moto none, because
-  only the Moto's batches landed above the receiver's watermark. Duplicates, no conflicts.
-- Staggering (1/5/10 s) made no visible difference; the `(1)`s hit the first two Nord writes.
-- **Decided 2026-10-28:** sweep conflict copies on pull (`key (N)` and `key_<digits>`, only while
-  `key` is listed), drop `SafFileStore`'s post-write cleanup (it ran before the copy existed);
-  keep the echo for now and revisit with relay/multi-plug work. Done in 3eb5dac.
+## Later
 
-### F9: folder sync uploads plaintext (found 2026-10-28)
+- **Prevent the `(1)` copies at the root, not just sweep them.** Ideas to test: create with
+  content in one provider call (none exists in SAF today, check `DocumentsContract` and
+  Dropbox's provider on newer versions); write to a staging name and let a later run rename
+  (blocked by F4); a native Dropbox plug over its HTTP API instead of SAF (a new plug, needs a
+  decision: FOSS SDK or plain Ktor, app key handling). Marc wants this solved eventually.
+- **Echo filter** (see F2): per-plug origin per cell, decide with the relay / multi-plug work.
+- **Sealed-bytes cache:** a re-seal uses a fresh salt, so a put that half-landed and is retried
+  leaves a duplicate under a new key. Cache the sealed bytes per delta; needs a safe "same delta"
+  check, as a peer cell can land inside the same HLC range.
+- **F5:** don't prune when `list()` returns empty but the plug holds ingested rows; or prune only
+  after a confirmed healthy listing.
+- **F6 folder-identity log:** log the tree root's display name and child count on sync start,
+  and surface tiers 1 and 2 in the UI instead of an empty folder.
+- **Test gap:** a `FolderSyncActions`-level test that the folder path stores only ciphertext.
+- UX (2026-10-27): the camera forces landscape while pairing; ~10 s wait after picking a folder
+  before the first sync (sync right after selection).
 
-The identical hash above means the bytes are deterministic: `LiveSync.publish()` puts
-`ProtoBatchEncoder.encode(delta)` straight into the plug, and `pull()` decodes it straight
-back. No `BatchEnvelope` exists anywhere in the folder path (only `ManualSync` seals). Todo
-titles sit in Dropbox as plaintext protobuf, contradicting the step 8 milestone ("a synced
-folder that holds only ciphertext") and the 2026-10-27 check (6), which mistook binary
-protobuf for ciphertext. Likely also why `unreadable_batch` stays 0 with three 0-byte `(1)`
-files: an empty protobuf decodes as an empty batch.
+## Device state at handoff (2026-10-28 23:15)
 
-**Fixed** (2026-10-28, 891630f): `LiveSync` takes the `IdentityProvider`, seals each
-delta in a `BatchEnvelope` with the key minus hash as AAD, hashes the ciphertext, and opens on
-pull under the context rebuilt from the key (a failed open is `unreadable`). Names that don't
-parse as keys are skipped, so `(1)` and `_N` conflict copies are now ignored on read (half of
-F8). Follow-up: cache the sealed bytes so a failed put retries the same key (a re-seal uses a
-fresh salt, so a half-landed put leaves a duplicate); needs a safe "same delta" check, as a
-peer cell can land inside the same HLC range. Rollout: wipe `msuite/todo/{gid}` (plaintext)
-and reset both devices' `plug_watermark` + `ingested_batch` so they re-publish encrypted.
+- Both run `3eb5dac` (debug). Prefs: Nord `c900964f`, Moto `a1d3faef`, both `msuite`. Both list
+  the same 11 files, `field_state` identical (60 rows at 22:58), `unreadable_batch` 0.
+- Group `IQEPVMM8EU8S8OHP84ADCE77N8`; device ids Nord `TDG38GH04SLS2`, Moto `UN28KG7BECNL2`.
+- adb: wireless, transport ids change on reconnect (last: Nord 3, Moto 2); check
+  `adb devices -l` first. Screens lock and doze when unplugged; adb can't unlock (PIN).
+- `svc power stayon true` and `dumpsys deviceidle disable` are still set (next session, step 7).
+- Dropbox app v494.2.2 on both.
+- DB backups before the F9 rollout: `%TEMP%\f9\t{2,3}-todo.db`.
 
-Rolled out 2026-10-28 22:52: folder wiped (plus the stale root `todo/` tree), bookkeeping
-reset. Each device published one full-state batch (same HLC span, different hashes from the
-fresh salt); both list the same 2 names, `field_state` 36 rows identical cell for cell,
-`ingested_batch` 2, `unreadable_batch` 0, no errors or crashes. No echo, as both published
-before ingesting and the peer's cells changed nothing. This is the new T2 baseline.
+## Environment notes (Windows)
 
-## Instrumentation status (stripped, fix committed in bc0ff76)
-
-The debug-only instrumentation (SafFileStore TRACE[1..5]/traceFiles/traceFlags/TRACE delay/
-createFile-rename warning/traceRoot TREE lines, MainActivity `traceDropboxAccess()`) was
-stripped and the kept changes committed as bc0ff76 (2026-10-28):
-
-- AndroidManifest `<queries>` fix (decision 0076) — kept, validated on-device.
-- FolderPlug `list()` single-log simplification — kept.
-- kermit dependency in `core/sync/build.gradle.kts` — kept.
-
-The TREE idea was the single most useful diagnostic of the whole investigation — if F6
-tier 1/2 can ever recur, a production-safe "folder identity" log line (root display name +
-child count on sync start) is worth keeping deliberately.
-
-## Test plan (remaining)
-
-Preparation: Marc re-picks `msuite` (NOT root) on the Nord in the SAF picker and confirms
-the health check above. Moto is already ready. Both: `adb.logcat -d` and stash a dump before
-any logcat change; verify before/after with `FolderPlug: list()` (`list() ... found N files`).
-
-### T1 residual (already root-caused; re-run only the maintenance matrix)
-
-U1/U2 are answered. Remaining value in T1 is regression confirmation, on the *repaired* Nord:
-
-1. Re-run the steps that historically broke access (device reboot scenario 1 in the earlier
-   plan; `adb install -r` scenario 5) and confirm the `.queries` fix keeps tier 3 through
-   each.
-2. Keep scenario 7 as a permanent health check: log the tree root's display name (TREE
-   style) on every sync start.
-
-### T2: Two-device simultaneous write (root-cause U3's remaining half)
-
-1. Verify both devices list the same files (same count, same names).
-2. Logcat running on both. Create a todo on **both devices within the same second**
-   (e.g. "T2-Nord" and "T2-Moto").
-3. Wait for debounce (10 s) + publish + settle on both.
-4. Check for `createFile() returned RENAMED document` warnings and `CONFLICTS:` lines from
-   both sides; then list the folder from either device and diff names against the snapshot.
-5. If a conflict appears: was it visible in the writer's final trace (writer-created) or only
-   in the reader's next pull (reader/sync-created)? That distinction decides whether
-   prevention (write-side) or cleanup (list-side) is the right layer. Expect `_N` copies
-   with data (F8) if a re-publish races; 0-byte `(1)` remains the F3 suspect.
-6. Repeat with staggered writes (1 s, 5 s, 10 s apart) to find the race window.
-
-### T3: Folder-creation race (root-cause F1's open question)
-
-1. Only after T2/T4 (cleanup decision: observe first): delete `{gid}` from `msuite/todo/`,
-   both apps force-stopped; both devices' view of the parent must be empty first.
-2. Start both apps within the same second → both try to create `todo/{gid}/`.
-3. Check the parent: one `{gid}` or two (`_<n>` conflict)? If two again, the fix must
-   serialize folder creation (retry-with-existence-check + settle delay).
-   Note: today `msuite/todo/` holds exactly one `{gid}`, so T3 starts from a clean race.
-
-### T4: Long-run soak (confidence)
-
-10+ minutes of alternating edits on both devices (~30 s apart), then verify: identical
-`field_state` row counts and record IDs on both; no new conflict files, or if present they
-get cleaned by a *broadened* cleanup (F8); `ingested_batch` counts stable; TREE lines stable;
-no `syncedFolderUri` changes in prefs.
-
-## Cleanup candidates (decided 2026-10-28: observe first)
-
-Delete nothing yet — leave the residue in Dropbox and let T2/T4 observe whether the current
-cleanup and ingest handle it as expected. Delete afterwards if those tests don't already
-tell us enough:
-
-1. Stale `Dropbox/todo/` tree (Nord's late publish + `_9925...` copy).
-2. Old residue in `msuite/todo/{gid}`: three 0-byte `(1)` files and the `_51104...` copy.
+- Builds now run on Windows. Earlier device builds came from WSL with a different debug key, so
+  the Windows `~/.android/debug.keystore` was replaced with WSL's (old one:
+  `debug.keystore.windows-backup`); `install -r` keeps app data.
+- Kotlin incremental compilation failed on caches holding WSL paths (`/mnt/c/...`). Use
+  `-Pkotlin.incremental=false` (or one `--rerun-tasks` build) until the caches are clean.
+- Python is not installed on Windows; read pulled DBs with WSL:
+  `MSYS_NO_PATHCONV=1 wsl.exe -e python3 -I /mnt/c/.../script.py`. Pull a DB with
+  `adb exec-out run-as com.msuite.todo cat databases/todo.db > file` (journal mode `delete`;
+  check `todo.db-journal` is empty first).
 
 ## Cheat sheet (log signatures)
 
-- `TREE[dir=...] treeDocId=... rootName=...` — folder-identity health check; `rootName=null`
-  = F6 tier 1, `<SECURITY-EXCEPTION: grant dead>` = tier 2.
-- `DROPBOX-ACCESS DONE` — provider visibility + persisted grants snapshot.
-- `TRACE[1-before]` … `TRACE[5-after-3s-delay]`, `CONFLICTS:` lines — per-write conflict
-  snapshots (currently instrumentation-only).
-- `createFile() returned RENAMED document` — provider renamed on create; watch the actual
-  name: `_N`-form conflicts (F8) carry real data.
-- `FLAGS[...]` — which operations the provider claims to support (remember: rename lies,
-  F4).
-- `FolderPlug: list() ... found N files` — fastest health check; compare across devices.
-  0 on either device + healthy TREE on the peer = silent folder failure, expect F5 pruning.
-- `LiveSync: publish() writing key ...` — key being written; field 3 (`v1_d_XXXX...`) must
-  be the local device's id, not the peer's (F2 recurrence check).
-- `-b crash` buffer for F7-style fatals; trace filter for the rest: `logcat -d -s
-  SafFileStore:D FolderPlug:I`.
-- **Never clear logcat without dumping it first** (U4's lesson).
-- `unreadable_batch` rows appearing — a sign 0-byte conflict files (or cross-version
-  garbage) were ingested.
-- `plug_watermark` URIs in the DB vs `syncedFolderUri` in prefs — if they diverge, the
-  folder config changed under us.
-
-## Follow-ups
-
-- F2 remainder: decide whether a delta should skip peer cells ingested from the same plug
-  (echo); the key fix is done (5521754).
-- Root-fix U1 for all Android 16 (and possibly earlier) builds: `.queries` declaration +
-  decision record; note in `architecture.md`.
-- Root-fix F7: publish/write against an unreachable provider degrades to retriable silent
-  skip, never FATAL.
-- Root-finish F8 (only after T2 decides): broaden the duplicate cleanup to `_N` form, choose
-  handling for data-bearing vs 0-byte copies, and consider a startup list-sweep.
-- Repair instructions are Marc's manual step: re-pick `msuite` on the Nord, run the health
-  check, then choose cleanup items above.
-- Decision 0075: add the F4 flag-lies line (`rename=true` while `renameTo()` throws).
-- UX items (from 2026-10-27): camera forces landscape during pairing; ~10 s wait after
-  picking a folder before first sync — trigger an immediate sync after folder selection.
+- `FolderPlug: list() dir=..., found N files: [...]` — the health check; compare count and names
+  across devices. 0 on one device while the peer is healthy = F6 tier 1 or 2, expect F5 pruning.
+- `SafFileStore: write() CLOUD path=...` — one per published key; the key's device field must be
+  the local device (F2 check).
+- `E ActivityThread: Failed to find provider info for com.dropbox...` — F6 tier 1.
+- `SecurityException ... ACTION_OPEN_DOCUMENT` — F6 tier 2.
+- `logcat -b crash` — F7-style fatals.
+- `unreadable_batch` rows — objects that failed to open (foreign root, torn, tampered).
+- `plug_watermark` URI vs `syncedFolderUri` in prefs — diverging means the folder changed.
+- **Never clear logcat without dumping it first.**
