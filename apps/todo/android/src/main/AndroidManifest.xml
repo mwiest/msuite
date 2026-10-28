@@ -7,6 +7,19 @@
         android:name="android.hardware.camera"
         android:required="false" />
 
+    <!--
+        Document providers (e.g. Dropbox) must stay visible to us even when the system's
+        grant-derived package visibility decays (seen on a OnePlus/Android 16 device: the
+        persisted URI grant survived but com.dropbox.android became invisible, so every
+        SAF query silently returned an empty folder). Declaring the provider intent keeps
+        every installed document provider statically queryable.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".TodoApplication"
         android:allowBackup="false"

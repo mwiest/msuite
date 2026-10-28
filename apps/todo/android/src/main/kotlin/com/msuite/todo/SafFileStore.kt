@@ -18,7 +18,7 @@ import java.io.IOException
  * Temp files (paths with filenames starting with `.tmp_`) are stored in a local cache directory
  * instead of the cloud. This avoids eventual consistency issues with cloud providers like Dropbox,
  * where a file written to the cloud may not be immediately readable. The rename operation copies
- * from local temp directly to the cloud target, ensuring atomic semantics.
+ * from local temp directly to the cloud target, ensuring atomic semantics (decision 0075).
  */
 class SafFileStore(
     private val context: Context,
@@ -119,27 +119,33 @@ class SafFileStore(
             val name = if (lastSlash >= 0) path.substring(lastSlash + 1) else path
 
             val parent = resolveOrCreate(dir) ?: throw IOException("cannot create directory $dir")
+
             val existing = parent.findFile(name)
             if (existing != null && existing.isFile) {
                 existing.delete()
             }
+
             val file = parent.createFile(MIME_TYPE, name) ?: throw IOException("cannot create file $path")
             android.util.Log.d("SafFileStore", "write() CLOUD path=$path, bytes=${bytes.size}")
+
             contentResolver.openOutputStream(file.uri, "w")?.use { stream ->
                 stream.write(bytes)
             } ?: throw IOException("cannot open output stream for $path")
-            
-            // Clean up any duplicates created by Dropbox due to eventual consistency
-            // Dropbox creates files like "name (1)", "name (2)" when it detects conflicts
-            parent.listFiles().forEach { docFile ->
-                val fileName = docFile.name
-                if (fileName != null && fileName != name && fileName.startsWith(name) && 
-                    fileName.matches(Regex("""^${Regex.escape(name)} \(\d+\)$"""))) {
-                    android.util.Log.w("SafFileStore", "write() deleting duplicate file: $fileName")
-                    docFile.delete()
-                }
-            }
-            Unit
+
+            cleanupConflictCopies(parent, name)
+        }
+    }
+
+    /** Deletes stale `name (N)` conflict copies Dropbox leaves next to [name] after writes. */
+    private fun cleanupConflictCopies(parent: DocumentFile, name: String) {
+        // Other forms exist too (`name_<digits>`); see docs/plans/v1-step8b-dropbox-conflicts.md.
+        val pattern = Regex("""^${Regex.escape(name)} \(\d+\)$""")
+        parent.listFiles().forEach { docFile ->
+            val fileName = docFile.name
+            if (fileName.isNullOrEmpty() || fileName == name) return@forEach
+            if (!fileName.startsWith(name) || !fileName.matches(pattern)) return@forEach
+            android.util.Log.w("SafFileStore", "write() deleting duplicate file: $fileName")
+            docFile.delete()
         }
     }
 
@@ -174,10 +180,10 @@ class SafFileStore(
                 throw IOException("local temp file not found: $from")
             }
             val bytes = localFile.readBytes()
-            
+
             // Write directly to cloud destination
             write(to, bytes)
-            
+
             // Clean up local temp file
             localFile.delete()
             android.util.Log.d("SafFileStore", "rename() LOCAL→CLOUD from=$from, to=$to, bytes=${bytes.size}")
@@ -186,14 +192,14 @@ class SafFileStore(
             val source = resolve(from) ?: throw IOException("source not found: $from")
             val lastSlash = to.lastIndexOf('/')
             val targetName = if (lastSlash >= 0) to.substring(lastSlash + 1) else to
-            
+
             val renamed = try {
                 source.renameTo(targetName)
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 android.util.Log.w("SafFileStore", "renameTo failed, falling back to copy+delete", e)
                 false
             }
-            
+
             if (!renamed) {
                 // Copy to new file, delete source
                 val parent = source.parentFile ?: throw IOException("cannot find parent of $from")

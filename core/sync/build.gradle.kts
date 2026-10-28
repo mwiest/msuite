@@ -13,6 +13,7 @@ kotlin {
             api(project(":core:crypto"))
             api(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.kermit)
         }
         // Merge/HLC simulator harness (decision 0007) runs on the jvm target.
         jvmTest.dependencies {

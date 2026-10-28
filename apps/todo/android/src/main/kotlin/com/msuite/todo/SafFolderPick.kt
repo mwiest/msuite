@@ -12,8 +12,9 @@ import kotlinx.coroutines.CompletableDeferred
  * The folder structure is: `<picked>/{appId}/{groupId}/{name}` (handled by FolderPlug).
  *
  * Takes persistable URI permissions so the folder remains accessible across app restarts.
- * Note: Some document providers (like Dropbox) don't support persistable permissions.
- * In that case, the user will need to re-pick the folder after each app restart.
+ * Verified for Dropbox (finding, plan `v1-step8b-dropbox-conflicts`): grants persist across
+ * process death and device reboots; the fallback catch is only for providers that genuinely
+ * don't support persistable permissions.
  */
 class SafFolderPick(private val activity: ComponentActivity) : FolderPick {
     private var pendingPick: CompletableDeferred<String?>? = null
@@ -22,9 +23,8 @@ class SafFolderPick(private val activity: ComponentActivity) : FolderPick {
         activity.registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri != null) {
                 // Take persistable permissions so we can access the folder after restart.
-                // Some providers (notably Dropbox) don't support this; if the call fails we
-                // still return the URI so the current session works, but the user will need
-                // to re-pick after a restart.
+                // If a provider genuinely doesn't support this, we still return the URI so
+                // the current session works; the folder will need re-picking after restart.
                 val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 try {
                     activity.contentResolver.takePersistableUriPermission(uri, flags)

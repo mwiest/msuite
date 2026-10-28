@@ -22,16 +22,14 @@ class FolderPlug(private val store: FileStore) : BackendPlug {
     override suspend fun list(prefix: String): List<String> {
         val dir = directory(prefix)
         val files = store.list(dir)
-        log.i { "list() dir=$dir, found ${files.size} files before filtering: $files" }
-        
-        // Filter out .tmp_ files (legacy from atomic write pattern, kept for backward compatibility)
-        val tmpFiles = files.filter { it.startsWith(".tmp_") }
-        if (tmpFiles.isNotEmpty()) {
-            log.w { "list() found ${tmpFiles.size} legacy .tmp_ files (should be cleaned up): $tmpFiles" }
-        }
-        
+        log.i { "list() dir=$dir, found ${files.size} files: $files" }
+
+        // Filter out .tmp_ files (in-flight writes from atomic write pattern)
         val filtered = files.filter { !it.startsWith(".tmp_") }
-        log.i { "list() after filtering .tmp_: ${filtered.size} files: $filtered" }
+        if (filtered.size != files.size) {
+            log.i { "list() filtered out ${files.size - filtered.size} .tmp_ files" }
+        }
+
         return if (dir.isEmpty()) filtered else filtered.map { "$dir/$it" }
     }
 

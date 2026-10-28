@@ -237,7 +237,9 @@ and recovery`). The live
 plugs implement `BackendPlug`; the
 multi-object keys are first used at runtime by the synced-folder plug, the v1 milestone (decision
 0042). Its logic sits behind a small file-system interface, so the simulator runs it on `jvm` with
-plain files.
+plain files. On Android, the documents provider behind a picked tree must stay visible even when
+grant-derived package visibility decays — every app using the plug declares document providers in
+its manifest (decision 0076).
 
 ### Compaction (planned)
 
