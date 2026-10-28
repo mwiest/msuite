@@ -59,7 +59,10 @@ delta then contained cells stamped with the Motorola's device_id → same key as
 
 Root-cause site: `LiveSync.publish()` takes `deviceId = delta.cells.first().stamp.deviceId`
 (the peer's stamp) instead of the local device id
-(`core/sync/.../LiveSync.kt`). **Root fix not implemented.**
+(`core/sync/.../LiveSync.kt`). **Key fix done** (2026-10-28, 5521754): the key now names
+`replica.deviceId`, as `architecture.md` (key grammar, "the single writer") requires.
+Still open: the delta still *echoes* ingested peer cells above the watermark back to the same
+plug (needed for cross-plug relay) — decide whether to filter.
 
 Recent recurrence: the Nord sat on a pending 1257-byte delta (stamped
 `v1_d_UN28KG7BECNL2_...`) that finally published at 21:31 on 2026-10-28 — into the wrong,
@@ -349,8 +352,8 @@ tell us enough:
 
 ## Follow-ups
 
-- Root-fix F2: deltas must be annotated with the *local* device id at publish, or field_state
-  must never let peer stamps masquerade as local unpushed changes (`LiveSync.publish()`).
+- F2 remainder: decide whether a delta should skip peer cells ingested from the same plug
+  (echo); the key fix is done (5521754).
 - Root-fix U1 for all Android 16 (and possibly earlier) builds: `.queries` declaration +
   decision record; note in `architecture.md`.
 - Root-fix F7: publish/write against an unreachable provider degrades to retriable silent
