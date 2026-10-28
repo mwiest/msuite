@@ -299,6 +299,15 @@ folder that holds only ciphertext") and the 2026-10-27 check (6), which mistook 
 protobuf for ciphertext. Likely also why `unreadable_batch` stays 0 with three 0-byte `(1)`
 files: an empty protobuf decodes as an empty batch.
 
+**Fixed** (2026-10-28, 891630f): `LiveSync` takes the `IdentityProvider`, seals each
+delta in a `BatchEnvelope` with the key minus hash as AAD, hashes the ciphertext, and opens on
+pull under the context rebuilt from the key (a failed open is `unreadable`). Names that don't
+parse as keys are skipped, so `(1)` and `_N` conflict copies are now ignored on read (half of
+F8). Follow-up: cache the sealed bytes so a failed put retries the same key (a re-seal uses a
+fresh salt, so a half-landed put leaves a duplicate); needs a safe "same delta" check, as a
+peer cell can land inside the same HLC range. Rollout: wipe `msuite/todo/{gid}` (plaintext)
+and reset both devices' `plug_watermark` + `ingested_batch` so they re-publish encrypted.
+
 ## Instrumentation status (stripped, fix committed in bc0ff76)
 
 The debug-only instrumentation (SafFileStore TRACE[1..5]/traceFiles/traceFlags/TRACE delay/
