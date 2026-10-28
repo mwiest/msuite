@@ -70,11 +70,11 @@ class FolderSyncActions(
     fun startSyncIfConfigured() {
         val uri = settings.syncedFolderUri.value
         if (uri == null || liveSync != null) return
-        val root = identity.root(KEY_GEN_V1) ?: return
+        if (identity.root(KEY_GEN_V1) == null) return
         val store = fileStoreFactory(uri)
         val plug = FolderPlug(store)
         val plugId = PlugId(uri)
-        liveSync = LiveSync(replica, plug, plugId, "todo", root, scope, 10.seconds).also {
+        liveSync = LiveSync(replica, plug, plugId, "todo", identity, scope, 10.seconds).also {
             scope.launch { it.start() }
         }
     }

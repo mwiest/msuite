@@ -176,8 +176,8 @@ epoch days, decision 0052) and `Ref` (a record's `Uuid`, decision 0053). Layout 
 
 ### Batch envelope (encryption)
 
-Code in `core/crypto` (decision 0010); the manual plug and simulator Layer 3 wire the AAD, and the
-folder plug follows at step 8:
+Code in `core/crypto` (decision 0010); the manual plug, the folder plug (`LiveSync`) and simulator
+Layer 3 wire the AAD:
 
 ```
 header:     format (1 byte) | salt (256 bit random) | data-model version | keyGen id   (41 bytes)
@@ -218,12 +218,13 @@ Object keys (decision 0029; code: `ObjectKey`, `ObjectKeyPrefix` and `groupId` i
   of 0071, which a publisher seals with and a reader rebuilds from the name it fetched.
 
 Syncing is list-and-diff: `list({appId}/{groupId}/)` minus the keys already ingested, then `get`
-the rest.
+the rest. A name that doesn't parse as a key (a sync client's conflict copy, `name (1)` or
+`name_<n>`) is skipped; an object that fails to open counts as unreadable (decision 0069).
 
 | Plug | One batch is | Namespace is | Atomic publish | Create-only | `list` |
 |---|---|---|---|---|---|
 | Manual (v1) | the whole full-state snapshot, one file | - | file write | each export is a fresh compacted snapshot | - |
-| Synced folder (SAF) | a file | nested subfolders | write `.tmp_*` to local cache, then copy to cloud target | unique names; a retry resends identical bytes | list children |
+| Synced folder (SAF) | a file | nested subfolders | write `.tmp_*` to local cache, then copy to cloud target | unique names; a retry re-seals under a fresh salt, so a put that half-landed leaves a duplicate | list children |
 | WebDAV | a resource | nested collections | `PUT`, or `PUT` temp + `MOVE` | `If-None-Match: *` | `PROPFIND Depth:1` |
 | Object storage (S3, R2, B2, MinIO) | an object | a key prefix | native | `If-None-Match: *` | `ListObjectsV2(prefix)` |
 | Relay | a file on disk | nested directories | relay does temp + rename | relay rejects existing names and checks the hash | relay lists the namespace |
