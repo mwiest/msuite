@@ -98,9 +98,13 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
    (as in the F9 rollout), relaunch; both publish everything once. Done 2026-10-30 22:55: one
    full-state batch each, both confirmed (`unconfirmed_publish` 0), 76 rows on both; one more
    writer-made `(1)`, swept by the next pull.
-4b. [ ] **T4, soak:** 10+ minutes of alternating edits (~30 s apart). Verify identical
+4b. [x] **T4, soak:** 10+ minutes of alternating edits (~30 s apart). Verify identical
    `field_state` on both, `unreadable_batch` 0, no conflict copies surviving a pull, no
-   `syncedFolderUri` change, no crash.
+   `syncedFolderUri` change, no crash. Done 2026-10-30 22:56–23:07 (Marc's mixed edits, incl.
+   the same list name created on both before a sync): `field_state` identical cell for cell (98 rows, 23 records),
+   `ingested_batch` 22 and `unreadable_batch`, `unconfirmed_publish` 0 on both; same 22 names, no
+   surviving copies, no twin, no crash, no failed publish, every key named its writer. Two lists
+   both called "t3" stay two records, same order on both: expected.
 5. [x] **F7 fix:** a write against an unreachable folder becomes a retriable sync error (skip
    the round, surface it in the sync status), never FATAL. Test-first in `core/sync` with a
    failing `FileStore`. Done 2026-10-30: `1ff6131` (core: caught, `healthy`, retry after the
