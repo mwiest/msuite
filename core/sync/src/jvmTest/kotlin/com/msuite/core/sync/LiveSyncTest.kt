@@ -53,6 +53,23 @@ private suspend fun pull(replica: Replica, plug: BackendPlug, secret: ByteArray 
 private fun ByteArray.contains(part: ByteArray): Boolean =
     (0..size - part.size).any { start -> part.indices.all { this[start + it] == part[it] } }
 
+/** A plug that throws like an unreachable folder while [down] is set. */
+private class FlakyPlug(private val inner: BackendPlug = MemoryPlug()) : BackendPlug {
+    var down = true
+
+    private fun check() {
+        if (down) throw java.io.IOException("cannot create directory")
+    }
+
+    override suspend fun put(key: String, bytes: ByteArray) = check().let { inner.put(key, bytes) }
+
+    override suspend fun list(prefix: String): List<String> = check().let { inner.list(prefix) }
+
+    override suspend fun get(key: String): ByteArray? = check().let { inner.get(key) }
+
+    override suspend fun delete(key: String) = check().let { inner.delete(key) }
+}
+
 class LiveSyncTest : StringSpec({
     "a published key names the local device, even when a peer's cell won the merge" {
         val record = Uuid.random()
@@ -164,5 +181,38 @@ class LiveSyncTest : StringSpec({
 
         plug.list("todo/") shouldContainExactlyInAnyOrder
             listOf(key, "$absent (1)", "$namespace/notes.txt", "$key (copy)")
+    }
+
+    "a publish to an unreachable plug doesn't throw, and the next pull retries it" {
+        val replica = Replica(driver(), local, TestClock(1_000))
+        val plug = FlakyPlug()
+        val written = replica.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to title))
+
+        coroutineScope {
+            val sync = LiveSync(replica, plug, plugId, "todo", identity(), this)
+            sync.start()
+            sync.flush()
+            sync.healthy.value shouldBe false
+
+            plug.down = false
+            sync.pull()
+            sync.healthy.value shouldBe true
+            sync.stop()
+        }
+
+        val reader = Replica(driver(), peer, TestClock(1_000))
+        pull(reader, plug)
+        reader.cells() shouldContainExactlyInAnyOrder written
+    }
+
+    "a pull from an unreachable plug doesn't throw and reports the plug unhealthy" {
+        val replica = Replica(driver(), local, TestClock(1_000))
+        coroutineScope {
+            val sync = LiveSync(replica, FlakyPlug(), plugId, "todo", identity(), this)
+            sync.start()
+            sync.pull()
+            sync.healthy.value shouldBe false
+            sync.stop()
+        }
     }
 })
