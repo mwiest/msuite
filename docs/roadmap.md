@@ -5,7 +5,6 @@ Upcoming work, one line each. Work with a plan links to it; the rest gets a plan
 ## In progress
 
 - v1, a ToDo app that validates the sync layer: [`plans/v1-todo.md`](plans/v1-todo.md)
-  - step 8b, the Dropbox device check: [`plans/v1-step8b-dropbox-conflicts.md`](plans/v1-step8b-dropbox-conflicts.md)
 
 ## Planned
 
@@ -22,6 +21,21 @@ After v1, roughly in this order:
 
 ## Known problems
 
+- Dropbox makes 0-byte `key (1)` copies of about one write in three; pull sweeps them (decision
+  0078) but nothing prevents them. Find a way at the root: a create-with-content call in a newer
+  SAF or Dropbox provider, or a native Dropbox plug over its HTTP API instead of SAF (needs a
+  decision: SDK or plain Ktor, app key handling).
+- Live sync publishes deltas only: no snapshots or pruning yet, so the folder grows without bound,
+  and an emptied or deleted folder is not refilled (reset by hand, `testing.md`). Lands with step 9
+  (`architecture.md` -> Compaction).
+- A provider that went invisible or a lost grant reads as an empty folder: pruning drops all
+  `ingested_batch` rows (a full re-read later) and Settings only shows the problem once a write
+  fails. Log and show the folder's identity (root name, child count) instead.
+- A put retried after one that half-landed re-seals under a fresh salt and leaves a duplicate
+  object. Caching the sealed bytes needs a safe "same delta" check, as a peer cell can land inside
+  the same HLC range.
+- The pairing camera forces landscape.
+- The German strings mix "du" and "Sie".
 - A machine without any JDK 21 can't build: the daemon is pinned to 21 (detekt 1.23 fails on
   JDK 25) and no toolchain download is configured. Drop the pin once detekt 2 is stable.
 - Android-only Compose modules log "commonTest was configured but not added to any compilation".
@@ -34,7 +48,10 @@ After v1, roughly in this order:
 Deferred, each addable later without a format change unless noted:
 
 - Tell the user when a device's batches are deferred for a clock far ahead (decision 0040).
-- Sync through two plugs at once, which needs per-plug change tracking (decision 0036).
+- Sync through two plugs at once, which needs per-plug change tracking (decision 0036); the same
+  tracking would stop the echo (decision 0078).
+- Sync right after a folder is picked (today the first sync waits up to 10 s).
+- A `FolderSyncActions`-level test that the folder path stores only ciphertext.
 - Undelete for lists; their hidden tasks would reappear (decision 0032).
 - Key rotation after device loss, using the `keyGen` id (decision 0008).
 - Metadata mitigations: size buckets, opaque per-app namespaces, pseudonymous rotating `deviceId`

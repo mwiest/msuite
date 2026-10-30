@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 7 done; step 8 built, its device check continues in [`v1-step8b-dropbox-conflicts.md`](v1-step8b-dropbox-conflicts.md).**
+Status: **steps 0 to 8 done, code and device checks; step 9, the relay, is next.**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -91,12 +91,19 @@ Each step may take several commits; a step that grows big gets its own plan.
    with each device's pre-pairing data kept and a deletion crossing, the words copied as a sensitive
    clip that cleared after 60 s, a fresh install restored from words and importing the group's
    export, and the German strings.
-8. [ ] **Synced-folder plug (milestone).** SAF plug writing the multi-object keys (decision 0029)
+8. [x] **Synced-folder plug (milestone).** SAF plug writing the multi-object keys (decision 0029)
    into a folder that Syncthing, Nextcloud or Dropbox syncs; its logic behind a file-system
    interface; simulator Layer 2 with invariant 12 on plain files (decision 0042), then a delta
    mode over the real key grammar with span skip, coarse deltas and bookkeeping pruning,
    asserting invariants 18 and 19 (`architecture.md` → Compaction). Proves: live multi-device
-   sync through a backend that sees only ciphertext.
+   sync through a backend that sees only ciphertext. Landed: `49f3d12` to `e46c8a1`, then the device
+   check's fixes `bc0ff76` to `e7c15d7`: document providers in the manifest (0076), keys naming
+   their writer, batches sealed in the envelope (the folder had held plaintext), a failing folder
+   that no longer crashes and shows in Settings, conflict copies and twin folders cleaned up
+   (0078), and a publish counted only once listed (0077). Checked by hand 2026-10-27 to 2026-10-30
+   on two Android 16 phones through Dropbox (`testing.md` -> Two-device check): simultaneous,
+   staggered and racing writes, a 10-minute soak ending identical cell for cell, reboot and
+   reinstall. Snapshots and pruning run in the simulator only; on devices they land with step 9.
 9. [ ] **Relay and relay plug.** `server/` as a Ktor CIO binary with namespace tokens (decision
    0030), plus the plug that talks to it; capability-gated `delete` and writer-side pruning with
    the recovery rule (`architecture.md` → Compaction). Proves: live self-hosted sync without a

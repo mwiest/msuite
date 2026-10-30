@@ -128,8 +128,50 @@ Compaction (decision 0002; the spans of 0029; planned with v1 steps 8 and 9):
 |---|---|---|
 | 1 | v1 step 2 (landed), gating the LWW merge | pure merge and HLC, invariants 1 to 11 and 13 |
 | 1 + ToDo rules | v1 step 4 (landed) | invariants 14 to 16, through the ToDo commands |
-| 2 | v1 step 5 (landed), step 8 (folder plug on plain files, delta mode, pruning) | the real plug wrapped in; invariant 12 with the folder plug, 18 and 19 with pruning |
+| 2 | v1 step 5 (landed), step 8 (landed: folder plug on plain files, delta mode, pruning) | the real plug wrapped in; invariant 12 with the folder plug, 18 and 19 with pruning |
 | 3 | v1 step 6 (landed) | encrypted batches still converge, invariant 17, and the TooNew / unknown-`keyGen` / foreign-root scenarios |
+
+## Two-device check (Android, synced folder)
+
+What the simulator can't cover: a real sync client under the folder. Last run 2026-10-30 on a
+OnePlus Nord and a Motorola edge 70 pro (Android 16), Dropbox app v494.2.2.
+
+Setup: pair by QR; on each device pick a **dedicated** folder (e.g. `msuite`), not the account
+root. Both phones plugged in (`adb shell svc power stayon true` holds only while charging; set it
+back to `false` afterwards) with the app in the foreground: sync polls only while the app is
+visible, so a locked screen stops it.
+
+| Check | How | Pass |
+|---|---|---|
+| Health | compare the latest `FolderPlug: list()` on both | same count and names, no `(N)` / `_<digits>` names left |
+| Simultaneous and staggered writes | a task on each device in the same second, then 1 / 5 / 10 s apart | both converge, no crash |
+| Folder-creation race | delete `{appId}/{groupId}` in the cloud, wait for both lists to read 0, write on both in the same second | no crash, no twin folder after a pull, both converge |
+| Soak | 10+ minutes of mixed edits, alternating, sometimes the same task on both | `field_state` identical cell for cell; `unreadable_batch` and `unconfirmed_publish` empty |
+| Restart | `adb reboot`, unlock, open; then `adb install -r` | same list, no provider or grant error |
+
+Compare databases cell for cell: `adb exec-out run-as com.msuite.todo cat databases/todo.db >
+file` (journal mode `delete`: check `todo.db-journal` is empty first), then read both copies with
+Python's `sqlite3`. Deleting the group folder drops the published batches, and live sync doesn't
+refill it yet (see `roadmap.md`): force-stop both apps, clear `plug_watermark`, `ingested_batch`,
+`unreadable_batch` and `unconfirmed_publish` in a copy, push it back with `adb exec-in run-as ...
+sh -c 'cat > databases/todo.db'`, relaunch.
+
+Log signatures (`adb logcat -d`; dump before anything clears the buffer, it also rotates within
+minutes):
+
+- `FolderPlug: list() dir=..., found N files: [...]`: one per pull; the health check.
+- `SafFileStore: write() CLOUD path=...`: one per publish; the key's device field must be this
+  device's.
+- `FolderPlug: adopted twin folder ...`, `LiveSync: publish failed, retrying later`: the race and
+  an unreachable folder, both recovered.
+- `E ActivityThread: Failed to find provider info for com.dropbox...`: the provider is invisible
+  (decision 0076); `SecurityException ... ACTION_OPEN_DOCUMENT`: the grant is gone, re-pick. Either
+  reads as an empty folder.
+- `adb logcat -d -b crash`: fatals; check the process name, other apps crash too.
+
+Gotchas: a device's UTC clock matters, its time zone doesn't (an automatic time zone can be wrong
+while automatic time is right); adb can't unlock a PIN screen or drive the folder picker; a debug
+build signed with another machine's debug key won't `install -r` over the old one.
 
 ## Formatting and static analysis
 

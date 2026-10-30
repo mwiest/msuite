@@ -12,9 +12,9 @@ import kotlinx.coroutines.CompletableDeferred
  * The folder structure is: `<picked>/{appId}/{groupId}/{name}` (handled by FolderPlug).
  *
  * Takes persistable URI permissions so the folder remains accessible across app restarts.
- * Verified for Dropbox (finding, plan `v1-step8b-dropbox-conflicts`): grants persist across
- * process death and device reboots; the fallback catch is only for providers that genuinely
- * don't support persistable permissions.
+ * Verified for Dropbox (docs/testing.md, two-device check): grants persist across process death
+ * and device reboots; the fallback catch is only for providers that genuinely don't support
+ * persistable permissions.
  */
 class SafFolderPick(private val activity: ComponentActivity) : FolderPick {
     private var pendingPick: CompletableDeferred<String?>? = null

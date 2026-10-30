@@ -123,7 +123,9 @@ in the client.
   clock is an injected `kotlin.time.Clock`.
 - `deviceId` is a random 64-bit value, ordered unsigned; field IDs are `Int`s (decision 0043).
 - No local op-log (decision 0036). An outgoing delta is every cell with an HLC newer than the
-  plug's local watermark. The device also keeps the set of batch names it has ingested. Code:
+  plug's local watermark, so a peer's cells ingested with a higher HLC go out again under this
+  device's key (the *echo*, kept for now: decision 0078). The device also keeps the set of batch
+  names it has ingested. Code:
   `buildDelta` and `ingest` in `core/sync`; `ingest` defers a batch beyond the 24 h bound
   (`IngestResult.Deferred`), holds back one from a newer data-model version (`IngestResult.TooNew`,
   decision 0067), or merges it and advances the HLC. A fetched batch that won't decode is skipped
@@ -248,14 +250,21 @@ multi-object keys are first used at runtime by the synced-folder plug, the v1 mi
 plain files. On Android, the documents provider behind a picked tree must stay visible even when
 grant-derived package visibility decays — every app using the plug declares document providers in
 its manifest (decision 0076). Dropbox's provider reports `rename` as supported but `renameTo()`
-throws, so the atomic publish stages in local temp (decision 0075).
+throws, so the atomic publish stages in local temp (decision 0075). A tree URI and its grant are
+per device: a folder picked on one device means nothing on another, so each device picks its own
+(decision 0072). SAF reports a provider it can't see, or a grant that's gone, as an *empty
+folder*, not an error, so the plug can't tell that from a fresh folder; a write to it throws.
+`LiveSync` catches every plug failure: `healthy` turns false (Settings says the folder can't be
+reached), and a failed publish is retried after the next successful pull. Copies and twin
+folders that the sync client makes are cleaned up as above (decision 0078).
 
 ### Compaction (planned)
 
 The append-only contract grows three things without bound: backend objects, `list` enumeration and
 the client's `ingested_batch` bookkeeping. All three are bounded by 0002's rule — a writer's
-full-state snapshot subsumes its every earlier object — in three parts, landing with the folder
-plug (v1 step 8) and `delete` (v1 step 9):
+full-state snapshot subsumes its every earlier object — in three parts. The simulator has them
+(Layer 2, invariants 18 and 19); live sync publishes deltas only, so on a device they land with
+`delete` (v1 step 9):
 
 - **Span skip.** A reader that has ingested a writer's snapshot skips that writer's objects whose
   `hlcLo`..`hlcHi` span lies inside it: the key grammar (0029) carries the span, so no `delete` is
