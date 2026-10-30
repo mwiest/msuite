@@ -1,0 +1,7 @@
+CREATE TABLE unconfirmed_publish (
+    plug TEXT NOT NULL,
+    batch_key TEXT NOT NULL,
+    previous_hlc INTEGER,
+    misses INTEGER NOT NULL,
+    PRIMARY KEY (plug, batch_key)
+) WITHOUT ROWID;

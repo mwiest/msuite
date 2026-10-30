@@ -25,6 +25,9 @@ import kotlin.uuid.Uuid
 /** Failed decodes of one key before it is flagged corrupt and stops being fetched (decision 0069). */
 const val MAX_DECODE_ATTEMPTS = 3
 
+/** Listings of a plug that may miss a fresh publish before it is sent again (decision 0077). */
+const val MAX_CONFIRM_MISSES = 3
+
 /**
  * The device's state, in its database, with its HLC clock. The clock starts from the highest
  * stored HLC, so writes after a restart order after everything stored, even if the wall clock went
@@ -59,7 +62,7 @@ class Replica private constructor(
         return serialized {
             val stamp = Stamp(clock.now(), deviceId)
             values.map { (key, value) -> Cell(key, value, stamp) }.also(store::write)
-        }.also { tick() }
+        }.also { ticks.update { it + 1 } }
     }
 
     /** Merges [batch], fetched from [plug] under [batchKey]; a key ingested before is skipped. */
@@ -97,9 +100,39 @@ class Replica private constructor(
         buildDelta(store.cells(above = watermark), watermark)
     }
 
-    suspend fun pushed(plug: PlugId, delta: Batch) {
+    /**
+     * Moves [plug]'s watermark past [delta]. With the object's [key], the publish stays unconfirmed
+     * until a listing shows it ([confirm], decision 0077).
+     */
+    suspend fun pushed(plug: PlugId, delta: Batch, key: String? = null) {
         val hlcHi = delta.hlcHi() ?: return
-        serialized { store.plugs.setWatermark(plug, hlcHi) }
+        serialized {
+            if (key != null) store.unconfirmed.record(plug, key, previous = store.plugs.watermark(plug))
+            store.plugs.setWatermark(plug, hlcHi)
+        }
+    }
+
+    /**
+     * Checks unconfirmed publishes against [listedKeys] from a successful listing of [plug]. One
+     * missing [MAX_CONFIRM_MISSES] times is given up: the watermark goes back to before it, so its
+     * cells are sent again. Returns whether that happened (decision 0077).
+     */
+    suspend fun confirm(plug: PlugId, listedKeys: Set<String>): Boolean = serialized {
+        var resend = false
+        for (publish in store.unconfirmed.all(plug)) {
+            when {
+                publish.key in listedKeys -> store.unconfirmed.confirmed(plug, publish.key)
+
+                publish.misses + 1 >= MAX_CONFIRM_MISSES -> {
+                    store.rewindWatermark(plug, publish.previous)
+                    store.unconfirmed.confirmed(plug, publish.key)
+                    resend = true
+                }
+
+                else -> store.unconfirmed.missed(plug, publish.key)
+            }
+        }
+        resend
     }
 
     /** Every cell, or only [recordId]'s cells. */
@@ -118,14 +151,12 @@ class Replica private constructor(
 
     override fun close() = store.close()
 
-    private fun tick() = ticks.update { it + 1 }
-
     /** Merges under the lock, ticking when something changed; no plug bookkeeping. */
     private fun mergeLocked(batch: Batch): IngestResult {
         val result = ingest(batch, store::cell, clock)
         if (result is IngestResult.Merged && result.changes.isNotEmpty()) {
             store.write(result.changes)
-            tick()
+            ticks.update { it + 1 }
         }
         return result
     }
@@ -145,5 +176,14 @@ class Replica private constructor(
 
     private suspend fun <R> serialized(block: () -> R): R = withContext(context) {
         mutex.withLock { store.transaction(block) }
+    }
+}
+
+/** Moves [plug]'s watermark back to [to] (none when `null`); never forward. */
+private fun LocalStore.rewindWatermark(plug: PlugId, to: Hlc?) {
+    val current = plugs.watermark(plug) ?: return
+    when {
+        to == null -> plugs.clearWatermark(plug)
+        to < current -> plugs.setWatermark(plug, to)
     }
 }

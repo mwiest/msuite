@@ -16,7 +16,7 @@ sections from "Sync" on describe the agreed design; parts that are code say so. 
 | Module | Kind | Holds (intended) | Today |
 |---|---|---|---|
 | `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `CoreFields`, `Stamp`, `Cell`, `PlugId`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
-| `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested batch keys, per-plug watermarks, the device ID | `LocalStore` over all four tables (see Sync → Data and merge) |
+| `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested and unreadable batch keys, per-plug watermarks and unconfirmed publishes, the device ID | `LocalStore` over all its tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, `ManualSync`, `ObjectKey`/`ObjectKeyPrefix`/`groupId`, simulator Layer 1 |
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`, `EnvelopePlugStore`) with `Fetch`, `MemoryPlug`, `assertPlugContract`, `TestClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) and `RecoveryWords` over `BIP39_ENGLISH` (record 0073) |
@@ -89,8 +89,9 @@ in the client.
   `TYPE = 1` holds the app's `Int64` record type ID, `DELETED = 2` the tombstone. App fields start
   at 10.
 - Storage (code: `LocalStore` in `core/storage`, schema in `src/commonMain/sqldelight`): SQLite
-  tables `field_state`, `ingested_batch(plug, batch_key)` and `plug_watermark(plug, hlc)`, keyed
-  by `PlugId` (a stable name per configured plug); the last two sit behind `LocalStore.plugs`. A
+  tables `field_state`, `ingested_batch(plug, batch_key)`, `plug_watermark(plug, hlc)` and
+  `unconfirmed_publish(plug, batch_key, previous_hlc, misses)`, keyed by `PlugId` (a stable name
+  per configured plug); the plug tables sit behind `LocalStore.plugs` and `LocalStore.unconfirmed`. A
   one-row table `device` holds this device's ID (decision 0058). It
   knows no merge or HLC rules. HLCs are stored as the packed value with its sign bit flipped, so
   SQL compares them unsigned like `Hlc`. The platform creates the `SqlDriver` with
@@ -100,7 +101,9 @@ in the client.
   writes after a restart order after everything stored even if the wall clock went back. A local
   write stamps all its cells with one fresh HLC. Ingest skips a batch key already ingested from
   that plug, and writes the winners and marks the key in one transaction. A delta is built from
-  the plug's watermark, which moves on `pushed`. Every operation holds a coroutine `Mutex` and
+  the plug's watermark, which moves on `pushed`; a published key stays unconfirmed until a listing
+  shows it, and one missing from `MAX_CONFIRM_MISSES` listings rewinds the watermark so its cells
+  are sent again (decision 0077). Every operation holds a coroutine `Mutex` and
   runs in one transaction, in the replica's coroutine context (default `Dispatchers.Default`, so
   the blocking driver stays off the UI thread, decision 0059). The app opens one replica per database and writes only through it;
   the mutex doesn't cover a second one. `changes`, a `StateFlow`, ticks after each committed write

@@ -52,6 +52,7 @@ class LocalStore(private val driver: SqlDriver) : AutoCloseable {
 
     /** Per-plug bookkeeping (decision 0036). */
     val plugs = PlugBook(db.plugStateQueries)
+    val unconfirmed = UnconfirmedBook(db.plugStateQueries)
 
     override fun close() = driver.close()
 
@@ -90,6 +91,10 @@ class PlugBook internal constructor(private val queries: PlugStateQueries) {
 
     fun setWatermark(plug: PlugId, hlc: Hlc) {
         queries.setWatermark(plug.id, hlc.toSql())
+    }
+
+    fun clearWatermark(plug: PlugId) {
+        queries.clearWatermark(plug.id)
     }
 
     /** Get all ingested batch keys for a plug (for pruning). */
@@ -151,3 +156,27 @@ private fun Field_state.toCell() = Cell(
     value = value_,
     stamp = Stamp(hlcFromSql(hlc), DeviceId(device_id)),
 )
+
+/** A publish put to a plug but not yet seen in its listing (decision 0077). */
+data class UnconfirmedPublish(val key: String, val previous: Hlc?, val misses: Int)
+
+/** Publishes awaiting confirmation per plug (decision 0077). */
+class UnconfirmedBook internal constructor(private val queries: PlugStateQueries) {
+    /** Records [batchKey] as put but not yet listed; [previous] is the watermark before it. */
+    fun record(plug: PlugId, batchKey: String, previous: Hlc?) {
+        queries.insertUnconfirmed(plug.id, batchKey, previous?.toSql())
+    }
+
+    fun all(plug: PlugId): List<UnconfirmedPublish> = queries.unconfirmed(plug.id) { key, previous, misses ->
+        UnconfirmedPublish(key, previous?.let(::hlcFromSql), misses.toInt())
+    }.executeAsList()
+
+    /** One more listing of [plug] that didn't show [batchKey]. */
+    fun missed(plug: PlugId, batchKey: String) {
+        queries.bumpMisses(plug.id, batchKey)
+    }
+
+    fun confirmed(plug: PlugId, batchKey: String) {
+        queries.deleteUnconfirmed(plug.id, batchKey)
+    }
+}

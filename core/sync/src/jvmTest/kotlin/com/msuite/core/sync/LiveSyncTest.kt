@@ -70,6 +70,15 @@ private class FlakyPlug(private val inner: BackendPlug = MemoryPlug()) : Backend
     override suspend fun delete(key: String) = check().let { inner.delete(key) }
 }
 
+/** A plug whose first put reports success but lands where the listing never shows it (a twin folder). */
+private class LossyPlug(private val inner: BackendPlug = MemoryPlug()) : BackendPlug by inner {
+    var lose = 1
+
+    override suspend fun put(key: String, bytes: ByteArray) {
+        if (lose > 0) lose-- else inner.put(key, bytes)
+    }
+}
+
 class LiveSyncTest : StringSpec({
     "a published key names the local device, even when a peer's cell won the merge" {
         val record = Uuid.random()
@@ -214,5 +223,42 @@ class LiveSyncTest : StringSpec({
             sync.healthy.value shouldBe false
             sync.stop()
         }
+    }
+
+    "a publish the plug never lists is sent again after a few pulls" {
+        val replica = Replica(driver(), local, TestClock(1_000))
+        val plug = LossyPlug()
+        val written = replica.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to title))
+
+        coroutineScope {
+            val sync = LiveSync(replica, plug, plugId, "todo", identity(), this)
+            sync.start()
+            sync.flush()
+            plug.list("todo/").shouldBeEmpty()
+            repeat(MAX_CONFIRM_MISSES) { sync.pull() }
+            sync.stop()
+        }
+
+        plug.list("todo/") shouldHaveSize 1
+        val reader = Replica(driver(), peer, TestClock(1_000))
+        pull(reader, plug)
+        reader.cells() shouldContainExactlyInAnyOrder written
+    }
+
+    "a publish the plug lists is not sent again" {
+        val replica = Replica(driver(), local, TestClock(1_000))
+        val plug = MemoryPlug()
+        replica.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to title))
+
+        coroutineScope {
+            val sync = LiveSync(replica, plug, plugId, "todo", identity(), this)
+            sync.start()
+            sync.flush()
+            repeat(MAX_CONFIRM_MISSES + 1) { sync.pull() }
+            sync.flush()
+            sync.stop()
+        }
+
+        plug.list("todo/") shouldHaveSize 1
     }
 })

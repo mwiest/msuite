@@ -249,4 +249,39 @@ class LocalStoreTest : StringSpec({
             close()
         }
     }
+
+    "an unconfirmed publish keeps its previous watermark and counts misses until confirmed" {
+        val store = open()
+        store.unconfirmed.record(folder, "k1", previous = null)
+        store.unconfirmed.record(folder, "k2", previous = hlc(5))
+        store.unconfirmed.missed(folder, "k2")
+
+        store.unconfirmed.all(folder) shouldContainExactlyInAnyOrder listOf(
+            UnconfirmedPublish("k1", previous = null, misses = 0),
+            UnconfirmedPublish("k2", previous = hlc(5), misses = 1),
+        )
+        store.unconfirmed.all(relay).shouldBeEmpty()
+
+        store.unconfirmed.confirmed(folder, "k1")
+        store.unconfirmed.all(folder).map { it.key } shouldContainExactly listOf("k2")
+    }
+
+    "a watermark can be cleared" {
+        val store = open()
+        store.plugs.setWatermark(folder, hlc(5))
+        store.plugs.clearWatermark(folder)
+        store.plugs.watermark(folder).shouldBeNull()
+    }
+
+    "a version 1 database gains the unconfirmed table when migrated to the latest version" {
+        val url = "jdbc:sqlite:${tempfile(suffix = ".db").absolutePath}"
+        val v1 = JdbcSqliteDriver(url, Properties())
+        V1_SCHEMA.forEach { v1.execute(null, it, 0) }
+        LocalStore.Schema.migrate(v1, 1, LocalStore.Schema.version).value
+        v1.close()
+        LocalStore(JdbcSqliteDriver(url, Properties())).use {
+            it.unconfirmed.record(folder, "k1", previous = hlc(5))
+            it.unconfirmed.all(folder) shouldContainExactly listOf(UnconfirmedPublish("k1", hlc(5), 0))
+        }
+    }
 })

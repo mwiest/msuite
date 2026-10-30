@@ -88,6 +88,7 @@ class LiveSync(
         sweepConflictCopies(parsed.filterValues { it != null }.keys, parsed.filterValues { it == null }.keys)
         // Prune bookkeeping: remove entries for keys no longer in the backend (decision 0002).
         replica.prune(plugId, keys.toSet())
+        if (replica.confirm(plugId, keys.toSet())) retryPublish = true
     }
 
     /**
@@ -152,6 +153,6 @@ class LiveSync(
         val bytes = envelope.seal(delta, prefix.text())
         val key = prefix.withHash(ciphertextHash(bytes)).text()
         plug.put(key, bytes)
-        replica.pushed(plugId, delta)
+        replica.pushed(plugId, delta, key)
     }
 }

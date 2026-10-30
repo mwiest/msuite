@@ -62,3 +62,28 @@ DELETE FROM ingested_batch WHERE plug = ? AND batch_key = ?;
 -- Delete a specific unreadable batch entry
 deleteUnreadable:
 DELETE FROM unreadable_batch WHERE plug = ? AND batch_key = ?;
+
+-- A publish not yet seen in the plug's listing (decision 0077). previous_hlc is the watermark
+-- before it (sign-flipped, NULL for none), restored if the object never shows up.
+CREATE TABLE unconfirmed_publish (
+    plug TEXT NOT NULL,
+    batch_key TEXT NOT NULL,
+    previous_hlc INTEGER,
+    misses INTEGER NOT NULL,
+    PRIMARY KEY (plug, batch_key)
+) WITHOUT ROWID;
+
+clearWatermark:
+DELETE FROM plug_watermark WHERE plug = ?;
+
+insertUnconfirmed:
+INSERT OR REPLACE INTO unconfirmed_publish VALUES (?, ?, ?, 0);
+
+unconfirmed:
+SELECT batch_key, previous_hlc, misses FROM unconfirmed_publish WHERE plug = ?;
+
+bumpMisses:
+UPDATE unconfirmed_publish SET misses = misses + 1 WHERE plug = ? AND batch_key = ?;
+
+deleteUnconfirmed:
+DELETE FROM unconfirmed_publish WHERE plug = ? AND batch_key = ?;
