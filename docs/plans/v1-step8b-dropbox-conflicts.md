@@ -1,8 +1,8 @@
 # Plan: v1 step 8b, Dropbox conflict-file investigation
 
-Status: **In progress** (handoff 2026-10-28, 23:20). Started 2026-10-27. F2 key, F9 (plaintext)
-and F8 (conflict copies) fixed and verified on both devices; T2 done. Next session: check CI,
-then T3, T4, F7. See [Next session](#next-session).
+Status: **In progress** (2026-10-30). Started 2026-10-27. F1, F2 key, F7, F8, F9 and lost publishes
+fixed and verified on both devices; T2 and T3 done. Next: republish full state, T4, T1, close.
+See [Next session](#next-session).
 
 ## Goal
 
@@ -19,6 +19,9 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
 | F2: published keys named a peer's device id; now `replica.deviceId` | `5521754` | T2 round 1 |
 | F9: folder sync uploaded **plaintext**; `LiveSync` now seals every batch in `BatchEnvelope` (AAD = key minus hash, hash over the ciphertext) and skips names that don't parse as keys | `891630f` | rollout 22:52, folder wiped and republished |
 | F8: conflict copies `key (N)` / `key_<digits>` are deleted on pull while `key` is listed; `SafFileStore`'s post-write cleanup removed | `3eb5dac` | both devices 23:14, copies gone |
+| F7: a failing plug no longer crashes; `LiveSync.healthy`, retry after the next pull; Settings shows "Can't reach the folder" | `1ff6131`, `582728d` | T3 re-run: logged, no crash |
+| F1: `FolderPlug` adopts a twin `{gid}_<n>` / `{gid} (N)` into the group folder | `6c886c9` | both devices 22:50, Nord's lost batch recovered |
+| Lost publishes: a key stays unconfirmed until listed, 3 misses rewind the watermark (decision 0077, migration 2) | `e7c15d7` | unit tests; migration ran on both devices |
 | `PairingTest` didn't compile since `ea2d558` (`backendType`), so `allTests` was red | `891630f` | `allTests` green |
 
 ## Findings (condensed)
@@ -67,6 +70,13 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
   `Dispatchers.Main.immediate`: **F7 on a healthy folder, the app closed.** Relaunched at
   22:11:37, the Nord found the folder, published into it, and both converged on 2 files. No
   twin `{gid}_<n>` seen by either device, so with a dedicated parent F1 turns into F7.
+- **T3 re-run (2026-10-30 22:32), with the F7 fix:** no crash; the Nord's publish failed
+  (caught), and the retry 4 s later *created the folder again* (its view still lacked the Moto's),
+  wrote into it and moved the watermark on. Dropbox renamed that folder to
+  `{gid}_2805106065466311729`: **F1 is real with a dedicated parent too, and the batch was
+  silently lost** (never listed, never resent). Fixed by twin adoption (`6c886c9`) and
+  confirm-before-watermark (`e7c15d7`, decision 0077); after installing, both devices adopted the
+  twin at 22:50 and converged (76 rows identical, all four T3 todos on both).
 
 ## Next session
 
@@ -82,7 +92,11 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
    Dropbox, wait until both devices' views of `msuite/todo/` are empty, start both apps within
    the same second, then check `msuite/todo/` for one `{gid}` or two. If two: serialize creation
    (existence check, settle delay, retry) and adopt or merge a `{gid}_<n>` twin.
-4. [ ] **T4, soak:** 10+ minutes of alternating edits (~30 s apart). Verify identical
+4. [ ] **Republish full state:** the two T3 deletes dropped the older batches from the folder;
+   both devices keep them locally, but a late joiner couldn't get them. Force-stop both, clear
+   `plug_watermark`, `ingested_batch`, `unreadable_batch` and `unconfirmed_publish` via `run-as`
+   (as in the F9 rollout), relaunch; both publish everything once.
+4b. [ ] **T4, soak:** 10+ minutes of alternating edits (~30 s apart). Verify identical
    `field_state` on both, `unreadable_batch` 0, no conflict copies surviving a pull, no
    `syncedFolderUri` change, no crash.
 5. [x] **F7 fix:** a write against an unreachable folder becomes a retriable sync error (skip
