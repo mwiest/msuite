@@ -92,10 +92,12 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
    Dropbox, wait until both devices' views of `msuite/todo/` are empty, start both apps within
    the same second, then check `msuite/todo/` for one `{gid}` or two. If two: serialize creation
    (existence check, settle delay, retry) and adopt or merge a `{gid}_<n>` twin.
-4. [ ] **Republish full state:** the two T3 deletes dropped the older batches from the folder;
+4. [x] **Republish full state:** the two T3 deletes dropped the older batches from the folder;
    both devices keep them locally, but a late joiner couldn't get them. Force-stop both, clear
    `plug_watermark`, `ingested_batch`, `unreadable_batch` and `unconfirmed_publish` via `run-as`
-   (as in the F9 rollout), relaunch; both publish everything once.
+   (as in the F9 rollout), relaunch; both publish everything once. Done 2026-10-30 22:55: one
+   full-state batch each, both confirmed (`unconfirmed_publish` 0), 76 rows on both; one more
+   writer-made `(1)`, swept by the next pull.
 4b. [ ] **T4, soak:** 10+ minutes of alternating edits (~30 s apart). Verify identical
    `field_state` on both, `unreadable_batch` 0, no conflict copies surviving a pull, no
    `syncedFolderUri` change, no crash.
