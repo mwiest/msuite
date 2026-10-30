@@ -221,7 +221,9 @@ Syncing is list-and-diff: `list({appId}/{groupId}/)` minus the keys already inge
 the rest. A name that doesn't parse as a key (a sync client's conflict copy, `name (1)` or
 `name_<n>`) is skipped, and deleted while its original key is still listed (Dropbox makes 0-byte
 `(1)` copies on its own, seconds after some writes); an object that fails to open counts as
-unreadable (decision 0069).
+unreadable (decision 0069). The folder plug also adopts a twin of the namespace folder
+(`{groupId}_<n>`, `{groupId} (N)`, made when two devices create it at once): it moves the twin's
+files in, create-only, and deletes the twin.
 
 | Plug | One batch is | Namespace is | Atomic publish | Create-only | `list` |
 |---|---|---|---|---|---|

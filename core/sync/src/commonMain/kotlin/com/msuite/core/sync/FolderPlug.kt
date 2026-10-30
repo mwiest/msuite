@@ -21,6 +21,7 @@ class FolderPlug(private val store: FileStore) : BackendPlug {
 
     override suspend fun list(prefix: String): List<String> {
         val dir = directory(prefix)
+        adoptTwins(dir)
         val files = store.list(dir)
         log.i { "list() dir=$dir, found ${files.size} files: $files" }
 
@@ -31,6 +32,29 @@ class FolderPlug(private val store: FileStore) : BackendPlug {
         }
 
         return if (dir.isEmpty()) filtered else filtered.map { "$dir/$it" }
+    }
+
+    /**
+     * Moves the files of a sync client's twin of [dir] (`dir_<digits>`, `dir (N)`) into [dir] and
+     * deletes the twin. Two devices creating [dir] at once get one each (Dropbox renames the
+     * loser), and a device keeps writing into its twin until it sees the rename.
+     */
+    private suspend fun adoptTwins(dir: String) {
+        if (dir.isEmpty()) return
+        val parent = directory(dir)
+        val twin = Regex("""^${Regex.escape(filename(dir))}(?:_\d+| \(\d+\))$""")
+        for (name in store.list(parent).filter(twin::matches)) {
+            adopt(if (parent.isEmpty()) name else "$parent/$name", dir)
+        }
+    }
+
+    private suspend fun adopt(twinDir: String, dir: String) {
+        for (file in store.list(twinDir)) {
+            if (!file.startsWith(".tmp_")) store.read("$twinDir/$file")?.let { put("$dir/$file", it) }
+            store.delete("$twinDir/$file")
+        }
+        store.delete(twinDir)
+        log.w { "adopted twin folder $twinDir into $dir" }
     }
 
     override suspend fun get(key: String): ByteArray? = store.read(key)
