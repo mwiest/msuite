@@ -19,12 +19,14 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
- * The folder plug's sync status, exposed to the UI (slice 12). Shows when the last sync happened
- * and how many changes are pending publish.
+ * The folder plug's sync status, exposed to the UI (slice 12). Shows when the last sync got
+ * through, how many changes are pending publish, and whether the folder is [failing] (unreachable,
+ * retried on the next poll).
  */
 data class FolderSyncStatus(
     val lastSync: Instant?,
     val pendingChanges: Int,
+    val failing: Boolean = false,
 )
 
 /**
@@ -83,7 +85,7 @@ class FolderSyncActions(
     suspend fun syncNow() {
         val sync = liveSync ?: return
         sync.pull()
-        _status.value = _status.value.copy(lastSync = clock.now())
+        report(sync)
     }
 
     /** Starts polling for changes every 10 seconds (foreground only). */
@@ -91,11 +93,22 @@ class FolderSyncActions(
         if (pollingJob != null || liveSync == null) return
         pollingJob = scope.launch {
             while (isActive) {
-                liveSync?.pull()
-                _status.value = _status.value.copy(lastSync = clock.now())
+                liveSync?.let {
+                    it.pull()
+                    report(it)
+                }
                 delay(10.seconds)
             }
         }
+    }
+
+    private fun report(sync: LiveSync) {
+        val healthy = sync.healthy.value
+        val current = _status.value
+        _status.value = current.copy(
+            lastSync = if (healthy) clock.now() else current.lastSync,
+            failing = !healthy,
+        )
     }
 
     /** Stops the polling job. */

@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.msuite.todo.domain.FolderSyncActions
+import com.msuite.todo.domain.FolderSyncStatus
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.cancel
 import com.msuite.todo.resources.folder_clear
@@ -31,6 +32,7 @@ import com.msuite.todo.resources.folder_pick_hint
 import com.msuite.todo.resources.folder_pick_title
 import com.msuite.todo.resources.folder_sync
 import com.msuite.todo.resources.folder_sync_configured
+import com.msuite.todo.resources.folder_sync_failing
 import com.msuite.todo.resources.folder_sync_not_configured
 import com.msuite.todo.resources.folder_sync_now
 import kotlinx.coroutines.CoroutineScope
@@ -75,22 +77,7 @@ fun FolderPlugSection(folder: FolderSyncActions) {
             )
         }
 
-        // Sync status
-        if (status.lastSync != null) {
-            Text(
-                stringResource(Res.string.folder_last_sync, status.lastSync.toString()),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        } else {
-            Text(
-                stringResource(Res.string.folder_never_synced),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        }
+        SyncStatusLines(status)
 
         // Actions
         FolderActionsRow(folder, folderUri, busy, scope, showPickDialog)
@@ -100,6 +87,25 @@ fun FolderPlugSection(folder: FolderSyncActions) {
     // cloud-sync root (Syncthing, Nextcloud, ...) rather than a random folder.
     if (showPickDialog.value) {
         FolderPickDialog(showPickDialog, folder, busy, scope)
+    }
+}
+
+@Composable
+private fun SyncStatusLines(status: FolderSyncStatus) {
+    Text(
+        status.lastSync?.let { stringResource(Res.string.folder_last_sync, it.toString()) }
+            ?: stringResource(Res.string.folder_never_synced),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(bottom = 8.dp),
+    )
+    if (status.failing) {
+        Text(
+            stringResource(Res.string.folder_sync_failing),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
     }
 }
 

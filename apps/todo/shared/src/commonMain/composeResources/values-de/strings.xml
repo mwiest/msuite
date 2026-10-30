@@ -63,6 +63,7 @@
     <string name="folder_sync_now">Jetzt synchronisieren</string>
     <string name="folder_last_sync">Letzte Synchronisierung: %1$s</string>
     <string name="folder_never_synced">Nie synchronisiert</string>
+    <string name="folder_sync_failing">Ordner nicht erreichbar. Neuer Versuch alle 10 Sekunden; Änderungen bleiben auf diesem Gerät erhalten.</string>
     <string name="export">Exportieren</string>
     <string name="import_file">Importieren</string>
     <string name="sync_exported">Exportiert.</string>

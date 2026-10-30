@@ -63,6 +63,7 @@
     <string name="folder_sync_now">Sync now</string>
     <string name="folder_last_sync">Last sync: %1$s</string>
     <string name="folder_never_synced">Never synced</string>
+    <string name="folder_sync_failing">Can\'t reach the folder. Retrying every 10 seconds; your changes are kept on this device.</string>
     <string name="export">Export</string>
     <string name="import_file">Import</string>
     <string name="sync_exported">Exported.</string>

@@ -47,7 +47,7 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
   Failed to find provider info ...`, folder reads as empty; (2) grant missing:
   `SecurityException ... ACTION_OPEN_DOCUMENT`, also reads as empty; (3) healthy. Without a
   folder-identity log line, tiers 1 and 2 look like an empty folder.
-- **F7 crash loop:** a pending publish against a tier-1 folder throws
+- **F7 crash loop (fixed 2026-10-30):** a pending publish against a tier-1 folder throws
   `IOException: cannot create directory todo/{gid}` from `SafFileStore.write` (via `rename`)
   ~10 s after every app start, FATAL. **Not fixed.**
 - **U2 docIds:** stable per folder × provider × device; grants and tree URIs can't be copied
@@ -85,9 +85,10 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
 4. [ ] **T4, soak:** 10+ minutes of alternating edits (~30 s apart). Verify identical
    `field_state` on both, `unreadable_batch` 0, no conflict copies surviving a pull, no
    `syncedFolderUri` change, no crash.
-5. [ ] **F7 fix:** a write against an unreachable folder becomes a retriable sync error (skip
+5. [x] **F7 fix:** a write against an unreachable folder becomes a retriable sync error (skip
    the round, surface it in the sync status), never FATAL. Test-first in `core/sync` with a
-   failing `FileStore`.
+   failing `FileStore`. Done 2026-10-30: `1ff6131` (core: caught, `healthy`, retry after the
+   next pull) and commit pending-f7ui (Settings shows "Can't reach the folder", EN + DE).
 6. [ ] **T1 residual:** reboot and `adb install -r` on the Nord keep the folder healthy (the
    `<queries>` fix).
 7. [x] Reset the investigation settings on both devices (done 2026-10-28 23:30: `stay_on` 0,
