@@ -61,6 +61,9 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
 - **Clock skew:** the Nord's time zone is `Asia/Dubai` with the local time set to match CET, so
   its UTC clock is ~3 h behind. HLC copes, but the Nord's edits lose LWW against Moto edits from
   the previous 3 h. Device config, fixed 2026-10-28 (automatic time and zone).
+- **Nord time zone:** with automatic time zone on, the Nord picks `Asia/Dubai` (network country
+  `ch`) after a reboot. Automatic time keeps its UTC clock right (0.25 s off), so HLC and sync are
+  unaffected; only displayed times are off. Set the zone by hand if it matters.
 - **T2 results:** round 1 (simultaneous) and round 2 (staggered 1 / 5 / 10 s) both converged,
   no crashes, no `_N` copies; only the writer-made `(1)`s above.
 - **T3 result (2026-10-30 22:10), folder-creation race with a dedicated parent:** the Moto
@@ -109,9 +112,12 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
    the round, surface it in the sync status), never FATAL. Test-first in `core/sync` with a
    failing `FileStore`. Done 2026-10-30: `1ff6131` (core: caught, `healthy`, retry after the
    next pull) and 582728d (Settings shows "Can't reach the folder", EN + DE).
-6. [ ] **T1 residual:** reboot and `adb install -r` on the Nord keep the folder healthy (the
-   `<queries>` fix).
+6. [x] **T1 residual:** reboot and `adb install -r` on the Nord keep the folder healthy (the
+   `<queries>` fix). Done 2026-10-30
+   23:10–23:14: after `adb reboot` and after `adb install -r`, the Nord listed the same 22 files,
+   no Dropbox provider or grant error, no msuite crash.
 7. [x] Reset the investigation settings on both devices (done 2026-10-28 23:30: `stay_on` 0,
+   again on 2026-10-30 23:15 after a session with stay-on for charging devices;
    Doze enabled). They never helped: stay-on only works while charging, and polling stops when
    the screen goes off anyway.
 8. [ ] Close the plan: move what lasts into `architecture.md` / `testing.md`, tick step 8 in
