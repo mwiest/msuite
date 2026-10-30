@@ -88,7 +88,7 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
 5. [x] **F7 fix:** a write against an unreachable folder becomes a retriable sync error (skip
    the round, surface it in the sync status), never FATAL. Test-first in `core/sync` with a
    failing `FileStore`. Done 2026-10-30: `1ff6131` (core: caught, `healthy`, retry after the
-   next pull) and commit pending-f7ui (Settings shows "Can't reach the folder", EN + DE).
+   next pull) and 582728d (Settings shows "Can't reach the folder", EN + DE).
 6. [ ] **T1 residual:** reboot and `adb install -r` on the Nord keep the folder healthy (the
    `<queries>` fix).
 7. [x] Reset the investigation settings on both devices (done 2026-10-28 23:30: `stay_on` 0,
