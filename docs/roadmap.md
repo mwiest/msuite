@@ -25,7 +25,6 @@ After v1, roughly in this order:
 - A machine without any JDK 21 can't build: the daemon is pinned to 21 (detekt 1.23 fails on
   JDK 25) and no toolchain download is configured. Drop the pin once detekt 2 is stable.
 - Android-only Compose modules log "commonTest was configured but not added to any compilation".
-- CI runs failed lately; investigate first thing (step 1 of [`plans/v1-step8b-dropbox-conflicts.md`](plans/v1-step8b-dropbox-conflicts.md#next-session)). `allTests` was red from `ea2d558` to `891630f`.
 - The APK holds `libandroidx.graphics.path.so` (AndroidX, Apache-2), pulled in by Compose UI
   through `androidx.graphics:graphics-path`. It clashes with the letter of "no native `.so`",
   whose reason is F-Droid and SQLCipher; decide whether the rule means our own native code only.

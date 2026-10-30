@@ -60,16 +60,25 @@ no crash, no data-bearing duplicates, and every finding below is fixed or a reco
   the previous 3 h. Device config, fixed 2026-10-28 (automatic time and zone).
 - **T2 results:** round 1 (simultaneous) and round 2 (staggered 1 / 5 / 10 s) both converged,
   no crashes, no `_N` copies; only the writer-made `(1)`s above.
+- **T3 result (2026-10-30 22:10), folder-creation race with a dedicated parent:** the Moto
+  created `todo/{gid}` and published at 22:10:05.3. At 22:10:06.2 the Nord's
+  `resolveOrCreate` found no folder (its view was behind), `createDirectory` returned `null`,
+  and the `IOException("cannot create directory ...")` escaped `LiveSync.publish()` on
+  `Dispatchers.Main.immediate`: **F7 on a healthy folder, the app closed.** Relaunched at
+  22:11:37, the Nord found the folder, published into it, and both converged on 2 files. No
+  twin `{gid}_<n>` seen by either device, so with a dedicated parent F1 turns into F7.
 
 ## Next session
 
-1. [ ] **Check why the GitHub Actions pipeline failed lately** (`gh run list`, `gh run view
+1. [x] **Check why the GitHub Actions pipeline failed lately** (`gh run list`, `gh run view
    --log-failed`). Likely suspect: `allTests` was red from `ea2d558` until `891630f`
-   (`PairingTest`); confirm and fix whatever else fails. Update `roadmap.md` → Known problems.
-2. [ ] **Device prep:** both plugged in, screens on, app in the foreground (sync polls only in
+   (`PairingTest`); confirm and fix whatever else fails. Done 2026-10-30: three runs had failed
+   (spotless twice, `PairingTest` once), all already fixed locally; green after the push
+   (`41127664821`).
+2. [x] **Device prep:** both plugged in, screens on, app in the foreground (sync polls only in
    the foreground). Health check: `FolderPlug: list()` count equal on both (11 at handoff), no
    `(1)` / `_N` names. Dump logcat before anything clears it.
-3. [ ] **T3, folder-creation race (F1):** force-stop both apps, delete `msuite/todo/{gid}` in
+3. [x] **T3, folder-creation race (F1):** force-stop both apps, delete `msuite/todo/{gid}` in
    Dropbox, wait until both devices' views of `msuite/todo/` are empty, start both apps within
    the same second, then check `msuite/todo/` for one `{gid}` or two. If two: serialize creation
    (existence check, settle delay, retry) and adopt or merge a `{gid}_<n>` twin.
