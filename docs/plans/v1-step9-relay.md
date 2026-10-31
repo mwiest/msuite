@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **not started.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slice 1 done (2026-10-31); slices 2 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -31,8 +31,8 @@ Proposed here, confirm or overrule before the slice that needs them (see Open qu
 
 - **HTTP API** (all under `/v1`): `PUT /v1/{appId}/{groupId}/{name}` (body = object bytes),
   `GET /v1/{appId}/{groupId}/{name}`, `DELETE /v1/{appId}/{groupId}/{name}`, and
-  `GET /v1/{appId}/{groupId}/` for the listing: `text/plain`, one name per line. The key charset
-  (`[A-Z0-9_]`) needs no escaping and no serializer on the relay. `GET /health` for step 10.
+  `GET /v1/{appId}/{groupId}/` for the listing: `text/plain`, one name per line. Names are
+  validated by the shared `ObjectKey` grammar (decision 0079), so the relay needs no serializer. `GET /health` for step 10.
 - **Status codes:** `201` created, `200` already present (a create-only put of an existing key is
   success, decision 0003), `400` a name that doesn't parse or a body whose SHA-256 doesn't match its
   `hash`, `401` a wrong or missing token, `403` registration refused (allowlist), `404` absent,
@@ -59,12 +59,12 @@ Proposed here, confirm or overrule before the slice that needs them (see Open qu
 Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTests assembleDebug
 :server:jar` green.
 
-1. [ ] **`core/relay` and the wire contract.** New module (`msuite.kmp-library`, depends on
+1. [x] **`core/relay` and the wire contract.** New module (`msuite.kmp-library`, depends on
    `core/sync`); catalog adds `ktor-client-core`, `ktor-client-okhttp`, `ktor-server-test-host`
    (decision record: the module, engine and TLS answers above). `RelayApi`: path building and
    parsing for keys and listings, status-code constants, `relayToken(root, appId)`. Tests: token
    is deterministic, differs per app, and differs from `groupId`; paths round-trip; a name with
-   `/`, `..` or a lowercase letter is rejected. After it lands: `<commit>`.
+   `/`, `..` or outside the key grammar is rejected. After it lands: `c364585`.
 2. [ ] **Relay storage.** `BlobStore` in `server` over a data directory: create-only `put` (temp +
    hard link), `list`, `get`, `delete`, the hash check against the key, the namespace registry
    (`.token`, created with `CREATE_NEW` so two first puts race safely), byte accounting per
