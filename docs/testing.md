@@ -183,9 +183,9 @@ build signed with another machine's debug key won't `install -r` over the old on
 
 ## Two-device check (relay)
 
-Not run yet (2026-11-01): no Android device or emulator is available in the implementation
-environment. Run this once two devices (or an emulator and a phone) are on hand; the relay itself
-is covered by `server/src/test` and the simulator.
+Not run yet (2026-11-01): the emulator binaries and `test_avd` exist (`/dev/kvm` is present), but
+the headless boot was not completed in this session; no physical devices were attached. The
+procedure below is ready to run.
 
 Setup: build `:server:jar`, then on a LAN host run
 `MSUITE_RELAY_PORT=8080 MSUITE_RELAY_DATA=/srv/msuite java -jar server/build/libs/server.jar`.

@@ -108,7 +108,8 @@ Each step may take several commits; a step that grows big gets its own plan.
 9. [ ] **Relay and relay plug.** `server/` as a Ktor CIO binary with namespace tokens (decision
    0030), plus the plug that talks to it; capability-gated `delete` and writer-side pruning with
    the recovery rule (`architecture.md` → Compaction). Proves: live self-hosted sync without a
-   sync tool. Plan: [`v1-step9-relay.md`](v1-step9-relay.md).
+   sync tool. Plan: [`v1-step9-relay.md`](v1-step9-relay.md). Code landed 2026-11-01 (slices 1 to
+   11); the emulator and two-device checks are pending.
 10. [ ] **Cloud deploy template for the relay.** Proves: a non-technical hosting path exists.
 
 ## Open questions

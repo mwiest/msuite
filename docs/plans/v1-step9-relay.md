@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 to 11 done and slice 7 code landed (2026-11-01; emulator check pending); slice 12, the two-device check, awaits hardware.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 11 done and slice 7 code landed (2026-11-01); the emulator and two-device checks are pending. An AVD (`test_avd`) and `/dev/kvm` are present, so the check can be resumed here; a headless boot was started but not completed in this session.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -96,7 +96,7 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
    chooser, relay URL field (https only in release), the group ID to give an operator's allowlist,
    and status for unreachable, refused and full, in English and German. `product.md` updated.
    Checked on an emulator against `./gradlew :server:run` on the host (`http://10.0.2.2:<port>`).
-   Code landed: `e619153`; the emulator check is still pending.
+   Code landed: `e619153`; the emulator check is still pending (`test_avd` is available).
 8. [x] **Pairing carries the relay.** `BackendType.Relay(2)` whose section is the relay URL in
    UTF-8 (record: the section layout; decision 0072 makes a new type id no format change). A
    joining device that scans it preselects the relay with that URL; the token comes from the root.
@@ -124,8 +124,8 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
     relay down (status, then recovery); a namespace wiped on the relay (refilled); the object count
     stays bounded after many edits. Repeat the count check on the Dropbox folder. `testing.md`
     gets "Two-device check (relay)"; `architecture.md`'s Relay and Compaction sections become
-    "what the code does"; the plan closes per `AGENTS.md`. After it lands: **pending**: no Android
-    device or emulator is available here. The section and checks are in `testing.md`.
+    "what the code does"; the plan closes per `AGENTS.md`. After it lands: **pending**. The
+    procedure is in `testing.md`; `test_avd` and adb are installed, so start there.
 
 ## Open questions
 
@@ -144,6 +144,24 @@ For Marc, before the slice named:
 - **Server classpath:** `core/relay` -> `core/sync` brings `core/storage` (the SQLDelight runtime,
   no driver) onto the relay. Harmless for a jar, but if the native image of 0017 comes, the key
   grammar may move to a smaller module.
+
+## Next steps (resume here)
+
+1. **Slice 7 emulator check.** Boot `test_avd` (KVM is available), run
+   `./gradlew :server:run` on the host, install the debug APK, and in the emulator choose
+   `http://10.0.2.2:8080` (or the configured port). Create, edit and delete a task; confirm the
+   relay's data directory holds ciphertext and Settings shows a last sync.
+2. **Slice 12 two-device check.** Use two emulators (clone `test_avd` into a second AVD) or a phone
+   and the emulator. Follow `testing.md` -> "Two-device check (relay)": pair by QR carrying the
+   relay, simultaneous/staggered/offline edits, the 10-minute soak, relay restart and down, a wiped
+   namespace refilled, and the bounded object count; repeat the count check on the Dropbox folder.
+3. **Close the step.** Record the check results in `testing.md`, tick slice 12 and
+   `v1-todo.md` step 9, then close this plan per `AGENTS.md` (move what lasts into
+   `architecture.md`, `testing.md` or a decision record, then delete the plan).
+4. **Optional cleanups found during the build.** Close the engine-built `HttpClient` in
+   `RelayPlug` if that constructor is ever used; delete stale `.tmp_*` files in `BlobStore` at
+   startup; replace the UI's `RelayRefused.reason` string comparisons with an enum if more
+   statuses appear.
 
 ## How to verify
 
