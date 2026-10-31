@@ -101,7 +101,10 @@ class LiveSync(
         for ((key, objectKey) in parsed) {
             if (objectKey != null) pullOne(key, objectKey, ingested)
         }
-        if (!hasOwnObject(keys) && replica.canRecover(plugId)) publishSnapshot()
+        if (!hasOwnObject(keys) && replica.canRecover(plugId)) {
+            snapshotPending = null
+            publishSnapshot()
+        }
         compact(keys)
         sweepConflictCopies(parsed.filterValues { it != null }.keys, parsed.filterValues { it == null }.keys)
         // Prune bookkeeping: remove entries for keys no longer in the backend (decision 0002).
@@ -149,6 +152,10 @@ class LiveSync(
     private suspend fun compact(keys: List<String>) {
         val objects = keys.mapNotNull { key -> parseKey(key)?.let { key to it } }
         if (snapshotPending != null && keys.contains(snapshotPending)) snapshotPending = null
+        // A pending snapshot that was given up (0077) no longer blocks a new one.
+        if (snapshotPending != null && !keys.contains(snapshotPending) && replica.canRecover(plugId)) {
+            snapshotPending = null
+        }
         val latest = latestOwnSnapshot(objects)
         if (latest != null) pruneCovered(objects, latest)
         if (snapshotPending == null && ownDeltasAfter(objects, latest) >= SNAPSHOT_EVERY) publishSnapshot()
