@@ -19,6 +19,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import java.io.IOException
 import java.util.Properties
@@ -169,6 +170,31 @@ class LiveSyncActionsTest : StringSpec({
             live.applyJoinedBackend(BackendType.Relay, "http://relay.example".encodeToByteArray())
             live.backend.value shouldBe SyncBackend.None
 
+            live.setBackend(SyncBackend.None)
+        }
+    }
+
+    "polling follows a backend chosen after the screen became visible" {
+        val settings = TodoSettings(MapSettings())
+        val relay = CountingPlug()
+
+        coroutineScope {
+            val live = LiveSyncActions(
+                replica = replica(),
+                identity = StoredIdentity(MemoryRootStore()),
+                settings = settings,
+                folderPick = NoPick,
+                fileStoreFactory = { FlakyFileStore(PlainFileStore(tempdir())) },
+                scope = this,
+                relay = RelayOptions(plugFactory = { _, _ -> relay }),
+            )
+            live.startPolling() // no backend yet, common at first onStart
+            live.setBackend(SyncBackend.Relay("https://relay.example"))
+            withTimeout(2_000) {
+                while (relay.lists == 0) yield()
+            }
+            relay.lists shouldBeGreaterThan 0
+            live.stopPolling()
             live.setBackend(SyncBackend.None)
         }
     }

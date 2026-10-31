@@ -76,6 +76,7 @@ class LiveSyncActions(
     private var liveSync: LiveSync? = null
     private var startJob: Job? = null
     private var pollingJob: Job? = null
+    private var pollingWanted = false
 
     /** Opens the folder picker, switches to the folder, and starts its sync. */
     suspend fun pickFolder() {
@@ -109,6 +110,7 @@ class LiveSyncActions(
                 val sync = LiveSync(replica, plug, plugId, "todo", identity, scope, 10.seconds)
                 liveSync = sync
                 startJob = scope.launch { sync.start() }
+                if (pollingWanted) startPolling()
             }
     }
 
@@ -161,6 +163,7 @@ class LiveSyncActions(
 
     /** Starts polling for changes every 10 seconds (foreground only). */
     fun startPolling() {
+        pollingWanted = true
         if (pollingJob != null || liveSync == null) return
         pollingJob = scope.launch {
             while (isActive) {
@@ -185,6 +188,7 @@ class LiveSyncActions(
 
     /** Stops the polling job. */
     fun stopPolling() {
+        pollingWanted = false
         pollingJob?.cancel()
         pollingJob = null
     }
