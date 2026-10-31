@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 to 6 done (2026-10-31); slices 7 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 6 done and slice 7 code landed (2026-10-31; emulator check pending); slices 8 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -96,7 +96,7 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
    chooser, relay URL field (https only in release), the group ID to give an operator's allowlist,
    and status for unreachable, refused and full, in English and German. `product.md` updated.
    Checked on an emulator against `./gradlew :server:run` on the host (`http://10.0.2.2:<port>`).
-   After it lands: `<commit>`.
+   Code landed: `e619153`; the emulator check is still pending.
 8. [ ] **Pairing carries the relay.** `BackendType.Relay(2)` whose section is the relay URL in
    UTF-8 (record: the section layout; decision 0072 makes a new type id no format change). A
    joining device that scans it preselects the relay with that URL; the token comes from the root.
