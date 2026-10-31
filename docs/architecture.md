@@ -4,10 +4,11 @@ How the code is organised, and the sync design it is being built towards. What t
 user is in `product.md`; why it is built this way is in `decisions/`. A change in structure updates
 this file in the same commit.
 
-**Status (2026-10-17):** steps 2 to 6 are code: the merge core, the manual plug and the harness in
+**Status (2026-11-01):** steps 2 to 8 are code: the merge core, the manual plug and the harness in
 `core/model`, `core/sync` and `core/sync-testing`; storage (step 3) in `core/storage`; the ToDo app
 in `apps/todo`; the crypto primitives, the batch envelope and the object-key grammar in
-`core/crypto` and `core/sync`, with simulator Layer 3. The remaining modules are placeholders. The
+`core/crypto` and `core/sync`, with simulator Layer 3. Step 9, the relay and compaction, is code
+and covered by tests; its two-device check is pending. The
 sections from "Sync" on describe the agreed design; parts that are code say so. Each part becomes
 "what the code does" as its step in [`plans/v1-todo.md`](plans/v1-todo.md) lands; mark it then.
 
@@ -292,12 +293,21 @@ joins (0033) and the periodic compaction of 0002.
 
 ### Relay
 
-`server/`: one Ktor CIO binary, filesystem blob storage, manual wiring, no reflection (decision
-0017). It implements the plug contract over HTTP and reuses the key and contract types from
-`core`. Access per namespace (decision 0030): the client sends
-`HKDF-SHA256(root, "msuite-relay-auth-v1:" + appId)` as a bearer token; the relay stores only its
-SHA-256, registered by the first `put` to the namespace. The operator can restrict registration and
-cap namespace size. Cloudflare users need no relay: R2 works with the object-storage plug.
+`core/relay` owns the wire contract and the client plug (decision 0079): `RelayApi` builds and
+parses `/v1/{appId}/{groupId}/{name}` and the `/v1/{appId}/{groupId}/` listing, `RelayStatus` names
+the statuses, `relayToken` derives the bearer token, and `RelayPlug` is the `BackendPlug` over a
+Ktor `HttpClient`. Reachability maps to `RelayRefused(reason)` for 401/403/413/507 and to
+`IOException` otherwise.
+
+`server/` is one Ktor CIO binary with filesystem blobs and manual wiring (decision 0017). It uses
+the same `RelayApi` so the two sides cannot drift. `BlobStore` stores `{dataDir}/{appId}/{groupId}/
+{name}` and links a complete temp file into place, so a listed name is always complete; the hash
+in the name is checked against the body. The first `put` to a namespace registers it by linking
+`SHA-256(token)` into `.token` (decision 0030); later requests must present the same bearer token.
+`RelayConfig` reads `MSUITE_RELAY_PORT`, `_DATA`, `_ALLOW_GROUPS` (registration allowlist, unset =
+open) and both `_MAX_*_BYTES` limits from the environment once in `main`. The relay speaks plain
+HTTP; a reverse proxy or the host terminates TLS (0079). Cloudflare users need no relay: R2 works
+with the object-storage plug.
 
 ## Identity, pairing and recovery
 

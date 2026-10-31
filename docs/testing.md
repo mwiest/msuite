@@ -181,6 +181,42 @@ Gotchas: a device's UTC clock matters, its time zone doesn't (an automatic time 
 while automatic time is right); adb can't unlock a PIN screen or drive the folder picker; a debug
 build signed with another machine's debug key won't `install -r` over the old one.
 
+## Two-device check (relay)
+
+Not run yet (2026-11-01): no Android device or emulator is available in the implementation
+environment. Run this once two devices (or an emulator and a phone) are on hand; the relay itself
+is covered by `server/src/test` and the simulator.
+
+Setup: build `:server:jar`, then on a LAN host run
+`MSUITE_RELAY_PORT=8080 MSUITE_RELAY_DATA=/srv/msuite java -jar server/build/libs/server.jar`.
+Put Caddy (or the host's TLS) in front and use `https://…` on both devices, or use a debug build
+with `http://<host>:8080` (the Android emulator reaches the host as `http://10.0.2.2:8080`).
+Install the same debug build on both, pair by QR (the code carries the relay URL, record 0080), and
+keep both apps in the foreground while syncing. The group ID in Settings is what
+`MSUITE_RELAY_ALLOW_GROUPS` would name.
+
+| Check | How | Pass |
+|---|---|---|
+| Health | `/health` answers 200; Settings shows a last sync on both | both reach the relay |
+| Simultaneous, staggered and offline edits | edit on both in the same second, then 1 / 5 / 10 s apart, then with one app offline | both converge, no crash, the offline edits arrive |
+| Soak | 10+ minutes of mixed edits, alternating, sometimes the same task on both | `field_state` identical cell for cell; `unreadable_batch` and `unconfirmed_publish` empty |
+| Relay restart | stop and start the jar while both apps poll | both show unreachable, then recover without user action |
+| Relay down | stop the jar for a minute | Settings says the relay is unreachable, edits wait locally, then sync |
+| Namespace wiped | delete `{dataDir}/{appId}/{groupId}` on the relay | the next pull republishes a snapshot; both converge again |
+| Object count | after many edits, `find {dataDir}/todo/{groupId} -type f ! -name '.*' \| wc -l` | stays near `SNAPSHOT_EVERY` + 1 per writer, not growing with edits |
+| Ciphertext only | read a stored file, and `grep -rl "a task title" {dataDir}` | no plaintext; keys name their writer |
+| Emulator + host | `./gradlew :server:run` on the host, debug APK in the emulator at `http://10.0.2.2:<port>` | a create/edit/delete round-trips |
+
+Compare databases cell for cell as in the folder check. Log signatures: `LiveSync: publish failed,
+retrying later`, and the relay's own request log; a 401 means the two devices are not paired to the
+same root, a 403 means the operator's allowlist lacks the group, a 507 means the namespace limit is
+too small. Removing the namespace by hand is safe: the recovery rule refills it.
+
+Gotchas: a release build refuses `http://` (by design); use a debug build for a plain-HTTP relay
+and turn the debug network config off implicitly by using a release build for TLS checks. The
+relay's data directory must be writable; a new namespace is registered by the first `put`, so a
+typo in the URL creates another namespace rather than failing.
+
 ## Formatting and static analysis
 
 Spotless (ktlint) and detekt (decision 0026). CI runs them with the tests (decision 0025); the

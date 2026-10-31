@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 to 6 and 8 to 11 done, slice 7 code landed (2026-11-01; emulator check pending); slice 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 11 done and slice 7 code landed (2026-11-01; emulator check pending); slice 12, the two-device check, awaits hardware.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -124,7 +124,8 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
     relay down (status, then recovery); a namespace wiped on the relay (refilled); the object count
     stays bounded after many edits. Repeat the count check on the Dropbox folder. `testing.md`
     gets "Two-device check (relay)"; `architecture.md`'s Relay and Compaction sections become
-    "what the code does"; the plan closes per `AGENTS.md`. After it lands: `<commit>`.
+    "what the code does"; the plan closes per `AGENTS.md`. After it lands: **pending**: no Android
+    device or emulator is available here. The section and checks are in `testing.md`.
 
 ## Open questions
 
