@@ -8,6 +8,8 @@ import com.msuite.todo.domain.SensitiveClipboard
 import com.msuite.todo.domain.StoredIdentity
 import com.msuite.todo.domain.TodoSettings
 import com.russhwolf.settings.SharedPreferencesSettings
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +36,11 @@ class TodoApplication : Application() {
 
     /** Copying the recovery key (decision 0041). */
     val clipboard: SensitiveClipboard by lazy { AndroidSensitiveClipboard(this, appScope) }
+
+    /** The one HTTP client behind the relay plug; OkHttp is the injected engine (decision 0079). */
+    val relayClient: HttpClient by lazy {
+        HttpClient(OkHttp) { expectSuccess = false }
+    }
 
     private companion object {
         const val ROOT_FILE = "identity.root"

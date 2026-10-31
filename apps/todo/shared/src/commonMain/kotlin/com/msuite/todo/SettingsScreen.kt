@@ -43,14 +43,6 @@ import com.msuite.todo.resources.app_name
 import com.msuite.todo.resources.author
 import com.msuite.todo.resources.back
 import com.msuite.todo.resources.export
-import com.msuite.todo.resources.folder_clear
-import com.msuite.todo.resources.folder_last_sync
-import com.msuite.todo.resources.folder_never_synced
-import com.msuite.todo.resources.folder_pick
-import com.msuite.todo.resources.folder_sync
-import com.msuite.todo.resources.folder_sync_configured
-import com.msuite.todo.resources.folder_sync_not_configured
-import com.msuite.todo.resources.folder_sync_now
 import com.msuite.todo.resources.ic_arrow_back
 import com.msuite.todo.resources.import_file
 import com.msuite.todo.resources.license
@@ -97,6 +89,7 @@ enum class SettingsDestination { Pairing, Recovery }
 fun SettingsScreen(
     container: TodoContainer,
     version: String,
+    allowInsecureRelay: Boolean,
     onBack: () -> Unit,
     onOpen: (SettingsDestination) -> Unit,
 ) {
@@ -124,7 +117,7 @@ fun SettingsScreen(
             HorizontalDivider(Modifier.padding(top = 24.dp))
             SyncSection(container.sync)
             HorizontalDivider(Modifier.padding(top = 24.dp))
-            FolderPlugSection(container.live)
+            SyncBackendSection(container.live, allowInsecureRelay)
             HorizontalDivider(Modifier.padding(top = 24.dp))
             PairingSection { onOpen(SettingsDestination.Pairing) }
             HorizontalDivider(Modifier.padding(top = 24.dp))

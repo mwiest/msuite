@@ -25,6 +25,12 @@ fun interface RelayPlugFactory {
     fun create(url: String, root: ByteArray): BackendPlug
 }
 
+/** The relay half of [LiveSyncActions]: the shell's plug factory and whether http is allowed. */
+data class RelayOptions(
+    val plugFactory: RelayPlugFactory? = null,
+    val allowInsecure: Boolean = false,
+)
+
 /**
  * Live sync over the chosen backend: last sync, pending changes, and whether it is failing. A relay
  * refusal carries the [RelayRefused] so Settings can say why (auth, registration, limits).
@@ -35,6 +41,11 @@ data class SyncStatus(
     val failing: Boolean = false,
     val refused: RelayRefused? = null,
 )
+
+/** Whether [url] is a relay address this build may use: https, or http for a debug LAN/emulator. */
+fun isAllowedRelayUrl(url: String, allowInsecure: Boolean): Boolean =
+    (url.startsWith("https://") && url.length > "https://".length) ||
+        (allowInsecure && url.startsWith("http://") && url.length > "http://".length)
 
 /**
  * The live plug wired to the settings and replica (decision 0037): one backend at a time, chosen in
@@ -48,7 +59,7 @@ class LiveSyncActions(
     private val folderPick: FolderPick,
     private val fileStoreFactory: (String) -> FileStore,
     private val scope: CoroutineScope,
-    private val relayPlugFactory: RelayPlugFactory? = null,
+    private val relay: RelayOptions = RelayOptions(),
 ) {
     private val clock: Clock = Clock.System
     private val _status = MutableStateFlow(SyncStatus(lastSync = null, pendingChanges = 0))
@@ -74,7 +85,13 @@ class LiveSyncActions(
 
     /** Chooses one backend, stopping the previous one first (plan v1 step 9). */
     fun setBackend(value: SyncBackend) {
-        settings.setSyncBackend(value)
+        val normalized = when (value) {
+            is SyncBackend.Relay -> value.copy(url = value.url.trimEnd('/'))
+            else -> value
+        }
+        val changed = settings.syncBackend.value != normalized
+        settings.setSyncBackend(normalized)
+        if (!changed && liveSync != null) return
         liveSync?.stop()
         liveSync = null
         _status.value = SyncStatus(lastSync = null, pendingChanges = 0)
@@ -101,8 +118,15 @@ class LiveSyncActions(
                 FolderPlug(fileStoreFactory(chosen.uri)) to PlugId("folder:${chosen.uri}")
 
             is SyncBackend.Relay ->
-                relayPlugFactory?.let { it.create(chosen.url, root) to PlugId("relay:${chosen.url}") }
+                if (!isAllowedRelayUrl(chosen.url, relay.allowInsecure)) {
+                    null
+                } else {
+                    relay.plugFactory?.let { it.create(chosen.url, root) to PlugId("relay:${chosen.url}") }
+                }
         }
+
+    /** The group ID an operator's relay allowlist names; computed from the root, never stored. */
+    suspend fun groupId(): String? = identity.root(KEY_GEN_V1)?.let { com.msuite.core.sync.groupId(it) }
 
     /** Manually triggers a sync (pull from the backend). */
     suspend fun syncNow() {

@@ -3,6 +3,8 @@
 
     <!-- Only pairing scans; the app installs and works without a camera. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- The relay plug (plan v1 step 9). -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />

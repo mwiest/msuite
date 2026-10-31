@@ -3,8 +3,9 @@
 What msuite is and what its apps do today. When behaviour changes, this file changes in the same
 commit. What is intended but not built is in `roadmap.md` and the plans.
 
-Checked against the code on 2026-10-30: **the ToDo app works offline on one device, syncs live
-with paired devices through a folder the user already syncs (Dropbox, Syncthing, Nextcloud), exports
+Checked against the code on 2026-10-31: **the ToDo app works offline on one device, syncs live
+with paired devices through a folder the user already syncs (Dropbox, Syncthing, Nextcloud) or a
+self-hosted relay, exports
 an encrypted whole-state snapshot file, pairs a second device by QR, and shows or restores the group
 key as 24 recovery words.** On first
 start it
@@ -17,9 +18,11 @@ mark done or not done, and delete in the overflow menu. Title and notes are save
 field or close the sheet. A long press drags an open task to a new place. The "+" tab creates a list;
 the top bar's menu renames the selected list, moves it left or right, or deletes it after confirming
 how many tasks go with it ("My Tasks" can't be deleted). The gear opens the settings: the theme
-(system default, light or dark), a Folder Sync section that picks the synced folder, shows when the
-last sync got through (or that the folder can't be reached and is retried every 10 seconds), and
-syncs on demand, a Sync section that exports the device's whole state to an
+(system default, light or dark), a Sync method chooser (off, a synced folder, or a self-hosted
+relay) that picks the folder or takes the relay's https address, shows the group ID an operator's
+allowlist needs, and reports the last sync or why it is failing (folder unreachable, relay
+unreachable, key refused, registration refused, namespace full), with sync on demand, a Sync
+section that exports the device's whole state to an
 encrypted file or merges one in (the file is ciphertext under the group's root, so it imports on
 another device once the two are paired), a Pairing section that shows this device's QR code or scans
 another's with the camera (joining asks first and says the device's tasks will be shared), a
@@ -64,11 +67,14 @@ sync layer. Success is a working demonstration of the architecture and UX, not a
 Partly built. Settings has Export and Import: Export writes the device's whole state to one
 encrypted file, Import merges a chosen file in. The file is AES-256-GCM ciphertext under the group's
 root secret, so a backend or anyone who finds it sees only opaque bytes; it imports on any device
-that holds the group's root, which pairing by QR gives it. Live sync runs through a synced folder:
-each device writes its edits, 10 seconds after the last one, as encrypted files into the picked
-folder, and reads the others' files every 10 seconds while the app is open. A folder that can't be
-reached never closes the app; Settings says so and the edits wait on the device until it can.
-Architecture in `architecture.md`.
+that holds the group's root, which pairing by QR gives it. Live sync runs through one backend at a
+time, chosen in Settings: a synced folder, where each device writes its edits 10 seconds after the
+last one as encrypted files into the picked folder and reads the others' every 10 seconds while
+the app is open, or a self-hosted relay, where each device stores the same encrypted objects over
+HTTP and authenticates with a token derived from the root. A folder or relay that can't be reached
+never closes the app; Settings says so and the edits wait on the device until it can. A relay
+speaks plain HTTP behind a TLS reverse proxy; the app only accepts https addresses (a debug build
+also accepts http for a LAN or emulator). Architecture in `architecture.md`.
 
 - Sync is optional. The user picks a backend: none (export/import a file), a synced folder
   (Syncthing, Nextcloud, Dropbox), WebDAV, an S3-compatible bucket, or the self-hostable msuite

@@ -25,9 +25,11 @@ base {
 
 dependencies {
     implementation(project(":apps:todo:shared"))
+    implementation(project(":core:relay"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.documentfile)
     implementation(libs.sqldelight.android.driver)
+    implementation(libs.ktor.client.okhttp)
     implementation(libs.zxing.core)
     // The camera half only; it brings ZXing core along, which the encoder uses too (record 0074).
     implementation(libs.zxing.android.embedded)

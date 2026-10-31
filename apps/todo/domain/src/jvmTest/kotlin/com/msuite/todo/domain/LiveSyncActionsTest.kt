@@ -121,7 +121,7 @@ class LiveSyncActionsTest : StringSpec({
                 folderPick = NoPick,
                 fileStoreFactory = { store },
                 scope = this,
-                relayPlugFactory = { _, _ -> relay },
+                relay = RelayOptions(plugFactory = { _, _ -> relay }),
             )
             live.startSyncIfConfigured()
             yield()
@@ -140,6 +140,14 @@ class LiveSyncActionsTest : StringSpec({
         }
     }
 
+    "only https relay URLs are allowed unless the debug build opts in" {
+        isAllowedRelayUrl("https://relay.example", allowInsecure = false) shouldBe true
+        isAllowedRelayUrl("http://127.0.0.1:8080", allowInsecure = false) shouldBe false
+        isAllowedRelayUrl("http://127.0.0.1:8080", allowInsecure = true) shouldBe true
+        isAllowedRelayUrl("https://", allowInsecure = true) shouldBe false
+        isAllowedRelayUrl("relay.example", allowInsecure = true) shouldBe false
+    }
+
     "a relay refusal is carried on the status" {
         val refusal = RelayRefused("unauthorized", 401)
         val settings = TodoSettings(MapSettings())
@@ -152,7 +160,7 @@ class LiveSyncActionsTest : StringSpec({
                 folderPick = NoPick,
                 fileStoreFactory = { FlakyFileStore(PlainFileStore(tempdir())) },
                 scope = this,
-                relayPlugFactory = { _, _ -> ThrowingPlug(refusal) },
+                relay = RelayOptions(plugFactory = { _, _ -> ThrowingPlug(refusal) }),
             )
             live.setBackend(SyncBackend.Relay("https://relay.example"))
             yield()

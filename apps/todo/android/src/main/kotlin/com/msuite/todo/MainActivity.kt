@@ -1,5 +1,6 @@
 package com.msuite.todo
 
+import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -7,7 +8,10 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
+import com.msuite.core.relay.RelayPlug
 import com.msuite.todo.domain.LiveSyncActions
+import com.msuite.todo.domain.RelayOptions
+import com.msuite.todo.domain.RelayPlugFactory
 import com.msuite.todo.domain.ThemeMode
 import kotlinx.coroutines.launch
 
@@ -20,12 +24,17 @@ class MainActivity : ComponentActivity() {
         // The bar icons must contrast with the app's theme, which may differ from the system's.
         lifecycleScope.launch { app.settings.themeMode.collect { enableEdgeToEdge(it.barStyle(), it.barStyle()) } }
         val version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+        val debug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         val shell = ShellServices(
             files = SafSnapshotFiles(this),
             folder = SafFolderPick(this),
             qr = ZxingQrCodes(this),
             clipboard = app.clipboard,
             fileStoreFactory = { uri -> SafFileStore(applicationContext, android.net.Uri.parse(uri)) },
+            relayPlugFactory = RelayPlugFactory { url, root ->
+                RelayPlug(url, "todo", root, app.relayClient)
+            },
+            allowInsecureRelay = debug,
         )
         liveSync = LiveSyncActions(
             replica = app.replica,
@@ -34,6 +43,10 @@ class MainActivity : ComponentActivity() {
             folderPick = shell.folder,
             fileStoreFactory = shell.fileStoreFactory,
             scope = lifecycleScope,
+            relay = RelayOptions(
+                plugFactory = shell.relayPlugFactory,
+                allowInsecure = shell.allowInsecureRelay,
+            ),
         )
         liveSync.startSyncIfConfigured()
         val container = TodoContainer(
