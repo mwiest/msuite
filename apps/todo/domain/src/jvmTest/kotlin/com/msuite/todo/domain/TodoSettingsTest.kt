@@ -30,4 +30,26 @@ class TodoSettingsTest : StringSpec({
     "an unknown stored theme reads as the system's" {
         TodoSettings(MapSettings("theme" to "Sepia")).themeMode.value shouldBe ThemeMode.System
     }
+
+    "a legacy synced folder URI migrates to a Folder backend" {
+        val stored = MapSettings("syncedFolderUri" to "content://folder")
+
+        TodoSettings(stored).syncBackend.value shouldBe SyncBackend.Folder("content://folder")
+        TodoSettings(stored).syncBackend.value shouldBe SyncBackend.Folder("content://folder")
+    }
+
+    "the chosen backend round-trips and drives the folder URI" {
+        val stored = MapSettings()
+        TodoSettings(stored).syncBackend.value shouldBe SyncBackend.None
+
+        val settings = TodoSettings(stored)
+        settings.setSyncBackend(SyncBackend.Folder("content://folder"))
+        settings.syncedFolderUri.value shouldBe "content://folder"
+        settings.setSyncBackend(SyncBackend.Relay("https://relay.example"))
+        settings.syncedFolderUri.value shouldBe null
+
+        TodoSettings(stored).syncBackend.value shouldBe SyncBackend.Relay("https://relay.example")
+        settings.setSyncBackend(SyncBackend.None)
+        TodoSettings(stored).syncBackend.value shouldBe SyncBackend.None
+    }
 })

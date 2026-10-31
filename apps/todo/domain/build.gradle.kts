@@ -10,6 +10,7 @@ kotlin {
         commonMain.dependencies {
             api(project(":core:model"))
             api(project(":core:sync"))
+            api(project(":core:relay"))
             api(libs.multiplatform.settings)
         }
         jvmTest.dependencies {

@@ -7,12 +7,12 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
-import com.msuite.todo.domain.FolderSyncActions
+import com.msuite.todo.domain.LiveSyncActions
 import com.msuite.todo.domain.ThemeMode
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private lateinit var folderSync: FolderSyncActions
+    private lateinit var liveSync: LiveSyncActions
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
             clipboard = app.clipboard,
             fileStoreFactory = { uri -> SafFileStore(applicationContext, android.net.Uri.parse(uri)) },
         )
-        folderSync = FolderSyncActions(
+        liveSync = LiveSyncActions(
             replica = app.replica,
             identity = app.identity,
             settings = app.settings,
@@ -35,20 +35,20 @@ class MainActivity : ComponentActivity() {
             fileStoreFactory = shell.fileStoreFactory,
             scope = lifecycleScope,
         )
-        folderSync.startSyncIfConfigured()
+        liveSync.startSyncIfConfigured()
         val container = TodoContainer(
             replica = app.replica,
             settings = app.settings,
             files = shell.files,
             identity = app.identity,
-            folderSync = folderSync,
+            liveSync = liveSync,
         )
         setContent { TodoApp(container, version, shell) }
     }
 
     override fun onStart() {
         super.onStart()
-        folderSync.startPolling()
+        liveSync.startPolling()
     }
 
     override fun onStop() {
@@ -56,8 +56,8 @@ class MainActivity : ComponentActivity() {
         // Flush any pending changes before going to background (addresses the 10s debounce gap).
         // Await the flush before stopping polling to avoid race conditions.
         lifecycleScope.launch {
-            folderSync.flushPendingChanges()
-            folderSync.stopPolling()
+            liveSync.flushPendingChanges()
+            liveSync.stopPolling()
         }
     }
 }

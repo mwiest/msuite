@@ -19,8 +19,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.msuite.todo.domain.FolderSyncActions
-import com.msuite.todo.domain.FolderSyncStatus
+import com.msuite.todo.domain.LiveSyncActions
+import com.msuite.todo.domain.SyncStatus
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.cancel
 import com.msuite.todo.resources.folder_clear
@@ -41,7 +41,7 @@ import org.jetbrains.compose.resources.stringResource
 
 /** The folder plug (slice 12): pick a synced folder, show status, manual sync. */
 @Composable
-fun FolderPlugSection(folder: FolderSyncActions) {
+fun FolderPlugSection(folder: LiveSyncActions) {
     val status by folder.status.collectAsState()
     val folderUri by folder.folderUri.collectAsState()
     val scope = rememberCoroutineScope()
@@ -91,7 +91,7 @@ fun FolderPlugSection(folder: FolderSyncActions) {
 }
 
 @Composable
-private fun SyncStatusLines(status: FolderSyncStatus) {
+private fun SyncStatusLines(status: SyncStatus) {
     Text(
         status.lastSync?.let { stringResource(Res.string.folder_last_sync, it.toString()) }
             ?: stringResource(Res.string.folder_never_synced),
@@ -112,7 +112,7 @@ private fun SyncStatusLines(status: FolderSyncStatus) {
 @Composable
 private fun FolderPickDialog(
     showPickDialog: MutableState<Boolean>,
-    folder: FolderSyncActions,
+    folder: LiveSyncActions,
     busy: MutableState<Boolean>,
     scope: CoroutineScope,
 ) {
@@ -142,7 +142,7 @@ private fun FolderPickDialog(
 
 @Composable
 private fun FolderActionsRow(
-    folder: FolderSyncActions,
+    folder: LiveSyncActions,
     folderUri: String?,
     busy: MutableState<Boolean>,
     scope: CoroutineScope,

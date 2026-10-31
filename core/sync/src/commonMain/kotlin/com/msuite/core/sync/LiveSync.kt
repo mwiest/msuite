@@ -51,6 +51,11 @@ class LiveSync(
     /** Whether the last plug operation succeeded. */
     val healthy: StateFlow<Boolean> = _healthy.asStateFlow()
 
+    private val _failure = MutableStateFlow<Throwable?>(null)
+
+    /** The last plug failure, or `null` after a successful operation; a relay sets [RelayRefused]. */
+    val failure: StateFlow<Throwable?> = _failure.asStateFlow()
+
     suspend fun start() {
         groupId = groupId(requireNotNull(identity.root(KEY_GEN_V1)) { "no root for keyGen $KEY_GEN_V1" })
         publishJob = scope.launch {
@@ -131,8 +136,10 @@ class LiveSync(
             throw e
         } catch (e: Exception) {
             log.w(e) { "$operation failed, retrying later" }
+            _failure.value = e
             false
         }
+        if (ok) _failure.value = null
         _healthy.value = ok
         return ok
     }

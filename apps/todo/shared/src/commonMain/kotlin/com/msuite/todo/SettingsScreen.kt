@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.msuite.todo.domain.FolderSyncActions
 import com.msuite.todo.domain.SyncActions
 import com.msuite.todo.domain.SyncResult
 import com.msuite.todo.domain.ThemeMode
@@ -125,7 +124,7 @@ fun SettingsScreen(
             HorizontalDivider(Modifier.padding(top = 24.dp))
             SyncSection(container.sync)
             HorizontalDivider(Modifier.padding(top = 24.dp))
-            FolderPlugSection(container.folder)
+            FolderPlugSection(container.live)
             HorizontalDivider(Modifier.padding(top = 24.dp))
             PairingSection { onOpen(SettingsDestination.Pairing) }
             HorizontalDivider(Modifier.padding(top = 24.dp))

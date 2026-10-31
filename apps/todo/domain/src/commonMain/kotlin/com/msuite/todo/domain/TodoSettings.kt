@@ -8,6 +8,17 @@ import kotlin.uuid.Uuid
 
 enum class ThemeMode { System, Light, Dark }
 
+/** How this device syncs (one backend at a time, plan v1 step 9): none, a folder, or a relay. */
+sealed interface SyncBackend {
+    data object None : SyncBackend
+
+    /** A folder the user syncs with Syncthing, Dropbox or similar (decision 0042). */
+    data class Folder(val uri: String) : SyncBackend
+
+    /** A self-hosted relay; the token comes from the root (decisions 0030, 0079). */
+    data class Relay(val url: String) : SyncBackend
+}
+
 /** Device-local, non-synced preferences (decision 0064). Never backend credentials. */
 class TodoSettings(private val settings: Settings) {
     private val theme = MutableStateFlow(
@@ -32,23 +43,55 @@ class TodoSettings(private val settings: Settings) {
         last.value = id
     }
 
-    private val folderUri = MutableStateFlow(settings.getStringOrNull(SYNCED_FOLDER_URI))
+    private val backend = MutableStateFlow(loadBackend())
 
-    /** The synced folder's URI, or `null` if not configured (decision 0042). */
+    /** The chosen backend; one at a time (plan v1 step 9). */
+    val syncBackend: StateFlow<SyncBackend> = backend.asStateFlow()
+
+    private val folderUri = MutableStateFlow((backend.value as? SyncBackend.Folder)?.uri)
+
+    /** The synced folder's URI, or `null` if the backend isn't a folder (decision 0042). */
     val syncedFolderUri: StateFlow<String?> = folderUri.asStateFlow()
 
+    fun setSyncBackend(value: SyncBackend) {
+        setPersisted(value)
+        backend.value = value
+        folderUri.value = (value as? SyncBackend.Folder)?.uri
+    }
+
+    /** Compatibility accessor for the folder-only UI; sets or clears a Folder backend. */
     fun setSyncedFolderUri(uri: String?) {
-        if (uri != null) {
-            settings.putString(SYNCED_FOLDER_URI, uri)
-        } else {
+        setSyncBackend(if (uri == null) SyncBackend.None else SyncBackend.Folder(uri))
+    }
+
+    /** Reads the backend, migrating the step 8 `syncedFolderUri` key to `syncBackend`. */
+    private fun loadBackend(): SyncBackend = decode(settings.getStringOrNull(SYNC_BACKEND))
+        ?: settings.getStringOrNull(SYNCED_FOLDER_URI)?.let { legacy ->
             settings.remove(SYNCED_FOLDER_URI)
+            SyncBackend.Folder(legacy).also { setPersisted(it) }
         }
-        folderUri.value = uri
+        ?: SyncBackend.None
+
+    private fun setPersisted(value: SyncBackend) {
+        when (value) {
+            SyncBackend.None -> settings.remove(SYNC_BACKEND)
+            is SyncBackend.Folder -> settings.putString(SYNC_BACKEND, "folder:${value.uri}")
+            is SyncBackend.Relay -> settings.putString(SYNC_BACKEND, "relay:${value.url}")
+        }
     }
 
     private companion object {
         const val THEME = "theme"
         const val LAST_LIST = "lastList"
         const val SYNCED_FOLDER_URI = "syncedFolderUri"
+        const val SYNC_BACKEND = "syncBackend"
+
+        fun decode(stored: String?): SyncBackend? = when {
+            stored == null -> null
+            stored == "none" -> SyncBackend.None
+            stored.startsWith("folder:") -> SyncBackend.Folder(stored.removePrefix("folder:"))
+            stored.startsWith("relay:") -> SyncBackend.Relay(stored.removePrefix("relay:"))
+            else -> null
+        }
     }
 }

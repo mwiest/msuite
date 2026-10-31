@@ -4,8 +4,8 @@ import com.msuite.core.crypto.BackendType
 import com.msuite.core.sync.FileStore
 import com.msuite.core.sync.ManualSync
 import com.msuite.core.sync.Replica
-import com.msuite.todo.domain.FolderSyncActions
 import com.msuite.todo.domain.ListCommands
+import com.msuite.todo.domain.LiveSyncActions
 import com.msuite.todo.domain.PairingActions
 import com.msuite.todo.domain.SnapshotFiles
 import com.msuite.todo.domain.StoredIdentity
@@ -23,7 +23,7 @@ class TodoContainer(
     val settings: TodoSettings,
     files: SnapshotFiles,
     identity: StoredIdentity,
-    folderSync: FolderSyncActions,
+    liveSync: LiveSyncActions,
 ) {
     val lists = ListCommands(replica)
     val tasks = TaskCommands(replica)
@@ -32,5 +32,5 @@ class TodoContainer(
     val pairing = PairingActions(identity) {
         if (settings.syncedFolderUri.value != null) BackendType.Folder else BackendType.Manual
     }
-    val folder = folderSync
+    val live = liveSync
 }
