@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 to 6, 8 and 9 done, slice 7 code landed (2026-11-01; emulator check pending); slices 10 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 6 and 8 to 10 done, slice 7 code landed (2026-11-01; emulator check pending); slices 11 and 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -106,13 +106,13 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
    `core/sync` as production code, used by both `Cluster` and `LiveSync`'s pull: a key inside an
    ingested snapshot of the same writer is not fetched. Tests: covered and uncovered spans,
    another writer's snapshot doesn't cover. After it lands: `68b671e`.
-10. [ ] **Compaction: snapshot and prune in `LiveSync`.** After [`SNAPSHOT_EVERY`] own listed
+10. [x] **Compaction: snapshot and prune in `LiveSync`.** After [`SNAPSHOT_EVERY`] own listed
     deltas, publish the whole state (`replica.cells()`, as `ManualSync.export` builds it) as type
     `s`; once a listing shows it, delete this device's
     objects its span covers. Applies to every live plug, so the folder gets it too. Tests on two
     `Replica`s over `MemoryPlug`: invariants 18 and 19 through the real `LiveSync`, no prune
     before the snapshot is listed, a reader mid-fetch skips a pruned key (0069). After it lands:
-    `<commit>`.
+    `4fce275`.
 11. [ ] **Compaction: recovery.** A pull that lists no object of this device while it has a
     watermark and no unconfirmed publish rewinds the watermark and publishes a snapshot. Tests:
     an emptied plug is refilled and a fresh peer converges from it. `roadmap.md` drops the

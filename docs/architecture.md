@@ -264,8 +264,8 @@ folders that the sync client makes are cleaned up as above (decision 0078).
 The append-only contract grows three things without bound: backend objects, `list` enumeration and
 the client's `ingested_batch` bookkeeping. All three are bounded by 0002's rule — a writer's
 full-state snapshot subsumes its every earlier object — in three parts. The simulator has them
-(Layer 2, invariants 18 and 19). Span skip is production code; writer-side pruning and recovery
-land with the rest of v1 step 9:
+(Layer 2, invariants 18 and 19). Span skip, snapshot publishing and writer-side pruning are
+production code; recovery lands with the rest of v1 step 9:
 
 - **Span skip.** A reader that has ingested a writer's snapshot skips that writer's objects whose
   `hlcLo`..`hlcHi` span lies inside it: the key grammar (0029) carries the span, so no `delete` is
@@ -273,11 +273,14 @@ land with the rest of v1 step 9:
   below). Code: `isCoveredBySnapshot` in `core/sync`, used by `LiveSync`'s pull and the simulator's
   `Cluster`. `ingested_batch` and `unreadable_batch` are caches, not correctness (merge is
   state-based), so rows whose keys are no longer in `list` are pruned with it.
-- **Writer-side pruning.** After publishing a snapshot, a device deletes its own earlier objects,
-  optionally keeping a short grace window (a key absent at `get` is a skip, not corruption —
-  0069). `delete` is capability-gated (0003). The namespace authenticates the group's shared root
-  (0008), so "own objects" is a convention every member could break; the recovery rule covers that
-  and a backend that lost data alike.
+- **Writer-side pruning.** After [`SNAPSHOT_EVERY`] (20) of its own deltas are listed since its
+  last snapshot, `LiveSync` publishes the whole state as a snapshot (type `s`). Once a listing
+  shows that snapshot, it deletes this device's older deltas and snapshots whose `hlcHi` the
+  snapshot covers, optionally keeping a short grace window (a key absent at `get` is a skip, not
+  corruption — 0069). `delete` is capability-gated (0003). The namespace authenticates the group's
+  shared root (0008), so "own objects" is a convention every member could break; the recovery rule
+  covers that and a backend that lost data alike. A pending snapshot is not republished until a
+  listing shows it (0077).
 - **Recovery.** A device that finds its published objects gone publishes a fresh snapshot. A delta
   would not re-expose them — its watermark has moved — but a snapshot re-exposes its whole state.
 

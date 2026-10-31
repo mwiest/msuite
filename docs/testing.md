@@ -54,7 +54,9 @@ pruning are not exercised — plus pruning steps asserting invariants 18 and 19.
 The relay plug runs Layers 2 and 3 against a real CIO relay on a free local port
 (`server/src/test/.../RelaySimulatorTest.kt`), in memory and through `Replica`: invariant 12 with
 concurrent puts of one key and of distinct keys, then the same convergence checks as the folder
-layers.
+layers. `LiveSyncTest` drives compaction through the real `LiveSync` on two `Replica`s over
+`MemoryPlug`: invariants 18 and 19, no prune before a listing shows the snapshot, and a key pruned
+between `list` and `get` skipped without the corrupt flag (0069).
 
 Layer 3 runs the schedules again through `EnvelopePlugStore` (code, step 6): the real object keys of
 0029, the `hash` over the ciphertext, and the AAD from the key minus its hash (0071), in memory and
@@ -136,6 +138,7 @@ Compaction (decision 0002; the spans of 0029; planned with v1 steps 8 and 9):
 | 2 | v1 step 5 (landed), step 8 (landed: folder plug on plain files, delta mode, pruning) | the real plug wrapped in; invariant 12 with the folder plug, 18 and 19 with pruning |
 | 3 | v1 step 6 (landed) | encrypted batches still converge, invariant 17, and the TooNew / unknown-`keyGen` / foreign-root scenarios |
 | 2 and 3 over the relay | v1 step 9 (landed) | `PlugStore` and `EnvelopePlugStore` over `RelayPlug` against an embedded CIO relay, in memory and through `Replica`; invariant 12 with concurrent puts |
+| Compaction through `LiveSync` | v1 step 9 (landed) | two `Replica`s over `MemoryPlug`; invariants 18 and 19, the listing gate before pruning, and a pruned key during a pull |
 
 ## Two-device check (Android, synced folder)
 
