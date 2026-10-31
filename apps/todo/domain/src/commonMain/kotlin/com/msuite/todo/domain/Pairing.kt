@@ -5,10 +5,16 @@ import com.msuite.core.crypto.KEY_GEN_V1
 import com.msuite.core.crypto.PairingPayload
 import com.msuite.core.crypto.RecoveryWords
 
+/** The backend descriptor this device puts in its QR (record 0072): type plus its section. */
+data class PairingBackend(val type: BackendType, val section: ByteArray = ByteArray(0))
+
 /** What a scanned code or a typed recovery key did, for the screen's message (step 7). */
 sealed interface JoinResult {
     /** The group's root is this device's from now on; [backend] is the group's transport. */
-    data class Joined(val backend: BackendType?) : JoinResult
+    data class Joined(
+        val backend: BackendType?,
+        val backendSection: ByteArray = ByteArray(0),
+    ) : JoinResult
 
     /**
      * The words adopted the group's root (record 0073). They carry no backend, so the device's
@@ -49,11 +55,15 @@ sealed interface JoinPreview {
  */
 class PairingActions(
     private val identity: StoredIdentity,
-    private val backendType: () -> BackendType,
+    private val backend: () -> PairingBackend,
+    private val onJoined: (BackendType?, ByteArray) -> Unit = { _, _ -> },
 ) {
+
     /** The bytes this device shows as its QR, or `null` when it holds no root yet. */
-    suspend fun code(): ByteArray? =
-        identity.root(KEY_GEN_V1)?.let { PairingPayload.build(KEY_GEN_V1, it, backendType()) }
+    suspend fun code(): ByteArray? = identity.root(KEY_GEN_V1)?.let {
+        val descriptor = backend()
+        PairingPayload.build(KEY_GEN_V1, it, descriptor.type, descriptor.section)
+    }
 
     /** The 24 recovery words for this device's root, or `null` when it holds none (record 0073). */
     suspend fun words(): List<String>? = identity.root(KEY_GEN_V1)?.let { RecoveryWords.encode(it) }
@@ -75,7 +85,10 @@ class PairingActions(
     suspend fun join(code: ByteArray): JoinResult {
         val payload = PairingPayload.parse(code) ?: return JoinResult.Unreadable
         return if (payload.keyGen == KEY_GEN_V1) {
-            adopt(payload.root) { JoinResult.Joined(payload.backend) }
+            adopt(payload.root) {
+                onJoined(payload.backend, payload.backendSection)
+                JoinResult.Joined(payload.backend, payload.backendSection)
+            }
         } else {
             JoinResult.UnsupportedKeyGen
         }

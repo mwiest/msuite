@@ -7,9 +7,11 @@ import com.msuite.core.sync.Replica
 import com.msuite.todo.domain.ListCommands
 import com.msuite.todo.domain.LiveSyncActions
 import com.msuite.todo.domain.PairingActions
+import com.msuite.todo.domain.PairingBackend
 import com.msuite.todo.domain.SnapshotFiles
 import com.msuite.todo.domain.StoredIdentity
 import com.msuite.todo.domain.SyncActions
+import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.domain.TaskCommands
 import com.msuite.todo.domain.TodoSettings
 import com.msuite.todo.domain.TodoState
@@ -29,8 +31,16 @@ class TodoContainer(
     val tasks = TaskCommands(replica)
     val states: Flow<TodoState> = replica.todoStates()
     val sync = SyncActions(ManualSync(replica, identity), files)
-    val pairing = PairingActions(identity) {
-        if (settings.syncedFolderUri.value != null) BackendType.Folder else BackendType.Manual
-    }
+    val pairing = PairingActions(
+        identity = identity,
+        backend = {
+            when (val backend = settings.syncBackend.value) {
+                SyncBackend.None -> PairingBackend(BackendType.Manual)
+                is SyncBackend.Folder -> PairingBackend(BackendType.Folder)
+                is SyncBackend.Relay -> PairingBackend(BackendType.Relay, backend.url.encodeToByteArray())
+            }
+        },
+        onJoined = liveSync::applyJoinedBackend,
+    )
     val live = liveSync
 }

@@ -22,6 +22,9 @@ enum class BackendType(val id: Int) {
 
     /** The synced-folder plug: no config carried, the joining device picks its own folder (0042, 0072). */
     Folder(1),
+
+    /** The relay: its section is the relay URL in UTF-8 (record 0080). */
+    Relay(2),
 }
 
 /**
@@ -43,14 +46,21 @@ class PairingPayload private constructor(
 
     companion object {
         /** The bytes for one QR: [root] under [keyGen], the backend descriptor, and the checksum. */
-        suspend fun build(keyGen: Int, root: ByteArray, backend: BackendType): ByteArray {
+        suspend fun build(
+            keyGen: Int,
+            root: ByteArray,
+            backend: BackendType,
+            section: ByteArray = ByteArray(0),
+        ): ByteArray {
             require(keyGen >= 0) { "keyGen must not be negative: $keyGen" }
             require(root.size == SECRET_SIZE) { "the root takes $SECRET_SIZE bytes, got ${root.size}" }
-            val bytes = ByteArray(BODY_BYTES)
+            require(sectionFits(backend, section)) { "not a ${backend.name} backend section" }
+            val bytes = ByteArray(BODY_BYTES + section.size)
             bytes[FORMAT_INDEX] = PAYLOAD_FORMAT.toByte()
             keyGen.toBigEndian().copyInto(bytes, KEY_GEN_INDEX)
             root.copyInto(bytes, ROOT_INDEX)
             bytes[BACKEND_INDEX] = backend.id.toByte()
+            section.copyInto(bytes, BODY_BYTES)
             return bytes.checksummed()
         }
 
@@ -72,12 +82,28 @@ class PairingPayload private constructor(
             val keyGen = covered.intAt(KEY_GEN_INDEX)
             val backendType = covered[BACKEND_INDEX].toInt() and BYTE_MASK
             val section = covered.copyOfRange(BACKEND_INDEX + 1, covered.size)
-            // We never build a negative keyGen, and no known type carries a section yet.
-            val known = BackendType.entries.any { it.id == backendType }
-            return if (keyGen >= 0 && !(section.isNotEmpty() && known)) {
+            // We never build a negative keyGen, and a known type must have exactly its section.
+            val known = BackendType.entries.firstOrNull { it.id == backendType }
+            val sectionValid = known == null || sectionFits(known, section)
+            return if (keyGen >= 0 && sectionValid) {
                 PairingPayload(keyGen, covered.copyOfRange(ROOT_INDEX, BACKEND_INDEX), backendType, section)
             } else {
                 null
+            }
+        }
+
+        /** Whether [section] is the one [type] carries: none except the relay's URL (record 0080). */
+        private fun sectionFits(type: BackendType, section: ByteArray): Boolean = when (type) {
+            BackendType.Manual, BackendType.Folder -> section.isEmpty()
+            BackendType.Relay -> relayUrl(section) != null
+        }
+
+        /** The relay URL [section] encodes, or `null` when it isn't a UTF-8 http(s) URL. */
+        fun relayUrl(section: ByteArray): String? {
+            val text = runCatching { section.decodeToString(throwOnInvalidSequence = true) }.getOrNull()
+            return text?.takeIf {
+                (it.startsWith("https://") && it.length > "https://".length) ||
+                    (it.startsWith("http://") && it.length > "http://".length)
             }
         }
 

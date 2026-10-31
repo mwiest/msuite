@@ -14,7 +14,7 @@ private val other = ByteArray(SECRET_SIZE) { (it + 9).toByte() }
 
 /** Actions over a device that holds [stored] (or generates one when `null`). */
 private fun actions(stored: ByteArray? = null) =
-    PairingActions(StoredIdentity(MemoryRootStore(stored))) { BackendType.Manual }
+    PairingActions(StoredIdentity(MemoryRootStore(stored)), backend = { PairingBackend(BackendType.Manual) })
 
 class PairingTest : StringSpec({
     "a device's own code carries its root and the manual transport" {
@@ -25,11 +25,42 @@ class PairingTest : StringSpec({
         payload.backend shouldBe BackendType.Manual
     }
 
+    "a relay's code carries its URL and joining reports it" {
+        val url = "https://relay.example"
+        val source = PairingActions(
+            StoredIdentity(MemoryRootStore(group)),
+            { PairingBackend(BackendType.Relay, url.encodeToByteArray()) },
+        )
+        val code = source.code().shouldNotBeNull()
+        val payload = PairingPayload.parse(code).shouldNotBeNull()
+        payload.backend shouldBe BackendType.Relay
+        payload.backendSection.decodeToString() shouldBe url
+
+        var joinedType: BackendType? = null
+        var joinedSection: ByteArray? = null
+        val identity = StoredIdentity(MemoryRootStore(other))
+        val target = PairingActions(
+            identity,
+            { PairingBackend(BackendType.Manual) },
+            onJoined = { type, section ->
+                joinedType = type
+                joinedSection = section
+            },
+        )
+
+        target.join(code) shouldBe JoinResult.Joined(BackendType.Relay, url.encodeToByteArray())
+        joinedType shouldBe BackendType.Relay
+        joinedSection?.decodeToString() shouldBe url
+        identity.root(KEY_GEN_V1)?.toList() shouldBe group.toList()
+    }
+
     "joining adopts the scanned root" {
         val identity = StoredIdentity(MemoryRootStore(other))
         identity.root(KEY_GEN_V1)?.toList() shouldBe other.toList()
 
-        PairingActions(identity) { BackendType.Manual }.join(actions(group).code().shouldNotBeNull()) shouldBe
+        PairingActions(identity, backend = {
+            PairingBackend(BackendType.Manual)
+        }).join(actions(group).code().shouldNotBeNull()) shouldBe
             JoinResult.Joined(BackendType.Manual)
 
         identity.root(KEY_GEN_V1)?.toList() shouldBe group.toList()
@@ -37,7 +68,7 @@ class PairingTest : StringSpec({
 
     "a preview reads another group's code without adopting anything" {
         val identity = StoredIdentity(MemoryRootStore(other))
-        val pairing = PairingActions(identity) { BackendType.Manual }
+        val pairing = PairingActions(identity, backend = { PairingBackend(BackendType.Manual) })
         val code = actions(group).code().shouldNotBeNull()
 
         pairing.preview(code) shouldBe JoinPreview.Ready
@@ -56,7 +87,7 @@ class PairingTest : StringSpec({
 
     "scanning one's own code changes nothing and writes nothing" {
         val store = MemoryRootStore()
-        val pairing = PairingActions(StoredIdentity(store)) { BackendType.Manual }
+        val pairing = PairingActions(StoredIdentity(store), backend = { PairingBackend(BackendType.Manual) })
         val code = pairing.code().shouldNotBeNull()
         val saves = store.saves
 
@@ -80,7 +111,9 @@ class PairingTest : StringSpec({
     "the words restore the root a code would have carried" {
         val identity = StoredIdentity(MemoryRootStore(other))
 
-        PairingActions(identity) { BackendType.Manual }.restore(RecoveryWords.encode(group)) shouldBe
+        PairingActions(identity, backend = {
+            PairingBackend(BackendType.Manual)
+        }).restore(RecoveryWords.encode(group)) shouldBe
             JoinResult.Restored
 
         identity.root(KEY_GEN_V1)?.toList() shouldBe group.toList()
@@ -89,7 +122,9 @@ class PairingTest : StringSpec({
     "restoring on a device with no data adopts the words' root" {
         val identity = StoredIdentity(MemoryRootStore())
 
-        PairingActions(identity) { BackendType.Manual }.restore(RecoveryWords.encode(group)) shouldBe
+        PairingActions(identity, backend = {
+            PairingBackend(BackendType.Manual)
+        }).restore(RecoveryWords.encode(group)) shouldBe
             JoinResult.Restored
 
         identity.root(KEY_GEN_V1)?.toList() shouldBe group.toList()
@@ -97,7 +132,7 @@ class PairingTest : StringSpec({
 
     "restoring one's own words changes nothing" {
         val store = MemoryRootStore()
-        val pairing = PairingActions(StoredIdentity(store)) { BackendType.Manual }
+        val pairing = PairingActions(StoredIdentity(store), backend = { PairingBackend(BackendType.Manual) })
 
         pairing.restore(RecoveryWords.encode(group)) shouldBe JoinResult.Restored
         val saves = store.saves
@@ -108,7 +143,7 @@ class PairingTest : StringSpec({
 
     "typed words are previewed before they are restored" {
         val identity = StoredIdentity(MemoryRootStore(other))
-        val pairing = PairingActions(identity) { BackendType.Manual }
+        val pairing = PairingActions(identity, backend = { PairingBackend(BackendType.Manual) })
 
         pairing.preview(RecoveryWords.encode(group)) shouldBe JoinPreview.Ready
         pairing.preview(RecoveryWords.encode(other)) shouldBe JoinPreview.AlreadyThisGroup

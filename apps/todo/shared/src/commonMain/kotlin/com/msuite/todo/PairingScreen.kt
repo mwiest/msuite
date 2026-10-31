@@ -50,6 +50,7 @@ import com.msuite.todo.resources.pair_devices
 import com.msuite.todo.resources.pair_join_hint
 import com.msuite.todo.resources.pair_joined_file
 import com.msuite.todo.resources.pair_joined_folder
+import com.msuite.todo.resources.pair_joined_relay
 import com.msuite.todo.resources.pair_joined_unknown
 import com.msuite.todo.resources.pair_scan
 import com.msuite.todo.resources.pair_show
@@ -212,6 +213,7 @@ private fun JoinResult.label() = when (this) {
     is JoinResult.Joined -> when (backend) {
         BackendType.Manual -> Res.string.pair_joined_file
         BackendType.Folder -> Res.string.pair_joined_folder
+        BackendType.Relay -> Res.string.pair_joined_relay
         null -> Res.string.pair_joined_unknown
     }
 

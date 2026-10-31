@@ -1,6 +1,8 @@
 package com.msuite.todo.domain
 
+import com.msuite.core.crypto.BackendType
 import com.msuite.core.crypto.KEY_GEN_V1
+import com.msuite.core.crypto.PairingPayload
 import com.msuite.core.model.PlugId
 import com.msuite.core.relay.RelayRefused
 import com.msuite.core.sync.BackendPlug
@@ -72,6 +74,7 @@ class LiveSyncActions(
     val folderUri: StateFlow<String?> = settings.syncedFolderUri
 
     private var liveSync: LiveSync? = null
+    private var startJob: Job? = null
     private var pollingJob: Job? = null
 
     /** Opens the folder picker, switches to the folder, and starts its sync. */
@@ -92,8 +95,7 @@ class LiveSyncActions(
         val changed = settings.syncBackend.value != normalized
         settings.setSyncBackend(normalized)
         if (!changed && liveSync != null) return
-        liveSync?.stop()
-        liveSync = null
+        stopLiveSync()
         _status.value = SyncStatus(lastSync = null, pendingChanges = 0)
         startSyncIfConfigured()
     }
@@ -104,10 +106,17 @@ class LiveSyncActions(
         identity.root(KEY_GEN_V1)
             ?.let(::connectionFor)
             ?.let { (plug, plugId) ->
-                liveSync = LiveSync(replica, plug, plugId, "todo", identity, scope, 10.seconds).also {
-                    scope.launch { it.start() }
-                }
+                val sync = LiveSync(replica, plug, plugId, "todo", identity, scope, 10.seconds)
+                liveSync = sync
+                startJob = scope.launch { sync.start() }
             }
+    }
+
+    private fun stopLiveSync() {
+        startJob?.cancel()
+        startJob = null
+        liveSync?.stop()
+        liveSync = null
     }
 
     private fun connectionFor(root: ByteArray): Pair<BackendPlug, PlugId>? =
@@ -127,6 +136,21 @@ class LiveSyncActions(
 
     /** The group ID an operator's relay allowlist names; computed from the root, never stored. */
     suspend fun groupId(): String? = identity.root(KEY_GEN_V1)?.let { com.msuite.core.sync.groupId(it) }
+
+    /**
+     * Applies the backend descriptor of a just-joined group (record 0080): a relay URL becomes the
+     * chosen backend, any other type clears a backend left over from a previous group.
+     */
+    fun applyJoinedBackend(type: BackendType?, section: ByteArray) {
+        val relayUrl = if (type == BackendType.Relay) PairingPayload.relayUrl(section) else null
+        setBackend(
+            if (relayUrl != null && isAllowedRelayUrl(relayUrl, relay.allowInsecure)) {
+                SyncBackend.Relay(relayUrl)
+            } else {
+                SyncBackend.None
+            },
+        )
+    }
 
     /** Manually triggers a sync (pull from the backend). */
     suspend fun syncNow() {

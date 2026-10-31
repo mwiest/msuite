@@ -1,6 +1,7 @@
 package com.msuite.todo.domain
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.msuite.core.crypto.BackendType
 import com.msuite.core.model.DeviceId
 import com.msuite.core.relay.RelayRefused
 import com.msuite.core.storage.LocalStore
@@ -146,6 +147,30 @@ class LiveSyncActionsTest : StringSpec({
         isAllowedRelayUrl("http://127.0.0.1:8080", allowInsecure = true) shouldBe true
         isAllowedRelayUrl("https://", allowInsecure = true) shouldBe false
         isAllowedRelayUrl("relay.example", allowInsecure = true) shouldBe false
+    }
+
+    "a joined relay URL becomes the chosen backend" {
+        val settings = TodoSettings(MapSettings())
+        coroutineScope {
+            val live = LiveSyncActions(
+                replica = replica(),
+                identity = StoredIdentity(MemoryRootStore()),
+                settings = settings,
+                folderPick = NoPick,
+                fileStoreFactory = { FlakyFileStore(PlainFileStore(tempdir())) },
+                scope = this,
+                relay = RelayOptions(plugFactory = { _, _ -> CountingPlug() }),
+            )
+
+            live.applyJoinedBackend(BackendType.Relay, "https://relay.example".encodeToByteArray())
+            yield()
+            live.backend.value shouldBe SyncBackend.Relay("https://relay.example")
+
+            live.applyJoinedBackend(BackendType.Relay, "http://relay.example".encodeToByteArray())
+            live.backend.value shouldBe SyncBackend.None
+
+            live.setBackend(SyncBackend.None)
+        }
     }
 
     "a relay refusal is carried on the status" {

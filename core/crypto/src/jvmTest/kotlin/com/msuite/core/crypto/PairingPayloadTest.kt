@@ -2,6 +2,7 @@ package com.msuite.core.crypto
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 
 private const val KEY_GEN = 1
@@ -77,6 +78,38 @@ class PairingPayloadTest : StringSpec({
         parsed?.backendType shouldBe 200
         parsed?.backend shouldBe null
         parsed?.backendSection?.hex() shouldBe "010203"
+    }
+
+    "a relay payload round-trips its URL in the section" {
+        val url = "https://relay.example/msuite"
+        val bytes = PairingPayload.build(KEY_GEN, root(), BackendType.Relay, url.encodeToByteArray())
+        val parsed = PairingPayload.parse(bytes).shouldNotBeNull()
+
+        parsed.backend shouldBe BackendType.Relay
+        parsed.backendSection.decodeToString() shouldBe url
+        PairingPayload.relayUrl(parsed.backendSection) shouldBe url
+    }
+
+    "a relay section that isn't a URL is refused" {
+        shouldThrow<IllegalArgumentException> {
+            PairingPayload.build(KEY_GEN, root(), BackendType.Relay, "not a url".encodeToByteArray())
+        }
+        shouldThrow<IllegalArgumentException> {
+            PairingPayload.build(KEY_GEN, root(), BackendType.Relay)
+        }
+        PairingPayload.parse(
+            payload(backendType = BackendType.Relay.id.toByte(), section = "ftp://relay".encodeToByteArray()),
+        ) shouldBe null
+        PairingPayload.parse(payload(backendType = BackendType.Relay.id.toByte())) shouldBe null
+    }
+
+    "a type without a section refuses one" {
+        shouldThrow<IllegalArgumentException> {
+            PairingPayload.build(KEY_GEN, root(), BackendType.Manual, byteArrayOf(1))
+        }
+        shouldThrow<IllegalArgumentException> {
+            PairingPayload.build(KEY_GEN, root(), BackendType.Folder, byteArrayOf(1))
+        }
     }
 
     "a known backend type with a section it doesn't have is rejected" {
