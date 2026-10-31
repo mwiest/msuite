@@ -18,6 +18,7 @@ sections from "Sync" on describe the agreed design; parts that are code say so. 
 | `core/model` | KMP (android, jvm) | Domain types, stable record IDs (UUID) and stable opaque field/op IDs, op definitions, the data-model version header (= 1), the identity `upcast` hook, the batch/snapshot encoder interface (kotlinx.serialization ProtoBuf, decision 0016) | `Hlc`, `DeviceId`, `FieldId`, `CoreFields`, `Stamp`, `Cell`, `PlugId`, `FractionalIndex`, `Batch`, `ProtoBatchEncoder`, `Value`, `ValueCodec`, `DATA_MODEL_VERSION` |
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested and unreadable batch keys, per-plug watermarks and unconfirmed publishes, the device ID | `LocalStore` over all its tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, `ManualSync`, `ObjectKey`/`ObjectKeyPrefix`/`groupId`, simulator Layer 1 |
+| `core/relay` | KMP (android, jvm) | The relay wire contract shared with `server/`, and the plug that talks to it (decision 0079) | `RelayApi` paths/headers/status codes, `relayToken` |
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`, `EnvelopePlugStore`) with `Fetch`, `MemoryPlug`, `assertPlugContract`, `TestClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) and `RecoveryWords` over `BIP39_ENGLISH` (record 0073) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
@@ -53,7 +54,7 @@ KeyStore, camera QR, alarms) stays behind interfaces in the app layer, never in 
 
 | Convention plugin | Sets up | Used by |
 |---|---|---|
-| `msuite.kmp-library` | KMP + AGP KMP library, targets `android` and `jvm`, JUnit Platform | `core/{model,storage,sync,crypto}`, `apps/todo/domain` |
+| `msuite.kmp-library` | KMP + AGP KMP library, targets `android` and `jvm`, JUnit Platform | `core/{model,storage,sync,relay,crypto}`, `apps/todo/domain` |
 | `msuite.compose-library` | KMP + AGP KMP library + Compose Multiplatform, android target only | `core/design`, `apps/todo/shared` |
 | `msuite.android-app` | Android application with built-in Kotlin, Compose, `targetSdk` | `apps/todo/android` |
 | `msuite.jvm-library` | Kotlin/JVM, JDK 21 toolchain, Java 17 bytecode, JUnit Platform | `core/sync-testing` |

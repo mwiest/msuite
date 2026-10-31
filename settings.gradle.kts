@@ -21,6 +21,7 @@ rootProject.name = "msuite"
 include(":core:model")
 include(":core:storage")
 include(":core:sync")
+include(":core:relay") // relay wire contract and plug, shared with server/
 include(":core:sync-testing") // multi-device simulator harness, used by tests only
 include(":core:crypto")
 include(":core:design")

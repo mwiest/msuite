@@ -128,7 +128,8 @@ private const val ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUV"
 /** Chars in an unpadded base32hex encoding of [bytes]. */
 internal fun charsFor(bytes: Int): Int = (bytes * BITS_PER_BYTE + BITS_PER_CHAR - 1) / BITS_PER_CHAR
 
-internal fun encodeBase32Hex(bytes: ByteArray): String {
+/** Unpadded uppercase base32hex (RFC 4648), the encoding of every binary key field (decision 0029). */
+fun encodeBase32Hex(bytes: ByteArray): String {
     val text = StringBuilder(charsFor(bytes.size))
     var buffer = 0
     var bits = 0
