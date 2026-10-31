@@ -36,6 +36,7 @@ const val MAX_CONFIRM_MISSES = 3
  * database and write only through it.
  * Apps use [open]; the constructor with an explicit [deviceId] is for tests and the simulator.
  */
+@Suppress("TooManyFunctions") // One facade over the store; each function is one operation.
 class Replica private constructor(
     private val store: LocalStore,
     val deviceId: DeviceId,
@@ -93,6 +94,11 @@ class Replica private constructor(
 
     /** Merges [batch] with no plug bookkeeping: the manual snapshot path (decision 0066). */
     suspend fun mergeRemote(batch: Batch): IngestResult = serialized { mergeLocked(batch) }
+
+    /** The keys [plug] has ingested; a pull uses the snapshots among them for the span skip (0029). */
+    suspend fun ingestedKeys(plug: PlugId): Set<String> = serialized {
+        store.plugs.ingestedKeys(plug).toSet()
+    }
 
     /** What [plug] hasn't been sent yet, or `null`; after a successful put, call [pushed]. */
     suspend fun delta(plug: PlugId): Batch? = serialized {

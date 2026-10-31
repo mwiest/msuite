@@ -11,6 +11,7 @@ import com.msuite.core.sync.HlcClock
 import com.msuite.core.sync.IngestResult
 import com.msuite.core.sync.ObjectKey
 import com.msuite.core.sync.hlcHi
+import com.msuite.core.sync.isCoveredBySnapshot
 import io.kotest.assertions.withClue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.comparables.shouldBeGreaterThan
@@ -177,43 +178,6 @@ open class Cluster(
             store.delete(key)
             // Remove from all devices' ingested sets since the object is gone
             devices.forEach { it.ingested.remove(key) }
-        }
-    }
-
-    /**
-     * Span skip: a delta is covered if the device has ingested a snapshot from the same writer
-     * whose HLC span contains the delta's span. Only applies when using real key grammar (0029).
-     */
-    private fun isCoveredBySnapshot(key: String, ingested: Set<String>): Boolean {
-        @Suppress("SwallowedException") // Expected: some keys may not be valid ObjectKeys
-        val objKey = try {
-            ObjectKey.parse(key)
-        } catch (e: IllegalArgumentException) {
-            null // Not a real key (e.g., Layer 1 uses numeric keys)
-        }
-
-        return objKey != null && objKey.prefix.type == BatchType.Delta && run {
-            // Find all ingested snapshots from the same writer
-            val writerSnapshots = ingested.mapNotNull { ingestedKey ->
-                @Suppress("SwallowedException") // Expected: some keys may not be valid ObjectKeys
-                try {
-                    val ingestedObjKey = ObjectKey.parse(ingestedKey)
-                    if (ingestedObjKey.prefix.type == BatchType.Snapshot &&
-                        ingestedObjKey.prefix.deviceId == objKey.prefix.deviceId
-                    ) {
-                        ingestedObjKey.prefix.hlcLo to ingestedObjKey.prefix.hlcHi
-                    } else {
-                        null
-                    }
-                } catch (e: IllegalArgumentException) {
-                    null
-                }
-            }
-
-            // Check if any snapshot covers this delta's span
-            writerSnapshots.any { (snapLo, snapHi) ->
-                snapLo <= objKey.prefix.hlcLo && objKey.prefix.hlcHi <= snapHi
-            }
         }
     }
 

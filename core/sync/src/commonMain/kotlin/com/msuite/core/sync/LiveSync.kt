@@ -87,8 +87,9 @@ class LiveSync(
         val prefix = "$appId/$gid/"
         val keys = plug.list(prefix)
         val parsed = keys.associateWith { runCatching { ObjectKey.parse(it) }.getOrNull() }
+        val ingested = replica.ingestedKeys(plugId).toMutableSet()
         for ((key, objectKey) in parsed) {
-            if (objectKey != null) pullOne(key, objectKey)
+            if (objectKey != null) pullOne(key, objectKey, ingested)
         }
         sweepConflictCopies(parsed.filterValues { it != null }.keys, parsed.filterValues { it == null }.keys)
         // Prune bookkeeping: remove entries for keys no longer in the backend (decision 0002).
@@ -111,12 +112,14 @@ class LiveSync(
         val CONFLICT_COPY = Regex("""^(.+)(?: \(\d+\)|_\d+)$""")
     }
 
-    private suspend fun pullOne(key: String, parsed: ObjectKey) {
-        if (replica.isCorrupt(plugId, key)) return
+    private suspend fun pullOne(key: String, parsed: ObjectKey, ingested: MutableSet<String>) {
+        if (isCoveredBySnapshot(key, ingested) || replica.isCorrupt(plugId, key)) return
         val bytes = plug.get(key) ?: return
         try {
             val opened = envelope.open(bytes, parsed.prefix.text())
-            if (opened is EnvelopeResult.Opened) replica.ingest(plugId, key, opened.batch)
+            if (opened is EnvelopeResult.Opened) {
+                if (replica.ingest(plugId, key, opened.batch) is IngestResult.Merged) ingested += key
+            }
         } catch (_: MalformedBatch) {
             replica.unreadable(plugId, key)
         }
