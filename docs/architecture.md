@@ -307,9 +307,10 @@ format (1 byte) | keyGen | root (256 bit) | backend type (1 byte) | backend sect
 
 The checksum is the first 4 bytes of SHA-256 over everything before it: it catches a misread code,
 not an attacker, since whoever sees the QR has the root (0008). Identity sits at fixed offsets, so a
-build that doesn't know the backend type still reads the root and pairs. The type today is `manual`
-(the snapshot file, nothing to carry); the folder type makes the joining device offer its folder
-chooser at step 8, and a backend with portable configuration carries it in its section at step 9.
+build that doesn't know the backend type still reads the root and pairs. The types are `manual`
+(0, the snapshot file, nothing to carry), `folder` (1, no config: a folder is picked per device,
+0072) and `relay` (2, the section is the relay URL in UTF-8, record 0080). A joining device
+preselects the relay it reads; a release build ignores an `http://` URL (0079).
 There is no salt — the same root and backend always produce the same QR.
 - In the UI (code: `PairingScreen` and `QrCodes`): a device shows its code on demand and never
   stores it; the other scans it with zxing-android-embedded behind the domain seam (record 0074),
