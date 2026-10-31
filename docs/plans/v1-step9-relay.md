@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 to 3 done (2026-10-31); slices 4 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 4 done (2026-10-31); slices 5 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -76,11 +76,11 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
    env config, `/health`; `main` replaces the placeholder. Tests with `testApplication`: every
    status code, a second group can't read the first's names, an unregistered namespace lists
    empty. `./gradlew :server:run` serves. After it lands: `3203451`.
-4. [ ] **`RelayPlug`.** `BackendPlug` over a Ktor `HttpClient` built from an injected engine; maps
-   `401`/`403`/`507` to `RelayRefused(reason)` and transport failures to `IOException`, so
+4. [x] **`RelayPlug`.** `BackendPlug` over a Ktor `HttpClient` built from an injected engine; maps
+   `401`/`403`/`413`/`507` to `RelayRefused(reason)` and transport failures to `IOException`, so
    `LiveSync` marks the plug unhealthy as it does for the folder. Tests in `server/src/test`, where
    client and relay meet: `assertPlugContract` against the in-process relay, and the plug's error
-   mapping. After it lands: `<commit>`.
+   mapping. After it lands: `bb054d6`.
 5. [ ] **Simulator Layer 2 and 3 over the relay.** `PlugStore` and `EnvelopePlugStore` over
    `RelayPlug` against the in-process relay, in memory and through `Replica`; invariant 12 with
    concurrent puts of the same and of distinct keys. `testing.md` gets the row. After it lands:
