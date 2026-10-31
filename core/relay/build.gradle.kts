@@ -9,7 +9,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":core:sync"))
-            implementation(libs.ktor.client.core)
+            api(libs.ktor.client.core)
         }
         jvmTest.dependencies {
             implementation(libs.kotest.property)

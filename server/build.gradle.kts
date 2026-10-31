@@ -14,4 +14,6 @@ dependencies {
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.ktor.client.okhttp)
+    testImplementation(project(":core:sync-testing"))
 }
