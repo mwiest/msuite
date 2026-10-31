@@ -1,6 +1,7 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 8 done, code and device checks; step 9, the relay, is next.**
+Status: **steps 0 to 8 done, code and device checks; step 9, the relay, is planned
+([`v1-step9-relay.md`](v1-step9-relay.md)).**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -107,7 +108,7 @@ Each step may take several commits; a step that grows big gets its own plan.
 9. [ ] **Relay and relay plug.** `server/` as a Ktor CIO binary with namespace tokens (decision
    0030), plus the plug that talks to it; capability-gated `delete` and writer-side pruning with
    the recovery rule (`architecture.md` → Compaction). Proves: live self-hosted sync without a
-   sync tool.
+   sync tool. Plan: [`v1-step9-relay.md`](v1-step9-relay.md).
 10. [ ] **Cloud deploy template for the relay.** Proves: a non-technical hosting path exists.
 
 ## Open questions
