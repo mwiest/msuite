@@ -74,7 +74,10 @@ the app is open, or a self-hosted relay, where each device stores the same encry
 HTTP and authenticates with a token derived from the root. A folder or relay that can't be reached
 never closes the app; Settings says so and the edits wait on the device until it can. A relay
 speaks plain HTTP behind a TLS reverse proxy; the app only accepts https addresses (a debug build
-also accepts http for a LAN or emulator). Architecture in `architecture.md`.
+also accepts http for a LAN or emulator). A device periodically folds its own edits into one
+snapshot and removes what the snapshot covers, so a backend stays bounded; if a folder or
+namespace is emptied, a device that has synced before refills it. Architecture in
+`architecture.md`.
 
 - Sync is optional. The user picks a backend: none (export/import a file), a synced folder
   (Syncthing, Nextcloud, Dropbox), WebDAV, an S3-compatible bucket, or the self-hostable msuite
