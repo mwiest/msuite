@@ -80,7 +80,8 @@ also accepts http for a LAN or emulator). Architecture in `architecture.md`.
   (Syncthing, Nextcloud, Dropbox), WebDAV, an S3-compatible bucket, or the self-hostable msuite
   relay. All of them see only ciphertext.
 - A new device joins by scanning one QR code from a paired device. If it already holds lists and
-  tasks, they are kept and shared with the other devices. A recovery key
+  tasks, they are kept and shared with the other devices. A code from a relay group selects that
+  relay on the joining device; a folder is picked per device. A recovery key
   (words, QR or file) is the fallback when no device is left. There is no password reset.
 - When two devices edit the same field while apart, the later edit wins and the other is lost
   (decision 0005).
