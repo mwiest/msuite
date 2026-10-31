@@ -160,10 +160,9 @@ visible, so a locked screen stops it.
 
 Compare databases cell for cell: `adb exec-out run-as com.msuite.todo cat databases/todo.db >
 file` (journal mode `delete`: check `todo.db-journal` is empty first), then read both copies with
-Python's `sqlite3`. Deleting the group folder drops the published batches, and live sync doesn't
-refill it yet (see `roadmap.md`): force-stop both apps, clear `plug_watermark`, `ingested_batch`,
-`unreadable_batch` and `unconfirmed_publish` in a copy, push it back with `adb exec-in run-as ...
-sh -c 'cat > databases/todo.db'`, relaunch.
+Python's `sqlite3`. Deleting the group folder drops the published batches; the next pull on a
+device with a watermark and no unconfirmed publish republishes a snapshot, so the folder refills
+and both devices converge (v1 step 9).
 
 Log signatures (`adb logcat -d`; dump before anything clears the buffer, it also rotates within
 minutes):

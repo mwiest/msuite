@@ -281,8 +281,11 @@ production code; recovery lands with the rest of v1 step 9:
   shared root (0008), so "own objects" is a convention every member could break; the recovery rule
   covers that and a backend that lost data alike. A pending snapshot is not republished until a
   listing shows it (0077).
-- **Recovery.** A device that finds its published objects gone publishes a fresh snapshot. A delta
-  would not re-expose them — its watermark has moved — but a snapshot re-exposes its whole state.
+- **Recovery.** A device whose pull lists none of its own objects, while it has a watermark and no
+  unconfirmed publish, publishes a fresh snapshot; the snapshot's `pushed` sets the watermark to
+  its span, so a delta would not re-expose the old state but a snapshot does. Code:
+  `Replica.canRecover` and `LiveSync.publishSnapshot`. Tests refill an emptied plug and converge a
+  fresh peer from it.
 
 Steady state publishes deltas, coarsely batched (per idle period, not per edit); snapshots are for
 joins (0033) and the periodic compaction of 0002.

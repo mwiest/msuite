@@ -25,9 +25,6 @@ After v1, roughly in this order:
   0078) but nothing prevents them. Find a way at the root: a create-with-content call in a newer
   SAF or Dropbox provider, or a native Dropbox plug over its HTTP API instead of SAF (needs a
   decision: SDK or plain Ktor, app key handling).
-- Live sync publishes deltas only: no snapshots or pruning yet, so the folder grows without bound,
-  and an emptied or deleted folder is not refilled (reset by hand, `testing.md`). Lands with step 9
-  (`architecture.md` -> Compaction).
 - A provider that went invisible or a lost grant reads as an empty folder: pruning drops all
   `ingested_batch` rows (a full re-read later) and Settings only shows the problem once a write
   fails. Log and show the folder's identity (root name, child count) instead.

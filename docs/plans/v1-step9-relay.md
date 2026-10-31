@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 to 6 and 8 to 10 done, slice 7 code landed (2026-11-01; emulator check pending); slices 11 and 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 6 and 8 to 11 done, slice 7 code landed (2026-11-01; emulator check pending); slice 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -113,11 +113,11 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
     `Replica`s over `MemoryPlug`: invariants 18 and 19 through the real `LiveSync`, no prune
     before the snapshot is listed, a reader mid-fetch skips a pruned key (0069). After it lands:
     `4fce275`.
-11. [ ] **Compaction: recovery.** A pull that lists no object of this device while it has a
-    watermark and no unconfirmed publish rewinds the watermark and publishes a snapshot. Tests:
-    an emptied plug is refilled and a fresh peer converges from it. `roadmap.md` drops the
+11. [x] **Compaction: recovery.** A pull that lists no object of this device while it has a
+    watermark and no unconfirmed publish publishes a snapshot; its `pushed` sets the watermark.
+    Tests: an emptied plug is refilled and a fresh peer converges from it. `roadmap.md` drops the
     "emptied folder not refilled" problem and the reset-by-hand note in `testing.md`. After it
-    lands: `<commit>`.
+    lands: `3b2e76d`.
 12. [ ] **Device check.** Two Android phones on the relay: `server` jar on a LAN machine behind
     Caddy (TLS) or plain HTTP with a debug build. Pair by QR carrying the relay; simultaneous,
     staggered and offline edits; a 10-minute soak ending identical cell for cell; relay restart and
