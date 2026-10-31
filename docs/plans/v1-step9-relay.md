@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 to 6 and 8 done, slice 7 code landed (2026-11-01; emulator check pending); slices 9 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 6, 8 and 9 done, slice 7 code landed (2026-11-01; emulator check pending); slices 10 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -102,10 +102,10 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
    joining device that scans it preselects the relay with that URL; the token comes from the root.
    Tests in `core/crypto` (round trip, a relay section that isn't a URL is refused, an old reader
    still pairs) and `PairingTest`. After it lands: `eacdab2`.
-9. [ ] **Compaction: span skip in core.** The simulator's `isCoveredBySnapshot` moves to
+9. [x] **Compaction: span skip in core.** The simulator's `isCoveredBySnapshot` moves to
    `core/sync` as production code, used by both `Cluster` and `LiveSync`'s pull: a key inside an
    ingested snapshot of the same writer is not fetched. Tests: covered and uncovered spans,
-   another writer's snapshot doesn't cover. After it lands: `<commit>`.
+   another writer's snapshot doesn't cover. After it lands: `68b671e`.
 10. [ ] **Compaction: snapshot and prune in `LiveSync`.** After [`SNAPSHOT_EVERY`] own listed
     deltas, publish the whole state (`replica.cells()`, as `ManualSync.export` builds it) as type
     `s`; once a listing shows it, delete this device's

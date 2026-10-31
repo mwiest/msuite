@@ -259,18 +259,19 @@ folder*, not an error, so the plug can't tell that from a fresh folder; a write 
 reached), and a failed publish is retried after the next successful pull. Copies and twin
 folders that the sync client makes are cleaned up as above (decision 0078).
 
-### Compaction (planned)
+### Compaction
 
 The append-only contract grows three things without bound: backend objects, `list` enumeration and
 the client's `ingested_batch` bookkeeping. All three are bounded by 0002's rule — a writer's
 full-state snapshot subsumes its every earlier object — in three parts. The simulator has them
-(Layer 2, invariants 18 and 19); live sync publishes deltas only, so on a device they land with
-`delete` (v1 step 9):
+(Layer 2, invariants 18 and 19). Span skip is production code; writer-side pruning and recovery
+land with the rest of v1 step 9:
 
 - **Span skip.** A reader that has ingested a writer's snapshot skips that writer's objects whose
   `hlcLo`..`hlcHi` span lies inside it: the key grammar (0029) carries the span, so no `delete` is
   needed and *fetching* stays bounded on every backend (enumeration is bounded by the delete
-  below). `ingested_batch` and `unreadable_batch` are caches, not correctness (merge is
+  below). Code: `isCoveredBySnapshot` in `core/sync`, used by `LiveSync`'s pull and the simulator's
+  `Cluster`. `ingested_batch` and `unreadable_batch` are caches, not correctness (merge is
   state-based), so rows whose keys are no longer in `list` are pruned with it.
 - **Writer-side pruning.** After publishing a snapshot, a device deletes its own earlier objects,
   optionally keeping a short grace window (a key absent at `get` is a skip, not corruption —
