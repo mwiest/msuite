@@ -1,12 +1,15 @@
 package com.msuite.server
 
+import io.ktor.server.cio.CIO
+import io.ktor.server.engine.embeddedServer
+
 /**
- * Placeholder entry point for the dumb relay.
- *
- * The real relay is a single Ktor (CIO) binary implementing put/list/get(/delete)
- * with create-only atomic publish + hash verification, filesystem-backed and
- * reflection-averse for a cheap GraalVM-native build (decision 0017).
+ * The relay entry point: programmatic config from the environment, CIO engine, filesystem blobs
+ * (decision 0017). TLS is the host's or a reverse proxy's job; the relay speaks plain HTTP.
  */
 fun main() {
-    println("msuite relay skeleton — Ktor CIO server pending (see docs/plans/v1-todo.md, step 9).")
+    val config = RelayConfig.fromEnv()
+    embeddedServer(CIO, host = "0.0.0.0", port = config.port) {
+        relayModule(config)
+    }.start(wait = true)
 }

@@ -8,13 +8,10 @@ application {
 
 dependencies {
     implementation(project(":core:relay"))
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.cio)
 
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.kotest.assertions.core)
-
-    // TODO: Ktor server — CIO engine + programmatic embeddedServer (no HOCON module loading),
-    //       filesystem blob storage, reuse the decision 0003 name-grammar from core.
-    //       Kept reflection-averse so a GraalVM-native build stays cheap (decision 0017).
-    //   implementation(libs.ktor.server.core)
-    //   implementation(libs.ktor.server.cio)
+    testImplementation(libs.ktor.server.test.host)
 }

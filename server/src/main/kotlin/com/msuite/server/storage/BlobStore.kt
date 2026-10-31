@@ -26,7 +26,22 @@ sealed interface PutResult {
 
     /** The namespace is registered to another token. */
     data object Unauthorized : PutResult
+
+    /** Registering a new namespace is not allowed by the relay's configuration. */
+    data object Forbidden : PutResult
+
+    /** The object exceeds the relay's per-object limit. */
+    data object TooLarge : PutResult
+
+    /** The namespace would exceed the relay's size limit. */
+    data object InsufficientStorage : PutResult
 }
+
+/** The operator's size limits; [Long.MAX_VALUE] means unlimited. */
+data class BlobLimits(
+    val maxObjectBytes: Long = Long.MAX_VALUE,
+    val maxNamespaceBytes: Long = Long.MAX_VALUE,
+)
 
 /** A namespace listing; an unregistered namespace lists empty rather than failing. */
 sealed interface ListResult {
@@ -68,15 +83,34 @@ class BlobStore(private val root: Path, private val io: CoroutineContext = Dispa
     }
 
     /** Publishes [bytes] under [path], registering the namespace on its first put with [token]. */
-    suspend fun put(path: RelayPath, token: String, bytes: ByteArray): PutResult = withContext(io) {
+    suspend fun put(
+        path: RelayPath,
+        token: String,
+        bytes: ByteArray,
+        limits: BlobLimits = BlobLimits(),
+        mayRegister: Boolean = true,
+    ): PutResult = withContext(io) {
         val name = path.name ?: return@withContext PutResult.BadRequest
         if (!RelayApi.isValidKey(path.key)) return@withContext PutResult.BadRequest
         if (ciphertextHash(bytes) != ObjectKey.parse(path.key).hash) return@withContext PutResult.BadRequest
-        if (!registerOrCheck(path, token)) return@withContext PutResult.Unauthorized
+        if (bytes.size > limits.maxObjectBytes) return@withContext PutResult.TooLarge
+
+        when (access(path, token)) {
+            Access.Denied -> return@withContext PutResult.Unauthorized
+
+            Access.Unregistered -> {
+                if (!mayRegister) return@withContext PutResult.Forbidden
+                if (bytes.size > limits.maxNamespaceBytes) return@withContext PutResult.InsufficientStorage
+                if (!registerOrCheck(path, token)) return@withContext PutResult.Unauthorized
+            }
+
+            Access.Authorized -> Unit
+        }
 
         val directory = namespaceDirectory(path)
         val finalPath = directory.resolve(name)
         if (Files.exists(finalPath)) return@withContext PutResult.AlreadyPresent
+        if (usedBytes(path) + bytes.size > limits.maxNamespaceBytes) return@withContext PutResult.InsufficientStorage
 
         val temp = Files.createTempFile(directory, TEMP_PREFIX, "")
         try {
