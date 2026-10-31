@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 to 5 done (2026-10-31); slices 6 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 6 done (2026-10-31); slices 7 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -85,12 +85,12 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
    `RelayPlug` against the in-process relay, in memory and through `Replica`; invariant 12 with
    concurrent puts of the same and of distinct keys. `testing.md` gets the row. After it lands:
    `171a688`.
-6. [ ] **Backend-neutral live sync in the domain.** `FolderSyncActions` becomes `LiveSyncActions`
+6. [x] **Backend-neutral live sync in the domain.** `FolderSyncActions` becomes `LiveSyncActions`
    over the chosen backend (`SyncBackend.None` / `Folder(uri)` / `Relay(url)` in `TodoSettings`,
    migrating the stored folder URI); polling, flush and status unchanged. `PlugId` per backend
    (`folder:<uri>`, `relay:<url>`). Existing folder tests pass unchanged in behaviour; new tests:
    switching backend stops the old sync, a relay status carries `RelayRefused`. After it lands:
-   `<commit>`.
+   `aae79c7`.
 7. [ ] **Relay in the app.** `INTERNET` permission; the shell provides the OkHttp engine through
    `ShellServices`; a debug-only network security config allows cleartext. Settings: backend
    chooser, relay URL field (https only in release), the group ID to give an operator's allowlist,
