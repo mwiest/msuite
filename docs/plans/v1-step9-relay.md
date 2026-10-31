@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 to 4 done (2026-10-31); slices 5 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 5 done (2026-10-31); slices 6 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -81,10 +81,10 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
    `LiveSync` marks the plug unhealthy as it does for the folder. Tests in `server/src/test`, where
    client and relay meet: `assertPlugContract` against the in-process relay, and the plug's error
    mapping. After it lands: `bb054d6`.
-5. [ ] **Simulator Layer 2 and 3 over the relay.** `PlugStore` and `EnvelopePlugStore` over
+5. [x] **Simulator Layer 2 and 3 over the relay.** `PlugStore` and `EnvelopePlugStore` over
    `RelayPlug` against the in-process relay, in memory and through `Replica`; invariant 12 with
    concurrent puts of the same and of distinct keys. `testing.md` gets the row. After it lands:
-   `<commit>`.
+   `171a688`.
 6. [ ] **Backend-neutral live sync in the domain.** `FolderSyncActions` becomes `LiveSyncActions`
    over the chosen backend (`SyncBackend.None` / `Folder(uri)` / `Relay(url)` in `TodoSettings`,
    migrating the stored folder URI); polling, flush and status unchanged. `PlugId` per backend
