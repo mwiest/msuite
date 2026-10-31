@@ -5,7 +5,9 @@ import com.msuite.core.crypto.BatchEnvelope
 import com.msuite.core.crypto.EnvelopeResult
 import com.msuite.core.crypto.IdentityProvider
 import com.msuite.core.crypto.KEY_GEN_V1
+import com.msuite.core.model.Batch
 import com.msuite.core.model.MalformedBatch
+import com.msuite.core.model.Model
 import com.msuite.core.model.PlugId
 import com.msuite.core.model.ProtoBatchEncoder
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +25,12 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
+ * How many of a writer's own deltas may be listed before it publishes a full-state snapshot and
+ * prunes the objects the snapshot covers (plan v1 step 9; invariants 18, 19).
+ */
+const val SNAPSHOT_EVERY = 20
+
+/**
  * Live sync: observes replica changes, debounces, and publishes deltas. Also pulls changes from
  * the backend. Coarse batching (decision 0002): waits [idlePeriod] of idle before publishing, so
  * a burst of edits becomes one batch. Every object is a [BatchEnvelope] sealed under its key
@@ -30,6 +38,7 @@ import kotlin.time.Duration.Companion.seconds
  * (an unreachable folder) never throws out of here: it turns [healthy] false, and a failed
  * publish is retried after the next successful pull.
  */
+@Suppress("TooManyFunctions") // One facade: pull, publish, compaction and the guard around them.
 @OptIn(FlowPreview::class)
 class LiveSync(
     private val replica: Replica,
@@ -43,6 +52,7 @@ class LiveSync(
     private val envelope = BatchEnvelope(ProtoBatchEncoder, identity::root, KEY_GEN_V1)
     private var groupId: String? = null
     private var publishJob: Job? = null
+    private var snapshotPending: String? = null
     private val log = Logger.withTag("LiveSync")
     private val publishLock = Mutex()
     private var retryPublish = false
@@ -91,6 +101,7 @@ class LiveSync(
         for ((key, objectKey) in parsed) {
             if (objectKey != null) pullOne(key, objectKey, ingested)
         }
+        compact(keys)
         sweepConflictCopies(parsed.filterValues { it != null }.keys, parsed.filterValues { it == null }.keys)
         // Prune bookkeeping: remove entries for keys no longer in the backend (decision 0002).
         replica.prune(plugId, keys.toSet())
@@ -127,6 +138,66 @@ class LiveSync(
 
     private suspend fun publish() = publishLock.withLock {
         retryPublish = !guarded("publish") { publishDelta() }
+    }
+
+    /**
+     * The writer side of compaction (invariants 18, 19): once a listing shows one of this device's
+     * snapshots, delete this device's older objects its span covers, then publish a new snapshot
+     * after [SNAPSHOT_EVERY] own deltas. Nothing is deleted until the snapshot is listed (0077).
+     */
+    private suspend fun compact(keys: List<String>) {
+        val objects = keys.mapNotNull { key -> parseKey(key)?.let { key to it } }
+        if (snapshotPending != null && keys.contains(snapshotPending)) snapshotPending = null
+        val latest = latestOwnSnapshot(objects)
+        if (latest != null) pruneCovered(objects, latest)
+        if (snapshotPending == null && ownDeltasAfter(objects, latest) >= SNAPSHOT_EVERY) publishSnapshot()
+    }
+
+    private fun latestOwnSnapshot(objects: List<Pair<String, ObjectKey>>): Pair<String, ObjectKey>? = objects
+        .filter { (_, key) -> key.prefix.deviceId == replica.deviceId && key.prefix.type == BatchType.Snapshot }
+        .maxByOrNull { (_, key) -> key.prefix.hlcHi }
+
+    private suspend fun pruneCovered(objects: List<Pair<String, ObjectKey>>, latest: Pair<String, ObjectKey>) {
+        for ((key, objectKey) in objects) {
+            val own = objectKey.prefix.deviceId == replica.deviceId
+            if (own && key != latest.first && objectKey.prefix.hlcHi <= latest.second.prefix.hlcHi) {
+                plug.delete(key)
+            }
+        }
+    }
+
+    private fun ownDeltasAfter(objects: List<Pair<String, ObjectKey>>, latest: Pair<String, ObjectKey>?): Int =
+        objects.count { (_, objectKey) ->
+            objectKey.prefix.deviceId == replica.deviceId &&
+                objectKey.prefix.type == BatchType.Delta &&
+                (latest == null || objectKey.prefix.hlcHi > latest.second.prefix.hlcHi)
+        }
+
+    private suspend fun publishSnapshot() = publishLock.withLock {
+        if (snapshotPending != null) return@withLock
+        val gid = groupId ?: return@withLock
+        val cells = replica.cells()
+        if (cells.isEmpty()) return@withLock
+        val batch = Batch(Model.DATA_MODEL_VERSION, cells)
+        val prefix = ObjectKeyPrefix(
+            appId = appId,
+            groupId = gid,
+            type = BatchType.Snapshot,
+            deviceId = replica.deviceId,
+            hlcLo = cells.minOf { it.stamp.hlc },
+            hlcHi = cells.maxOf { it.stamp.hlc },
+        )
+        val bytes = envelope.seal(batch, prefix.text())
+        val key = prefix.withHash(ciphertextHash(bytes)).text()
+        plug.put(key, bytes)
+        replica.pushed(plugId, batch, key)
+        snapshotPending = key
+    }
+
+    private fun parseKey(key: String): ObjectKey? = try {
+        ObjectKey.parse(key)
+    } catch (ignored: IllegalArgumentException) {
+        null
     }
 
     // Plugs throw platform exceptions (IOException, SecurityException), so catch broadly.

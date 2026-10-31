@@ -19,6 +19,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.comparables.shouldBeLessThanOrEqualTo
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import kotlinx.coroutines.coroutineScope
@@ -76,6 +77,24 @@ private class LossyPlug(private val inner: BackendPlug = MemoryPlug()) : Backend
 
     override suspend fun put(key: String, bytes: ByteArray) {
         if (lose > 0) lose-- else inner.put(key, bytes)
+    }
+}
+
+/** Lists keys in sorted order (deltas before snapshots), then deletes one to mimic a prune mid-fetch. */
+private class DeleteAfterList(
+    private val inner: BackendPlug,
+    private val doomed: String,
+) : BackendPlug by inner {
+    override suspend fun list(prefix: String): List<String> = inner.list(prefix).sorted().also { inner.delete(doomed) }
+}
+
+private suspend fun snapshotKeys(plug: BackendPlug): List<String> =
+    plug.list("todo/").filter { ObjectKey.parse(it).prefix.type == BatchType.Snapshot }
+
+private suspend fun writeDeltas(replica: Replica, sync: LiveSync, count: Int) {
+    repeat(count) { i ->
+        replica.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to byteArrayOf(i.toByte())))
+        sync.flush()
     }
 }
 
@@ -212,6 +231,83 @@ class LiveSyncTest : StringSpec({
         val reader = Replica(driver(), peer, TestClock(1_000))
         pull(reader, plug)
         reader.cells() shouldContainExactlyInAnyOrder written
+    }
+
+    "compaction publishes a snapshot and prunes only once a listing shows it" {
+        val writer = Replica(driver(), local, TestClock(1_000))
+        val plug = MemoryPlug()
+
+        coroutineScope {
+            val sync = LiveSync(writer, plug, plugId, "todo", identity(), this)
+            sync.start()
+            writeDeltas(writer, sync, SNAPSHOT_EVERY)
+            plug.list("todo/") shouldHaveSize SNAPSHOT_EVERY
+
+            // The first pull sees only deltas; it publishes the snapshot but prunes nothing.
+            sync.pull()
+            val snapshot = snapshotKeys(plug).single()
+            val bytes = plug.get(snapshot)!!
+            plug.list("todo/") shouldHaveSize SNAPSHOT_EVERY + 1
+
+            // Without the snapshot in the listing, the old objects stay (decision 0077).
+            plug.delete(snapshot)
+            sync.pull()
+            plug.list("todo/") shouldHaveSize SNAPSHOT_EVERY
+
+            plug.put(snapshot, bytes)
+            sync.pull()
+            plug.list("todo/") shouldHaveSize 1
+            ObjectKey.parse(plug.list("todo/").single()).prefix.type shouldBe BatchType.Snapshot
+            sync.stop()
+        }
+
+        val reader = Replica(driver(), peer, TestClock(1_000))
+        pull(reader, plug)
+        reader.cells() shouldContainExactlyInAnyOrder writer.cells()
+    }
+
+    "a writer's object count stays bounded and a late peer converges" {
+        val writer = Replica(driver(), local, TestClock(1_000))
+        val plug = MemoryPlug()
+
+        coroutineScope {
+            val sync = LiveSync(writer, plug, plugId, "todo", identity(), this)
+            sync.start()
+            repeat(45) { index ->
+                writer.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to byteArrayOf(index.toByte())))
+                sync.flush()
+                if ((index + 1) % SNAPSHOT_EVERY == 0) {
+                    sync.pull() // publish the snapshot
+                    sync.pull() // see it listed and prune
+                }
+            }
+            sync.pull()
+            plug.list("todo/").size shouldBeLessThanOrEqualTo SNAPSHOT_EVERY + 1
+            sync.stop()
+        }
+
+        val reader = Replica(driver(), peer, TestClock(1_000))
+        pull(reader, plug)
+        reader.cells() shouldContainExactlyInAnyOrder writer.cells()
+    }
+
+    "a reader whose listed key is pruned mid-fetch skips it and converges (0069)" {
+        val writer = Replica(driver(), local, TestClock(1_000))
+        val plug = MemoryPlug()
+        coroutineScope {
+            val sync = LiveSync(writer, plug, plugId, "todo", identity(), this)
+            sync.start()
+            writeDeltas(writer, sync, SNAPSHOT_EVERY)
+            sync.pull()
+            sync.stop()
+        }
+        val doomed = plug.list("todo/").first { ObjectKey.parse(it).prefix.type == BatchType.Delta }
+
+        val reader = Replica(driver(), peer, TestClock(1_000))
+        pull(reader, DeleteAfterList(plug, doomed))
+
+        reader.cells() shouldContainExactlyInAnyOrder writer.cells()
+        reader.isCorrupt(plugId, doomed) shouldBe false
     }
 
     "a pull from an unreachable plug doesn't throw and reports the plug unhealthy" {
