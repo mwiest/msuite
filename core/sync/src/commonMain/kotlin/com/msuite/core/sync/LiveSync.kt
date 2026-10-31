@@ -101,6 +101,7 @@ class LiveSync(
         for ((key, objectKey) in parsed) {
             if (objectKey != null) pullOne(key, objectKey, ingested)
         }
+        if (!hasOwnObject(keys) && replica.canRecover(plugId)) publishSnapshot()
         compact(keys)
         sweepConflictCopies(parsed.filterValues { it != null }.keys, parsed.filterValues { it == null }.keys)
         // Prune bookkeeping: remove entries for keys no longer in the backend (decision 0002).
@@ -172,6 +173,10 @@ class LiveSync(
                 objectKey.prefix.type == BatchType.Delta &&
                 (latest == null || objectKey.prefix.hlcHi > latest.second.prefix.hlcHi)
         }
+
+    /** Whether [keys] still holds any object written by this device. */
+    private fun hasOwnObject(keys: List<String>): Boolean =
+        keys.any { parseKey(it)?.prefix?.deviceId == replica.deviceId }
 
     private suspend fun publishSnapshot() = publishLock.withLock {
         if (snapshotPending != null) return@withLock

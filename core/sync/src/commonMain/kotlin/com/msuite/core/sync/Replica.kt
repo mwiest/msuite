@@ -100,6 +100,14 @@ class Replica private constructor(
         store.plugs.ingestedKeys(plug).toSet()
     }
 
+    /**
+     * Whether [plug] needs the recovery snapshot: this device has published before (a watermark)
+     * and no publish is waiting to appear (0002, 0077).
+     */
+    suspend fun canRecover(plug: PlugId): Boolean = serialized {
+        store.plugs.watermark(plug) != null && store.unconfirmed.all(plug).isEmpty()
+    }
+
     /** What [plug] hasn't been sent yet, or `null`; after a successful put, call [pushed]. */
     suspend fun delta(plug: PlugId): Batch? = serialized {
         val watermark = store.plugs.watermark(plug)

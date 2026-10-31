@@ -310,6 +310,41 @@ class LiveSyncTest : StringSpec({
         reader.isCorrupt(plugId, doomed) shouldBe false
     }
 
+    "a wiped plug is refilled and a fresh peer converges" {
+        val writer = Replica(driver(), local, TestClock(1_000))
+        val plug = MemoryPlug()
+
+        coroutineScope {
+            val sync = LiveSync(writer, plug, plugId, "todo", identity(), this)
+            sync.start()
+            writer.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to title))
+            sync.flush()
+            sync.pull() // confirm the delta and leave a watermark
+            plug.list("todo/").forEach { plug.delete(it) }
+
+            sync.pull()
+            snapshotKeys(plug) shouldHaveSize 1
+            sync.stop()
+        }
+
+        val reader = Replica(driver(), peer, TestClock(1_000))
+        pull(reader, plug)
+        reader.cells() shouldContainExactlyInAnyOrder writer.cells()
+    }
+
+    "a fresh replica with no watermark does not snapshot an empty plug" {
+        val replica = Replica(driver(), local, TestClock(1_000))
+        val plug = MemoryPlug()
+        coroutineScope {
+            val sync = LiveSync(replica, plug, plugId, "todo", identity(), this)
+            sync.start()
+            sync.pull()
+            sync.stop()
+        }
+
+        snapshotKeys(plug).shouldBeEmpty()
+    }
+
     "a pull from an unreachable plug doesn't throw and reports the plug unhealthy" {
         val replica = Replica(driver(), local, TestClock(1_000))
         coroutineScope {
