@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slice 1 done (2026-10-31); slices 2 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 and 2 done (2026-10-31); slices 3 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -65,12 +65,12 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
    parsing for keys and listings, status-code constants, `relayToken(root, appId)`. Tests: token
    is deterministic, differs per app, and differs from `groupId`; paths round-trip; a name with
    `/`, `..` or outside the key grammar is rejected. After it lands: `c364585`.
-2. [ ] **Relay storage.** `BlobStore` in `server` over a data directory: create-only `put` (temp +
+2. [x] **Relay storage.** `BlobStore` in `server` over a data directory: create-only `put` (temp +
    hard link), `list`, `get`, `delete`, the hash check against the key, the namespace registry
-   (`.token`, created with `CREATE_NEW` so two first puts race safely), byte accounting per
+   (`.token`, linked into place so two first puts race safely), byte accounting per
    namespace (scanned at start, kept in memory). kotest in `server/src/test` on a temp dir: create
    wins once under concurrent puts, a half-written temp is never listed, a wrong hash is refused, a
-   restart re-reads sizes. After it lands: `<commit>`.
+   restart re-reads sizes. After it lands: `7100731`.
 3. [ ] **Relay HTTP.** `embeddedServer(CIO)` with the routes and status codes above, bearer auth
    against the registry, trust on first `put` (decision 0030), the allowlist and both size limits,
    env config, `/health`; `main` replaces the placeholder. Tests with `testApplication`: every
