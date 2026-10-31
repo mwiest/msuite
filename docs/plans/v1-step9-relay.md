@@ -1,6 +1,6 @@
 # Plan: v1 step 9, the relay and the relay plug
 
-Status: **slices 1 and 2 done (2026-10-31); slices 3 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
+Status: **slices 1 to 3 done (2026-10-31); slices 4 to 12 open.** Started 2026-10-31. Parent: [`v1-todo.md`](v1-todo.md) step 9.
 
 ## Goal
 
@@ -47,7 +47,7 @@ Proposed here, confirm or overrule before the slice that needs them (see Open qu
 - **Relay config:** environment variables, read once in `main` (programmatic, decision 0017):
   `MSUITE_RELAY_PORT`, `MSUITE_RELAY_DATA`, `MSUITE_RELAY_ALLOW_GROUPS` (comma-separated `groupId`s;
   unset = open), `MSUITE_RELAY_MAX_OBJECT_BYTES`, `MSUITE_RELAY_MAX_NAMESPACE_BYTES`. Env vars suit
-  step 10's cloud hosts.
+  step 10's cloud hosts. Defaults: port 8080, `relay-data`, 16 MiB per object, 1 GiB per namespace.
 - **One backend at a time:** Settings chooses none, folder or relay. Two at once needs per-plug
   change tracking (`roadmap.md` -> Ideas).
 - **No capability descriptor yet:** both live plugs can `delete`, and the manual plug isn't a
@@ -71,11 +71,11 @@ Test-first; each slice builds and leaves `./gradlew spotlessCheck detekt allTest
    namespace (scanned at start, kept in memory). kotest in `server/src/test` on a temp dir: create
    wins once under concurrent puts, a half-written temp is never listed, a wrong hash is refused, a
    restart re-reads sizes. After it lands: `7100731`.
-3. [ ] **Relay HTTP.** `embeddedServer(CIO)` with the routes and status codes above, bearer auth
+3. [x] **Relay HTTP.** `embeddedServer(CIO)` with the routes and status codes above, bearer auth
    against the registry, trust on first `put` (decision 0030), the allowlist and both size limits,
    env config, `/health`; `main` replaces the placeholder. Tests with `testApplication`: every
    status code, a second group can't read the first's names, an unregistered namespace lists
-   empty. `./gradlew :server:run` serves. After it lands: `<commit>`.
+   empty. `./gradlew :server:run` serves. After it lands: `3203451`.
 4. [ ] **`RelayPlug`.** `BackendPlug` over a Ktor `HttpClient` built from an injected engine; maps
    `401`/`403`/`507` to `RelayRefused(reason)` and transport failures to `IOException`, so
    `LiveSync` marks the plug unhealthy as it does for the folder. Tests in `server/src/test`, where
