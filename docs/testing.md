@@ -183,15 +183,41 @@ build signed with another machine's debug key won't `install -r` over the old on
 
 ## Two-device check (relay)
 
-Not run yet (2026-11-01): the emulator binaries and `test_avd` exist (`/dev/kvm` is present), but
-the headless boot was not completed in this session; no physical devices were attached. The
-procedure below is ready to run.
+Run 2026-11-03 on two headless Android 14 emulators (`test_avd` and a fresh `test_avd2`, both
+`google_apis/x86_64` under KVM) against the relay built by `:server:installDist` on the host. A
+headless emulator has no camera, so the joining device was paired with the 24 recovery words
+instead of scanning; the relay section of the QR was confirmed by decoding the code device 1 drew
+from a screenshot (62 bytes, backend section type `2` plus `http://10.0.2.2:8080`, record 0080).
+Every row of the table passed:
 
-Setup: build `:server:jar`, then on a LAN host run
-`MSUITE_RELAY_PORT=8080 MSUITE_RELAY_DATA=/srv/msuite java -jar server/build/libs/server.jar`.
+- Simultaneous, 1 / 5 / 10 s staggered and airplane-mode offline edits converged within one poll.
+- The 10-minute soak (76 mixed create/rename/toggle/delete operations) ended with `field_state`
+  identical cell for cell (132 cells, `hlc` and `device_id` included), `unreadable_batch` and
+  `unconfirmed_publish` empty on both.
+- Stopping the relay showed "Can't reach the relay…" and froze `Last sync`; an edit made while it
+  was down stayed local and reached the other device one poll after the restart, with no user
+  action. The same held for a one-minute outage.
+- Deleting `{dataDir}/todo/{groupId}` made both devices republish a snapshot within 20 s. Clearing
+  device 2's app data (`pm clear`) and pairing it again from the words rebuilt all 136 cells
+  identically from the relay alone.
+- Object counts stayed bounded: 6 and 9 per writer on the relay after about 80 edits, and 4
+  objects in the namespace after the refill; on a folder plug one writer peaked at 21 objects (the
+  snapshot gate), fell to 6 once the snapshot was listed, and was 14 at the end.
+- `grep -rl` for task titles found no plaintext in the relay's data directory or in the folder.
+
+A device that is wiped and re-paired gets a new `device_id`, so its old identity's objects stay
+behind (one snapshot) and no other device prunes them. The folder count was checked on an
+emulator-local SAF folder (`/sdcard/msuite`) rather than Dropbox, which no emulator here runs; it
+drives the same `LiveSync` compaction through `FolderPlug`.
+
+Setup: build the relay with `./gradlew :server:installDist` and run
+`MSUITE_RELAY_PORT=8080 MSUITE_RELAY_DATA=/srv/msuite server/build/install/server/bin/server`
+(`./gradlew :server:run` with the same environment serves too; `:server:jar` is a thin jar, so
+`java -jar` on it does not start).
 Put Caddy (or the host's TLS) in front and use `https://…` on both devices, or use a debug build
 with `http://<host>:8080` (the Android emulator reaches the host as `http://10.0.2.2:8080`).
-Install the same debug build on both, pair by QR (the code carries the relay URL, record 0080), and
+Install the same debug build on both, pair by QR (the code carries the relay URL, record 0080) — or,
+on a device without a camera, with the 24 recovery words and the relay URL typed by hand — and
 keep both apps in the foreground while syncing. The group ID in Settings is what
 `MSUITE_RELAY_ALLOW_GROUPS` would name.
 

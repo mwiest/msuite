@@ -265,8 +265,9 @@ folders that the sync client makes are cleaned up as above (decision 0078).
 The append-only contract grows three things without bound: backend objects, `list` enumeration and
 the client's `ingested_batch` bookkeeping. All three are bounded by 0002's rule — a writer's
 full-state snapshot subsumes its every earlier object — in three parts. The simulator has them
-(Layer 2, invariants 18 and 19). Span skip, snapshot publishing and writer-side pruning are
-production code; recovery lands with the rest of v1 step 9:
+(Layer 2, invariants 18 and 19), and all three are production code in `LiveSync`: span skip,
+snapshot publishing with writer-side pruning, and the recovery rule for a backend that lost a
+writer's objects:
 
 - **Span skip.** A reader that has ingested a writer's snapshot skips that writer's objects whose
   `hlcLo`..`hlcHi` span lies inside it: the key grammar (0029) carries the span, so no `delete` is

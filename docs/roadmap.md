@@ -32,6 +32,9 @@ After v1, roughly in this order:
   object. Caching the sealed bytes needs a safe "same delta" check, as a peer cell can land inside
   the same HLC range.
 - The pairing camera forces landscape.
+- A device that is wiped and re-paired gets a new `deviceId`, so the objects of its old identity
+  stay (at most a snapshot and a few deltas) and no member prunes them; a group that reinstalls
+  often accumulates one per install (decisions 0029, 0058).
 - The German strings mix "du" and "Sie".
 - A machine without any JDK 21 can't build: the daemon is pinned to 21 (detekt 1.23 fails on
   JDK 25) and no toolchain download is configured. Drop the pin once detekt 2 is stable.

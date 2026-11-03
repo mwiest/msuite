@@ -1,7 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 8 done, code and device checks; step 9, the relay, is planned
-([`v1-step9-relay.md`](v1-step9-relay.md)).**
+Status: **steps 0 to 9 done, code and device checks; step 10, the cloud deploy template, is next.**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -105,11 +104,11 @@ Each step may take several commits; a step that grows big gets its own plan.
    on two Android 16 phones through Dropbox (`testing.md` -> Two-device check): simultaneous,
    staggered and racing writes, a 10-minute soak ending identical cell for cell, reboot and
    reinstall. Snapshots and pruning run in the simulator only; on devices they land with step 9.
-9. [ ] **Relay and relay plug.** `server/` as a Ktor CIO binary with namespace tokens (decision
+9. [x] **Relay and relay plug.** `server/` as a Ktor CIO binary with namespace tokens (decision
    0030), plus the plug that talks to it; capability-gated `delete` and writer-side pruning with
    the recovery rule (`architecture.md` → Compaction). Proves: live self-hosted sync without a
-   sync tool. Plan: [`v1-step9-relay.md`](v1-step9-relay.md). Code landed 2026-11-01 (slices 1 to
-   11); the emulator and two-device checks are pending.
+   sync tool. Code landed 2026-11-01 (`e619153`, decisions 0079 and 0080); checked 2026-11-03 on
+   two emulators, results in `testing.md` → Two-device check (relay).
 10. [ ] **Cloud deploy template for the relay.** Proves: a non-technical hosting path exists.
 
 ## Open questions
