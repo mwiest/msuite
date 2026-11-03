@@ -30,7 +30,15 @@ class AndroidSensitiveClipboard(context: Context, private val scope: CoroutineSc
             // Best effort: Android 10+ refuses a background read, so an unreadable clip is cleared
             // too — leaving a root on the clipboard is worse than clearing a newer copy.
             val current = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-            if (current == null || current == text) clipboard.clearPrimaryClip()
+            if (current == null || current == text) clear()
+        }
+    }
+
+    private fun clear() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            clipboard.clearPrimaryClip()
+        } else {
+            clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
         }
     }
 
