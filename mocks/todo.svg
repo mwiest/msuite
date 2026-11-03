@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="500px" height="500px" xmlns:bx="https://boxy-svg.com">
+  <defs>
+    <bx:grid x="0" y="0.699" width="21.333" height="21.333" divisions="1"/>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="249.088" y1="0" x2="249.088" y2="492.584" id="gradient-0" spreadMethod="pad" gradientTransform="matrix(0.867388, 0.557506, -0.62536, 1.008441, 801.697266, 443.74881)">
+      <stop offset="0" style="stop-color: rgb(65, 169, 180);"/>
+      <stop offset="1" style="stop-color: rgb(65, 100, 149);"/>
+    </linearGradient>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="249.088" y1="0" x2="249.088" y2="492.584" id="gradient-1" spreadMethod="pad" gradientTransform="matrix(0.867388, 0.557506, -0.62536, 1.008441, 801.697876, -138.170189)">
+      <stop offset="0" style="stop-color: rgb(209, 246, 250);"/>
+      <stop offset="1" style="stop-color: rgb(206, 211, 218);"/>
+    </linearGradient>
+    <bx:export>
+      <bx:file format="svg" href="#object-0"/>
+      <bx:file format="svg" href="#object-1" path="Untitled 2.svg"/>
+      <bx:file format="svg" href="#object-2" path="Untitled 3.svg"/>
+      <bx:file format="svg" href="#object-3" path="Untitled 4.svg"/>
+      <bx:file format="svg" href="#object-4" path="Untitled 5.svg"/>
+      <bx:file format="svg" href="#object-5" path="Untitled 6.svg"/>
+      <bx:file format="svg" href="#object-6" path="Untitled 7.svg"/>
+    </bx:export>
+  </defs>
+  <rect width="511.992" height="511.992" rx="64.784" ry="64.784" style="fill: url(&quot;#gradient-0&quot;); fill-rule: nonzero;" y="582.617" x="597.324"/>
+  <path d="M 746.655 689.282 m -63.999 0 a 63.999 63.998 0 1 0 127.998 0 a 63.999 63.998 0 1 0 -127.998 0 Z M 746.655 689.282 m -43.091 0 a 43.091 43.091 0 0 1 86.182 0 a 43.091 43.091 0 0 1 -86.182 0 Z" bx:shape="ring 746.655 689.282 43.091 43.091 63.999 63.998 1@06ee98c7" style="fill: rgb(220, 239, 249);"/>
+  <path d="M 746.655 837.179 m -63.999 0 a 63.999 62.564 0 1 0 127.998 0 a 63.999 62.564 0 1 0 -127.998 0 Z M 746.655 837.179 m -44.109 0 a 44.109 43.117 0 0 1 88.218 0 a 44.109 43.117 0 0 1 -88.218 0 Z" bx:shape="ring 746.655 837.179 44.109 43.117 63.999 62.564 1@f6d92938" style="fill: rgb(208, 237, 252);"/>
+  <path d="M 746.655 987.944 m -63.999 0 a 63.999 63.999 0 1 0 127.998 0 a 63.999 63.999 0 1 0 -127.998 0 Z M 746.655 987.944 m -44.108 0 a 44.108 44.107 0 0 1 88.216 0 a 44.108 44.107 0 0 1 -88.216 0 Z" bx:shape="ring 746.655 987.944 44.108 44.107 63.999 63.999 1@7e7729db" style="fill: rgb(158, 204, 229);"/>
+  <rect x="831.987" y="667.949" width="213.33" height="42.666" rx="4" ry="4" style="fill: rgb(223, 238, 248);"/>
+  <rect x="831.987" y="815.876" width="213.33" height="44.07" rx="4" ry="4" style="fill: rgb(213, 236, 251);"/>
+  <rect x="831.987" y="964.821" width="213.33" height="44.456" rx="4" ry="4" style="fill: rgb(166, 202, 227);"/>
+  <path style="fill: rgb(166, 202, 227);" d="M 718.263 984.327 L 743.851 994.562 L 769.048 949.122 C 769.048 949.122 780.264 956.626 779.839 956.626 C 779.417 956.626 748.15 1017.85 748.15 1017.85 L 713.296 994.993 L 718.263 984.327 Z"/>
+  <rect width="511.992" height="511.992" rx="64.784" ry="64.784" style="fill-rule: nonzero; fill: url(&quot;#gradient-1&quot;);" y="0.699" x="597.324"/>
+  <path d="M 746.655 405.575 m -63.999 0 a 63.999 64.453 0 1 0 127.998 0 a 63.999 64.453 0 1 0 -127.998 0 Z M 746.655 405.575 m -44.107 0 a 44.107 44.418 0 0 1 88.214 0 a 44.107 44.418 0 0 1 -88.214 0 Z" bx:shape="ring 746.655 405.575 44.107 44.418 63.999 64.453 1@9408fc9d" style="fill: rgb(112, 156, 171);"/>
+  <ellipse style="fill: rgb(112, 156, 171);" cx="746.764" cy="404.969" rx="27.987" ry="28.186"/>
+  <path d="M 746.655 107.335 m -63.999 0 a 63.999 63.965 0 1 0 127.998 0 a 63.999 63.965 0 1 0 -127.998 0 Z M 746.655 107.335 m -44.107 0 a 44.107 44.083 0 0 1 88.214 0 a 44.107 44.083 0 0 1 -88.214 0 Z" bx:shape="ring 746.655 107.335 44.107 44.083 63.999 63.965 1@3366925f" style="fill: rgb(109, 203, 220);"/>
+  <path d="M 746.655 256.656 m -63.999 0 a 63.999 63.976 0 1 0 127.998 0 a 63.999 63.976 0 1 0 -127.998 0 Z M 746.655 256.656 m -44.107 0 a 44.107 44.09 0 0 1 88.214 0 a 44.107 44.09 0 0 1 -88.214 0 Z" bx:shape="ring 746.655 256.656 44.107 44.09 63.999 63.976 1@c95199fe" style="fill: rgb(75, 183, 206);"/>
+  <rect x="833.2" y="97.367" width="212.117" height="20.018" rx="10.009" ry="10.009" style="fill: rgb(129, 200, 218);"/>
+  <rect x="833.2" y="248.655" width="212.117" height="19.222" rx="9.611" ry="9.611" style="fill: rgb(101, 180, 204);"/>
+  <rect x="833.2" y="396.415" width="212.117" height="21.333" rx="10.667" ry="10.667" style="fill: rgb(101, 158, 172);"/>
+  <rect width="511.987" height="511.992" style="fill-rule: nonzero; fill: rgb(233, 250, 252);" x="0.013" id="object-0"/>
+  <path d="M 159.997 128.016 m -53.332 0 a 53.332 53.321 0 1 0 106.664 0 a 53.332 53.321 0 1 0 -106.664 0 Z M 159.997 128.016 m -36.756 0 a 36.756 36.747 0 0 1 73.512 0 a 36.756 36.747 0 0 1 -73.512 0 Z" bx:shape="ring 159.997 128.016 36.756 36.747 53.332 53.321 1@5548c5a4" style="fill: rgb(114, 210, 227);" id="object-1"/>
+  <path d="M 159.997 257.025 m -53.332 0 a 53.332 53.31 0 1 0 106.664 0 a 53.332 53.31 0 1 0 -106.664 0 Z M 159.997 257.025 m -36.756 0 a 36.756 36.74 0 0 1 73.512 0 a 36.756 36.74 0 0 1 -73.512 0 Z" bx:shape="ring 159.997 257.025 36.756 36.74 53.332 53.31 1@b4ba87cc" style="fill: rgb(88, 183, 203);" id="object-2"/>
+  <rect x="255.996" y="107.364" width="191.997" height="42.666" rx="21.333" ry="21.333" style="fill: rgb(114, 210, 227);" id="object-3"/>
+  <rect x="255.996" y="235.362" width="191.997" height="42.666" rx="21.333" ry="21.333" style="fill: rgb(88, 183, 203);" id="object-4"/>
+  <rect x="255.996" y="363.36" width="191.997" height="42.666" rx="21.333" ry="21.333" style="fill: rgb(101, 158, 172);" id="object-5"/>
+  <ellipse style="fill: rgb(101, 158, 172);" cx="159.715" cy="385.109" rx="51.05" ry="51.05" id="object-6"/>
+</svg>
