@@ -2,7 +2,6 @@ package com.msuite.core.relay
 
 import com.msuite.core.sync.BackendPlug
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
@@ -16,17 +15,25 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import kotlinx.io.IOException
 
+/** Why the relay refused a request; Settings maps each to one message (decision 0079). */
+enum class RelayRefusal(val label: String) {
+    Unauthorized("unauthorized"),
+    Forbidden("forbidden"),
+    ObjectTooLarge("object too large"),
+    NamespaceFull("namespace full"),
+}
+
 /** The relay refused a request for a reason the user can act on (auth, registration or limits). */
 class RelayRefused(
-    val reason: String,
+    val refusal: RelayRefusal,
     val status: Int,
     cause: Throwable? = null,
-) : IOException("relay refused ($status): $reason", cause)
+) : IOException("relay refused ($status): ${refusal.label}", cause)
 
 /**
- * The [BackendPlug] over the relay's HTTP API (decision 0079). [client] is built by the caller,
- * normally with an injected engine (OkHttp on Android); tests pass Ktor's in-process client. The
- * bearer token is derived from [root] on each request and never stored (decision 0030).
+ * The [BackendPlug] over the relay's HTTP API (decision 0079). [client] is built and owned by the
+ * caller, normally with an injected engine (OkHttp on Android); tests pass Ktor's in-process
+ * client. The bearer token is derived from [root] on each request and never stored (decision 0030).
  */
 class RelayPlug(
     private val baseUrl: String,
@@ -34,13 +41,6 @@ class RelayPlug(
     private val root: ByteArray,
     private val client: HttpClient,
 ) : BackendPlug {
-    constructor(baseUrl: String, appId: String, root: ByteArray, engine: HttpClientEngine) : this(
-        baseUrl = baseUrl,
-        appId = appId,
-        root = root,
-        client = HttpClient(engine) { expectSuccess = false },
-    )
-
     override suspend fun put(key: String, bytes: ByteArray) {
         val status = call {
             client.put(url(RelayApi.keyPath(key))) {
@@ -90,10 +90,10 @@ class RelayPlug(
     }
 
     private fun failure(status: HttpStatusCode, cause: Throwable? = null): IOException = when (status.value) {
-        RelayStatus.UNAUTHORIZED -> RelayRefused("unauthorized", status.value, cause)
-        RelayStatus.FORBIDDEN -> RelayRefused("forbidden", status.value, cause)
-        RelayStatus.TOO_LARGE -> RelayRefused("object too large", status.value, cause)
-        RelayStatus.INSUFFICIENT_STORAGE -> RelayRefused("namespace full", status.value, cause)
+        RelayStatus.UNAUTHORIZED -> RelayRefused(RelayRefusal.Unauthorized, status.value, cause)
+        RelayStatus.FORBIDDEN -> RelayRefused(RelayRefusal.Forbidden, status.value, cause)
+        RelayStatus.TOO_LARGE -> RelayRefused(RelayRefusal.ObjectTooLarge, status.value, cause)
+        RelayStatus.INSUFFICIENT_STORAGE -> RelayRefused(RelayRefusal.NamespaceFull, status.value, cause)
         else -> IOException("relay answered ${status.value} ${status.description}", cause)
     }
 }

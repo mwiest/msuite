@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.msuite.core.relay.RelayRefusal
 import com.msuite.todo.domain.LiveSyncActions
 import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.domain.SyncStatus
@@ -342,12 +343,18 @@ private fun SyncStatusLines(status: SyncStatus, backend: SyncBackend) {
     }
 }
 
-private fun statusMessage(status: SyncStatus, backend: SyncBackend): StringResource? = when {
-    status.refused?.reason == "unauthorized" -> Res.string.relay_unauthorized
-    status.refused?.reason == "forbidden" -> Res.string.relay_forbidden
-    status.refused?.reason == "namespace full" -> Res.string.relay_full
-    status.refused?.reason == "object too large" -> Res.string.relay_too_large
-    status.failing && backend is SyncBackend.Relay -> Res.string.relay_unreachable
-    status.failing -> Res.string.folder_sync_failing
-    else -> null
+private fun statusMessage(status: SyncStatus, backend: SyncBackend): StringResource? = when (status.refused?.refusal) {
+    RelayRefusal.Unauthorized -> Res.string.relay_unauthorized
+
+    RelayRefusal.Forbidden -> Res.string.relay_forbidden
+
+    RelayRefusal.NamespaceFull -> Res.string.relay_full
+
+    RelayRefusal.ObjectTooLarge -> Res.string.relay_too_large
+
+    null -> when {
+        status.failing && backend is SyncBackend.Relay -> Res.string.relay_unreachable
+        status.failing -> Res.string.folder_sync_failing
+        else -> null
+    }
 }

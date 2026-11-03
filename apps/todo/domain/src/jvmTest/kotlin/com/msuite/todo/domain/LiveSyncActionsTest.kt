@@ -3,6 +3,7 @@ package com.msuite.todo.domain
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.msuite.core.crypto.BackendType
 import com.msuite.core.model.DeviceId
+import com.msuite.core.relay.RelayRefusal
 import com.msuite.core.relay.RelayRefused
 import com.msuite.core.storage.LocalStore
 import com.msuite.core.sync.BackendPlug
@@ -200,7 +201,7 @@ class LiveSyncActionsTest : StringSpec({
     }
 
     "a relay refusal is carried on the status" {
-        val refusal = RelayRefused("unauthorized", 401)
+        val refusal = RelayRefused(RelayRefusal.Unauthorized, 401)
         val settings = TodoSettings(MapSettings())
 
         coroutineScope {
@@ -218,7 +219,7 @@ class LiveSyncActionsTest : StringSpec({
             live.syncNow()
 
             live.status.value.failing shouldBe true
-            live.status.value.refused?.reason shouldBe "unauthorized"
+            live.status.value.refused?.refusal shouldBe RelayRefusal.Unauthorized
             live.status.value.refused?.status shouldBe 401
             live.setBackend(SyncBackend.None)
         }

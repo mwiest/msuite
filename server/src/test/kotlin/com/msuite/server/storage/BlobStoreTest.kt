@@ -127,6 +127,20 @@ class BlobStoreTest : StringSpec({
         store.usedBytes(NAMESPACE) shouldBe bytes.size.toLong()
     }
 
+    "a leftover temp file is removed when the store opens" {
+        val key = keyFor("kept")
+        val path = pathOf(key)
+        val bytes = bytesOf("kept")
+        store.put(path, TOKEN, bytes)
+
+        val stale = Files.write(root.resolve(APP).resolve(GROUP).resolve(".tmp_dead"), bytesOf("half"))
+
+        val reopened = BlobStore(root)
+        Files.exists(stale) shouldBe false
+        reopened.list(NAMESPACE, TOKEN) shouldBe ListResult.Ok(listOf(checkNotNull(path.name)))
+        reopened.usedBytes(NAMESPACE) shouldBe bytes.size.toLong()
+    }
+
     "the first put registers the namespace and another token is refused" {
         val key = keyFor("registered")
         val path = pathOf(key)

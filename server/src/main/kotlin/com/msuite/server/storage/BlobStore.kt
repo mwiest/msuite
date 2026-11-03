@@ -79,6 +79,7 @@ class BlobStore(private val root: Path, private val io: CoroutineContext = Dispa
 
     init {
         Files.createDirectories(root)
+        purgeTemps(root)
         scan(root, sizes)
     }
 
@@ -223,6 +224,15 @@ class BlobStore(private val root: Path, private val io: CoroutineContext = Dispa
         const val TEMP_PREFIX = ".tmp_"
 
         fun isObject(path: Path): Boolean = Files.isRegularFile(path) && !path.fileName.toString().startsWith(".")
+
+        /** A publish that died between write and link leaves a temp file; startup owns the directory. */
+        fun purgeTemps(root: Path) {
+            Files.walk(root).use { entries ->
+                entries
+                    .filter { it.fileName.toString().startsWith(TEMP_PREFIX) }
+                    .forEach(Files::deleteIfExists)
+            }
+        }
 
         fun scan(root: Path, sizes: MutableMap<String, Long>) {
             if (!Files.isDirectory(root)) return

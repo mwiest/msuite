@@ -3,6 +3,7 @@ package com.msuite.server
 import com.msuite.core.model.DeviceId
 import com.msuite.core.model.Hlc
 import com.msuite.core.relay.RelayPlug
+import com.msuite.core.relay.RelayRefusal
 import com.msuite.core.relay.RelayRefused
 import com.msuite.core.sync.BatchType
 import com.msuite.core.sync.ObjectKeyPrefix
@@ -73,7 +74,7 @@ class RelayPlugTest : StringSpec({
             val refused = expectThrows<RelayRefused> {
                 RelayPlug("", APP, OTHER_ROOT, client).put(second, bytesOf("second"))
             }
-            refused.reason shouldBe "unauthorized"
+            refused.refusal shouldBe RelayRefusal.Unauthorized
         }
     }
 
@@ -83,7 +84,7 @@ class RelayPlugTest : StringSpec({
             val refused = expectThrows<RelayRefused> {
                 RelayPlug("", APP, ROOT, client).put(keyFor(bytesOf("x")), bytesOf("x"))
             }
-            refused.reason shouldBe "forbidden"
+            refused.refusal shouldBe RelayRefusal.Forbidden
         }
     }
 
@@ -93,7 +94,7 @@ class RelayPlugTest : StringSpec({
             val refused = expectThrows<RelayRefused> {
                 RelayPlug("", APP, ROOT, client).put(keyFor(bytesOf("too-large")), bytesOf("too-large"))
             }
-            refused.reason shouldBe "object too large"
+            refused.refusal shouldBe RelayRefusal.ObjectTooLarge
         }
     }
 
@@ -105,7 +106,7 @@ class RelayPlugTest : StringSpec({
             val plug = RelayPlug("", APP, ROOT, client)
             plug.put(first, bytesOf("a"))
             val refused = expectThrows<RelayRefused> { plug.put(second, bytesOf("b")) }
-            refused.reason shouldBe "namespace full"
+            refused.refusal shouldBe RelayRefusal.NamespaceFull
         }
     }
 
