@@ -130,6 +130,7 @@ describe work in flight, git holds history.
 | `docs/roadmap.md` | Upcoming work, one line each, linking to its plan |
 | `docs/decisions/` | One decision per file (`NNNN-slug.md`, see `_template.md`); never edited, only replaced. 0001 to 0015 were OQ-1 to OQ-15 |
 | `docs/plans/` | One plan per piece of work in flight (see `_template.md`) |
+| `deploy/README.md` | Hosting the relay: Render (`render.yaml`) and Compose |
 | `web/README.md` | The deferred web app |
 | `mocks/` | Icon drafts |
 

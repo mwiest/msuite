@@ -44,7 +44,10 @@ data class RelayConfig(
                 ?.split(',')
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() }
-                ?.toSet(),
+                ?.toSet()
+                ?.also {
+                    require(it.isNotEmpty()) { "$ALLOW_GROUPS names no group; unset it to let any group register" }
+                },
             maxObjectBytes = env.long(MAX_OBJECT_BYTES, DEFAULT_MAX_OBJECT_BYTES).also {
                 require(it > 0) { "$MAX_OBJECT_BYTES must be positive, got $it" }
             },

@@ -15,7 +15,9 @@ Hosts also differ in how they pick the listen port: most PaaS inject `$PORT`.
 - The non-technical path is a Render Blueprint (`render.yaml`) behind a "Deploy to Render" button:
   an image-backed web service on the Starter plan with a disk, TLS by Render.
 - Self-hosters get `deploy/compose/`: the image behind Caddy, which obtains certificates itself.
-- `RelayConfig` reads `MSUITE_RELAY_PORT`, then `PORT`, then 8080.
+- `RelayConfig` reads `MSUITE_RELAY_PORT`, then `PORT`, then 8080. A set but blank
+  `MSUITE_RELAY_ALLOW_GROUPS` stops the relay at start instead of denying every group, so a skipped
+  deploy-form field fails loudly. The Blueprint prompts for the allowlist and pins Frankfurt.
 
 ## Rejected
 
@@ -24,6 +26,8 @@ Hosts also differ in how they pick the listen port: most PaaS inject `$PORT`.
 - Fly.io: cheaper, but deploying needs the `flyctl` CLI, which is not a non-technical path.
 - Compose alone: needs SSH, a domain and DNS.
 - Railway or Koyeb templates: the template lives in their dashboard, not in this repo.
+- Keeping a blank allowlist as "deny every group": a skipped form field would give a relay that
+  refuses everyone, which the app can only report as a refusal.
 
 ## Consequences
 

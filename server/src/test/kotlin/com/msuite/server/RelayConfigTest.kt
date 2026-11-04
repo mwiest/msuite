@@ -44,11 +44,11 @@ class RelayConfigTest : StringSpec({
             .message shouldBe "PORT is not a number"
     }
 
-    "an allowlist given as empty denies every registration" {
-        val config = RelayConfig.fromEnv(mapOf(RelayConfig.ALLOW_GROUPS to ""))
-
-        config.allowedGroups shouldBe emptySet()
-        config.mayRegister("ANY") shouldBe false
+    "an allowlist that names no group is rejected rather than denying everyone" {
+        listOf("", " ", " , ").forEach { blank ->
+            shouldThrow<IllegalArgumentException> { RelayConfig.fromEnv(mapOf(RelayConfig.ALLOW_GROUPS to blank)) }
+                .message shouldBe "MSUITE_RELAY_ALLOW_GROUPS names no group; unset it to let any group register"
+        }
     }
 
     "bad numbers are rejected with the variable named" {

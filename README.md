@@ -76,7 +76,7 @@ same way:
 | Synced folder (Syncthing, Nextcloud, Dropbox) | Using a sync tool you already run |
 | WebDAV (e.g. Nextcloud) | A server you already have |
 | Object storage (S3, Cloudflare R2, Backblaze B2, MinIO) | Cheap, always-on storage |
-| msuite relay | A tiny server you host yourself |
+| msuite relay | A tiny server you host yourself ([`deploy/`](deploy/README.md)) |
 
 Every batch gets a unique name and is never overwritten, so two devices uploading at the same time
 can't clobber each other, even on a backend without locking. Details:

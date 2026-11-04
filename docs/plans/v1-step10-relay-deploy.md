@@ -1,6 +1,6 @@
 # Plan: v1 step 10, a cloud deploy template for the relay
 
-Status: **slices 1 and 2 committed; slice 2 awaits its first CI run; slice 3 is next.** Started
+Status: **slices 1 to 3 committed; slice 2 awaits its first CI run; slice 4 is next.** Started
 2026-11-04. Parent: [`v1-todo.md`](v1-todo.md) step 10.
 
 ## Goal
@@ -22,7 +22,9 @@ Compose file. Both run the same prebuilt image.
    JRE; `.github/workflows/relay-image.yml` builds it on every PR, smoke-tests `/health` inside the
    container, and pushes `ghcr.io/mwiest/msuite-relay` from `main` and `v*` tags.
 3. [ ] **Render Blueprint.** `render.yaml` (image-backed web service, Starter plan, 1 GB disk at
-   `/data`, health check, registration allowlist prompted) and a "Deploy to Render" button.
+   `/data`, health check, registration allowlist prompted) and a "Deploy to Render" button. A
+   set-but-blank allowlist now stops the relay instead of denying everyone, so a skipped form
+   field can't produce a relay that refuses every group; Frankfurt region.
 4. [ ] **Compose + Caddy.** `deploy/compose/` with `compose.yaml`, `Caddyfile` and `.env.example`;
    the guide in `deploy/README.md`.
 5. [ ] **Real deploy.** Deploy from the button on a real account; two devices pair and sync through

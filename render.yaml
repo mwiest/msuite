@@ -1,0 +1,22 @@
+# Render Blueprint for the msuite relay (decision 0081); the guide is deploy/README.md.
+services:
+  - type: web
+    name: msuite-relay
+    runtime: image
+    image:
+      url: ghcr.io/mwiest/msuite-relay:latest
+    # A disk needs a paid instance; Render sets PORT and terminates TLS.
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /health
+    disk:
+      name: relay-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      # Comma-separated group IDs from the app's Settings; only they may register.
+      - key: MSUITE_RELAY_ALLOW_GROUPS
+        sync: false
+      # 256 MiB per group, so a few groups fit the 1 GB disk.
+      - key: MSUITE_RELAY_MAX_NAMESPACE_BYTES
+        value: "268435456"
