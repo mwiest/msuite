@@ -1,6 +1,7 @@
 # Plan: v1 step 10, a cloud deploy template for the relay
 
-Status: **slice 1 done; slice 2, the image, is next.** Started 2026-11-04. Parent: [`v1-todo.md`](v1-todo.md) step 10.
+Status: **slices 1 and 2 committed; slice 2 awaits its first CI run; slice 3 is next.** Started
+2026-11-04. Parent: [`v1-todo.md`](v1-todo.md) step 10.
 
 ## Goal
 
@@ -15,8 +16,8 @@ Compose file. Both run the same prebuilt image.
 
 ## Slices
 
-1. [ ] **`PORT` fallback.** `MSUITE_RELAY_PORT` wins, then `PORT`, then 8080. Checked by
-   `RelayConfigTest`.
+1. [x] **`PORT` fallback.** `MSUITE_RELAY_PORT` wins, then `PORT`, then 8080. Checked by
+   `RelayConfigTest`. Landed: `8137002`.
 2. [ ] **Image and its workflow.** `server/Dockerfile` packs the `:server:installDist` output on a
    JRE; `.github/workflows/relay-image.yml` builds it on every PR, smoke-tests `/health` inside the
    container, and pushes `ghcr.io/mwiest/msuite-relay` from `main` and `v*` tags.
