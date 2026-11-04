@@ -307,9 +307,9 @@ the same `RelayApi` so the two sides cannot drift. `BlobStore` stores `{dataDir}
 in the name is checked against the body, and a temp file left by a crashed publish is deleted
 when the relay starts. The first `put` to a namespace registers it by linking
 `SHA-256(token)` into `.token` (decision 0030); later requests must present the same bearer token.
-`RelayConfig` reads `MSUITE_RELAY_PORT`, `_DATA`, `_ALLOW_GROUPS` (registration allowlist, unset =
-open) and both `_MAX_*_BYTES` limits from the environment once in `main`. The relay speaks plain
-HTTP; a reverse proxy or the host terminates TLS (0079). Cloudflare users need no relay: R2 works
+`RelayConfig` reads `MSUITE_RELAY_PORT` (falling back to a host's `PORT`, decision 0081), `_DATA`,
+`_ALLOW_GROUPS` (registration allowlist, unset = open) and both `_MAX_*_BYTES` limits from the
+environment once in `main`. The relay speaks plain HTTP; a reverse proxy or the host terminates TLS (0079). Cloudflare users need no relay: R2 works
 with the object-storage plug.
 
 ## Identity, pairing and recovery

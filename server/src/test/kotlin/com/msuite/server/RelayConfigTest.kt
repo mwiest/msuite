@@ -37,6 +37,13 @@ class RelayConfigTest : StringSpec({
         config.mayRegister("CCC") shouldBe false
     }
 
+    "a host's PORT is used unless MSUITE_RELAY_PORT is set" {
+        RelayConfig.fromEnv(mapOf(RelayConfig.HOST_PORT to "10000")).port shouldBe 10000
+        RelayConfig.fromEnv(mapOf(RelayConfig.HOST_PORT to "10000", RelayConfig.PORT to "9000")).port shouldBe 9000
+        shouldThrow<IllegalArgumentException> { RelayConfig.fromEnv(mapOf(RelayConfig.HOST_PORT to "x")) }
+            .message shouldBe "PORT is not a number"
+    }
+
     "an allowlist given as empty denies every registration" {
         val config = RelayConfig.fromEnv(mapOf(RelayConfig.ALLOW_GROUPS to ""))
 

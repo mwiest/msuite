@@ -109,7 +109,8 @@ Each step may take several commits; a step that grows big gets its own plan.
    the recovery rule (`architecture.md` → Compaction). Proves: live self-hosted sync without a
    sync tool. Code landed 2026-11-01 (`e619153`, decisions 0079 and 0080); checked 2026-11-03 on
    two emulators, results in `testing.md` → Two-device check (relay).
-10. [ ] **Cloud deploy template for the relay.** Proves: a non-technical hosting path exists.
+10. [ ] **Cloud deploy template for the relay.** Proves: a non-technical hosting path exists. In
+    progress: [`v1-step10-relay-deploy.md`](v1-step10-relay-deploy.md), decision 0081.
 
 ## Open questions
 

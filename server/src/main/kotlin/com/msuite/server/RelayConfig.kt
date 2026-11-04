@@ -5,8 +5,9 @@ import java.nio.file.Path
 
 /**
  * The relay's programmatic configuration (decision 0017), read once from the environment in
- * [main]. Sizes default to 16 MiB per object and 1 GiB per namespace; an allowlist limits who may
- * register a namespace (decision 0030), not who may use one already registered.
+ * [main]. The port falls back to the `PORT` that PaaS hosts inject (decision 0081). Sizes default
+ * to 16 MiB per object and 1 GiB per namespace; an allowlist limits who may register a namespace
+ * (decision 0030), not who may use one already registered.
  */
 data class RelayConfig(
     val port: Int = DEFAULT_PORT,
@@ -22,6 +23,7 @@ data class RelayConfig(
 
     companion object {
         const val PORT = "MSUITE_RELAY_PORT"
+        const val HOST_PORT = "PORT"
         const val DATA = "MSUITE_RELAY_DATA"
         const val ALLOW_GROUPS = "MSUITE_RELAY_ALLOW_GROUPS"
         const val MAX_OBJECT_BYTES = "MSUITE_RELAY_MAX_OBJECT_BYTES"
@@ -34,8 +36,8 @@ data class RelayConfig(
 
         /** Reads [env], throwing [IllegalArgumentException] with the offending variable on bad input. */
         fun fromEnv(env: Map<String, String> = System.getenv()): RelayConfig = RelayConfig(
-            port = env.int(PORT, DEFAULT_PORT).also {
-                require(it in 0..MAX_PORT) { "$PORT must be 0..$MAX_PORT, got $it" }
+            port = env.int(PORT, env.int(HOST_PORT, DEFAULT_PORT)).also {
+                require(it in 0..MAX_PORT) { "The port must be 0..$MAX_PORT, got $it" }
             },
             dataDir = Path.of(env[DATA] ?: DEFAULT_DATA_DIR),
             allowedGroups = env[ALLOW_GROUPS]
