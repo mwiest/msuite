@@ -48,7 +48,8 @@ jobs:
         run: |
           docker run -d --name relay -e PORT=10000 -p 10000:10000 msuite-relay:test
           # Docker's port proxy resets connections until the JVM listens, hence --retry-all-errors.
-          curl --fail --silent --retry 30 --retry-all-errors --retry-delay 1 http://localhost:10000/health             || { docker logs relay; exit 1; }
+          curl --fail --silent --retry 30 --retry-all-errors --retry-delay 1 http://localhost:10000/health \
+            || { docker logs relay; exit 1; }
           docker exec relay touch /data/probe
           docker rm -f relay
 
@@ -60,7 +61,8 @@ jobs:
           MSUITE_RELAY_ALLOW_GROUPS: SMOKE
         run: |
           docker compose up -d
-          curl --fail --silent --insecure --retry 30 --retry-all-errors --retry-delay 1 https://localhost/health             || { docker compose logs; exit 1; }
+          curl --fail --silent --insecure --retry 30 --retry-all-errors --retry-delay 1 https://localhost/health \
+            || { docker compose logs; exit 1; }
           docker compose down -v
 
       - name: Tags
