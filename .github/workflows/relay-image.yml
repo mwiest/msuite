@@ -51,6 +51,23 @@ jobs:
           docker exec relay touch /data/probe
           docker rm -f relay
 
+      - name: Compose smoke test
+        working-directory: deploy/compose
+        env:
+          MSUITE_RELAY_IMAGE: msuite-relay:test
+          RELAY_DOMAIN: localhost
+          MSUITE_RELAY_ALLOW_GROUPS: SMOKE
+        run: |
+          docker compose up -d
+          ok=1
+          for _ in $(seq 30); do
+            if curl --fail --silent --insecure https://localhost/health; then ok=0; break; fi
+            sleep 1
+          done
+          [ "$ok" = 0 ] || docker compose logs
+          docker compose down -v
+          exit "$ok"
+
       - name: Tags
         id: meta
         uses: docker/metadata-action@v5

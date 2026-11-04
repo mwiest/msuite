@@ -71,7 +71,8 @@ KeyStore, camera QR, alarms) stays behind interfaces in the app layer, never in 
 - `.gitattributes` forces LF (CRLF only for `*.bat`); Spotless fails on CRLF files.
 - CI (decision 0025): `.github/workflows/ci.yml` runs lint, tests, then the debug APK and relay
   jar. `.github/workflows/relay-image.yml` packs `:server:installDist` into `server/Dockerfile`'s
-  image, smoke-tests `/health` and a writable `/data` in the container, and publishes
+  image, smoke-tests `/health` and a writable `/data` in the container and through
+  `deploy/compose` (Caddy with its internal CA on `localhost`), and publishes
   `ghcr.io/mwiest/msuite-relay` (amd64 and arm64) from `main` and `v*` tags (decision 0081).
   Renovate (`renovate.json`) groups Kotlin and Compose Multiplatform updates.
 

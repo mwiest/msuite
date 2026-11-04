@@ -23,6 +23,22 @@ append its ID to `MSUITE_RELAY_ALLOW_GROUPS`, separated by a comma.
 Updates: Render doesn't pull a newer image by itself. Choose **Manual Deploy → Deploy latest
 reference** on the service to update.
 
+## Your own server (Docker Compose)
+
+For a VPS with Docker (Oracle Always-Free, Hetzner, a home server with ports 80 and 443 open) and
+a domain whose DNS points at it. [Caddy](https://caddyserver.com) in front of the relay obtains and
+renews the certificate.
+
+```sh
+git clone https://github.com/mwiest/msuite.git
+cd msuite/deploy/compose
+cp .env.example .env    # set RELAY_DOMAIN and MSUITE_RELAY_ALLOW_GROUPS
+docker compose up -d
+```
+
+The address for the app is `https://` plus your domain. Update with
+`docker compose pull && docker compose up -d`. The batches live in the `relay-data` volume.
+
 ## Configuration
 
 | Variable | Default | Meaning |

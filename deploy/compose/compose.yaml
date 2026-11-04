@@ -1,0 +1,30 @@
+# The msuite relay behind Caddy, which obtains a TLS certificate for RELAY_DOMAIN (decision 0081).
+# Copy .env.example to .env, fill it in, then `docker compose up -d`.
+services:
+  relay:
+    image: ${MSUITE_RELAY_IMAGE:-ghcr.io/mwiest/msuite-relay:latest}
+    restart: unless-stopped
+    environment:
+      MSUITE_RELAY_ALLOW_GROUPS: ${MSUITE_RELAY_ALLOW_GROUPS:?list the group IDs in .env}
+    volumes:
+      - relay-data:/data
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [relay]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      RELAY_DOMAIN: ${RELAY_DOMAIN:?set the relay's domain in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  relay-data:
+  caddy-data:
+  caddy-config:

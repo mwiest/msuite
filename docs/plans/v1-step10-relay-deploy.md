@@ -1,6 +1,6 @@
 # Plan: v1 step 10, a cloud deploy template for the relay
 
-Status: **slices 1 to 3 committed; slice 2 awaits its first CI run; slice 4 is next.** Started
+Status: **slices 1 to 4 committed and await their first CI run; slice 5, the real deploy, is next.** Started
 2026-11-04. Parent: [`v1-todo.md`](v1-todo.md) step 10.
 
 ## Goal
@@ -26,7 +26,8 @@ Compose file. Both run the same prebuilt image.
    set-but-blank allowlist now stops the relay instead of denying everyone, so a skipped form
    field can't produce a relay that refuses every group; Frankfurt region.
 4. [ ] **Compose + Caddy.** `deploy/compose/` with `compose.yaml`, `Caddyfile` and `.env.example`;
-   the guide in `deploy/README.md`.
+   the guide in `deploy/README.md`. CI brings the stack up with Caddy's internal CA on `localhost`
+   and reads `/health` over HTTPS.
 5. [ ] **Real deploy.** Deploy from the button on a real account; two devices pair and sync through
    the `https://` URL; record it in `testing.md`.
 
