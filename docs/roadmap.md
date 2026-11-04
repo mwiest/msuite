@@ -32,6 +32,9 @@ After v1, roughly in this order:
   object. Caching the sealed bytes needs a safe "same delta" check, as a peer cell can land inside
   the same HLC range.
 - The pairing camera forces landscape.
+- Scanning a code from a device of the same group ends as "already paired" and ignores the code's
+  relay, so moving an existing group to a relay means typing the address on every device
+  (`PairingActions.adopt`, record 0080).
 - A device that is wiped and re-paired gets a new `deviceId`, so the objects of its old identity
   stay (at most a snapshot and a few deltas) and no member prunes them; a group that reinstalls
   often accumulates one per install (decisions 0029, 0058).
@@ -52,6 +55,8 @@ Deferred, each addable later without a format change unless noted:
   tracking would stop the echo (decision 0078).
 - Sync right after a folder is picked (today the first sync waits up to 10 s).
 - A `FolderSyncActions`-level test that the folder path stores only ciphertext.
+- Leaving a group (un-pair): needs decisions on a new root, the local data and the old group's
+  objects; pairs with a "Connected devices" screen.
 - Undelete for lists; their hidden tasks would reappear (decision 0032).
 - Key rotation after device loss, using the `keyGen` id (decision 0008).
 - Metadata mitigations: size buckets, opaque per-app namespaces, pseudonymous rotating `deviceId`

@@ -238,6 +238,21 @@ retrying later`, and the relay's own request log; a 401 means the two devices ar
 same root, a 403 means the operator's allowlist lacks the group, a 507 means the namespace limit is
 too small. Removing the namespace by hand is safe: the recovery rule refills it.
 
+### Hosted relay (Render)
+
+Run 2026-11-04 with two already-paired devices against a relay deployed from the "Deploy to
+Render" button (`deploy/README.md`, decision 0081): the GHCR image on the Starter plan in
+Frankfurt, a 1 GB disk at `/data`, and the group ID as `MSUITE_RELAY_ALLOW_GROUPS`. All passed:
+
+- The service went Live and `https://…onrender.com/health` answered `ok`.
+- Both devices connected over HTTPS and converged on every edit, so the non-root relay writes to
+  Render's disk.
+- After a redeploy the data was still there: the disk persists.
+
+Re-scanning device A's code on the already-paired device B did not switch B to the relay (a same-
+group scan ends as "already paired", `roadmap.md` → Known problems); B was connected by typing the
+address. The image itself is smoke-tested by `.github/workflows/relay-image.yml` on every PR.
+
 Gotchas: a release build refuses `http://` (by design); use a debug build for a plain-HTTP relay
 and turn the debug network config off implicitly by using a release build for TLS checks. The
 relay's data directory must be writable; a new namespace is registered by the first `put`, so a

@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 9 done, code and device checks; step 10, the cloud deploy template, is next.**
+Status: **steps 0 to 10 done, code and device checks.**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -109,8 +109,11 @@ Each step may take several commits; a step that grows big gets its own plan.
    the recovery rule (`architecture.md` → Compaction). Proves: live self-hosted sync without a
    sync tool. Code landed 2026-11-01 (`e619153`, decisions 0079 and 0080); checked 2026-11-03 on
    two emulators, results in `testing.md` → Two-device check (relay).
-10. [ ] **Cloud deploy template for the relay.** Proves: a non-technical hosting path exists. In
-    progress: [`v1-step10-relay-deploy.md`](v1-step10-relay-deploy.md), decision 0081.
+10. [x] **Cloud deploy template for the relay.** A GHCR image built and smoke-tested by CI, a Render
+    Blueprint behind a "Deploy to Render" button, and Compose with Caddy for a VPS (`deploy/`,
+    decision 0081); the relay falls back to `$PORT`, and a blank allowlist stops it. Proves: a
+    non-technical hosting path exists. Landed: `8137002` to `7810236`. Checked 2026-11-04 on Render
+    (`testing.md` → Hosted relay).
 
 ## Open questions
 
