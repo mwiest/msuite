@@ -127,10 +127,10 @@ closes. Each problem slice removes its line from `roadmap.md` → Known problems
 13. [x] **Scanning your own group's code offers its backend.** "Already paired" with a code whose
     backend differs (e.g. a relay) offers to switch to it (`PairingActions`, record 0080). Test in
     `apps/todo/domain`. Only a relay code offers a switch: a folder or manual code carries no setup. Landed: `680e765`.
-14. [ ] **An empty listing after syncing is held, not believed.** A plug that lists nothing after
+14. [x] **An empty listing after syncing is held, not believed.** A plug that lists nothing after
     this device has ingested from it skips pruning and the recovery republish, and Settings warns
-    "folder looks empty" with a confirm to treat it as really empty. Tests in `core/sync`; needs a
-    decision record.
+    "folder looks empty" with a confirm to treat it as really empty. Tests in `core/sync` and
+    `apps/todo/domain`. Landed: `c0eda26` (decision 0082).
 15. [ ] **German strings say "du".** All German UI text in the informal form.
 16. [ ] **Build hygiene.** A decision record: "no native `.so`" means native code we add; AndroidX's
     `libandroidx.graphics.path.so` (Apache-2, Compose's path iteration below API 34) is fine. Fix
