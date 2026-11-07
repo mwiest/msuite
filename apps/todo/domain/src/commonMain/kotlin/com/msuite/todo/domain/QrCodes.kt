@@ -12,9 +12,9 @@ interface QrCodes {
     /**
      * Reads one code with the camera and returns its bytes, or `null` when the user backs out or
      * the camera yields nothing. The scanner reports its own failures, so the UI treats `null` as
-     * "nothing scanned".
+     * "nothing scanned". The camera screen shows [prompt].
      */
-    suspend fun scan(): ByteArray?
+    suspend fun scan(prompt: String): ByteArray?
 }
 
 /** A QR as its dark modules: the shell's encoder produces it, the UI draws it (decision 0012). */

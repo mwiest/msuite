@@ -98,6 +98,7 @@
     <string name="pair_show_hint">Scan this code with the other device\'s camera. Anyone who photographs it has the key.</string>
     <string name="pair_join_hint">Scan the code of a device that is already in the group.</string>
     <string name="pair_scan">Scan a code</string>
+    <string name="pair_scan_prompt">Point the camera at the other device's code.</string>
     <string name="pair_confirm_title">Join this group?</string>
     <string name="pair_confirm_body">This device\'s lists and tasks will be shared with every device in the group. They stay on this device too.</string>
     <string name="pair_confirm_join">Join</string>

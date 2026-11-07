@@ -38,7 +38,7 @@ class ZxingQrCodes(private val activity: ComponentActivity) : QrCodes {
         return QrMatrix(modules.width, dark)
     }
 
-    override suspend fun scan(): ByteArray? {
+    override suspend fun scan(prompt: String): ByteArray? {
         val scanned = CompletableDeferred<ByteArray?>()
         // A replaced request fails instead of waiting on a camera that is already gone.
         pendingScan?.complete(null)
@@ -46,6 +46,8 @@ class ZxingQrCodes(private val activity: ComponentActivity) : QrCodes {
         val options = ScanOptions().apply {
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
             setOrientationLocked(false)
+            setCaptureActivity(PairingScanActivity::class.java)
+            setPrompt(prompt)
         }
         scanLauncher.launch(options)
         return scanned.await()

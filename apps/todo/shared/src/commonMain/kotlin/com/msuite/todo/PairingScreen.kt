@@ -53,6 +53,7 @@ import com.msuite.todo.resources.pair_joined_folder
 import com.msuite.todo.resources.pair_joined_relay
 import com.msuite.todo.resources.pair_joined_unknown
 import com.msuite.todo.resources.pair_scan
+import com.msuite.todo.resources.pair_scan_prompt
 import com.msuite.todo.resources.pair_show
 import com.msuite.todo.resources.pair_show_hint
 import com.msuite.todo.resources.pair_unreadable
@@ -95,11 +96,12 @@ fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit) {
             Text(stringResource(Res.string.pairing_hint), style = MaterialTheme.typography.bodyMedium)
             ShowCode(code, qr, busy) { scope.launch { code = pairing.code() } }
             HorizontalDivider(Modifier.padding(top = 24.dp, bottom = 16.dp))
+            val prompt = stringResource(Res.string.pair_scan_prompt)
             Join(busy, result) {
                 scope.launch {
                     busy = true
                     result = null
-                    qr.scan()?.let { bytes ->
+                    qr.scan(prompt)?.let { bytes ->
                         when (val preview = pairing.preview(bytes)) {
                             JoinPreview.Ready -> scanned = bytes
                             else -> result = preview.message()
