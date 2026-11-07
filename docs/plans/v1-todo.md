@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 10 done, code and device checks.**
+Status: **steps 0 to 10 done, code and device checks; 11 to 17 (fixes, S3 plug) not started.**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -114,6 +114,34 @@ Each step may take several commits; a step that grows big gets its own plan.
     decision 0081); the relay falls back to `$PORT`, and a blank allowlist stops it. Proves: a
     non-technical hosting path exists. Landed: `8137002` to `7810236`. Checked 2026-11-04 on Render
     (`testing.md` → Hosted relay).
+
+Added 2026-11-07: the known problems that are cheap to fix, then an S3 plug, before the plan
+closes. Each problem slice removes its line from `roadmap.md` → Known problems.
+
+11. [ ] **Pairing camera follows rotation.** The scanner unlocks its orientation instead of forcing
+    landscape. Checked on a device (no logic to test).
+12. [ ] **A retried put reuses its sealed bytes.** `LiveSync` keeps the last sealed delta in memory
+    and re-sends the same bytes when the rebuilt delta has exactly the same cells (not just the
+    same HLC range), so the create-only put lands on the existing key. Test: a put that fails after
+    storing, then a retry, leaves one object.
+13. [ ] **Scanning your own group's code offers its backend.** "Already paired" with a code whose
+    backend differs (e.g. a relay) offers to switch to it (`PairingActions`, record 0080). Test in
+    `apps/todo/domain`.
+14. [ ] **An empty listing after syncing is held, not believed.** A plug that lists nothing after
+    this device has ingested from it skips pruning and the recovery republish, and Settings warns
+    "folder looks empty" with a confirm to treat it as really empty. Tests in `core/sync`; needs a
+    decision record.
+15. [ ] **German strings say "du".** All German UI text in the informal form.
+16. [ ] **Build hygiene.** A decision record: "no native `.so`" means native code we add; AndroidX's
+    `libandroidx.graphics.path.so` (Apache-2, Compose's path iteration below API 34) is fine. Fix
+    the "commonTest was configured" warning if cheap.
+17. [ ] **S3 plug.** A `BackendPlug` for S3-compatible storage (AWS, R2, B2, MinIO), in a new
+    `core/s3` module: SigV4 on the Ktor client with cryptography-kotlin's HMAC/SHA-256, only PUT
+    (`If-None-Match: *`), GET, DELETE and `ListObjectsV2`. Settings section; the secret stored
+    under the KeyStore, never in settings. The QR carries endpoint, bucket, region, access key and
+    secret as a new backend type's section. Tests: AWS's SigV4 vectors, the plug against Ktor's
+    mock engine, the pairing section round trip. Checked on two devices against a real bucket.
+    Needs decision records (signing, pairing section).
 
 ## Open questions
 
