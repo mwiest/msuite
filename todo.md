@@ -9,6 +9,7 @@
 [ ] Settings: move Recovery key into "Account backup & recovery" in Section "Backup & Recovery"
 [ ] Settings: label section "Kopplung" -> "Connected devices" with a screen that has an accordion either showing "Share this device" with a blank QR code and warning before click or "Connect to other device" with a button to scan. Both have some explanation.
 [ ] Settings: move the about section into its own screen, like Voclet.
+[ ] Settings: recovery text keys have \' escaping
 [ ] Tasks: allow setting details from the start with icons like on Google Tasks
 [ ] Tasks: Round checkboxes (full fill on complete), completion animation (ripples) and more paddings
 [ ] Tasks: Allow collapsing of done tasks
