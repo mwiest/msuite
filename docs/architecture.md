@@ -201,8 +201,9 @@ The context is a plug object's key minus its `hash` (`{appId}/{groupId}/v{fmt}_{
 or a constant label for the manual snapshot file, which has no key. The header is cleartext and
 authenticated, so a reader decides `TooNew` (0067) and an unknown `keyGen` before deriving any key,
 and a reader that rebuilds the context from the key it fetched rejects a batch that was renamed,
-moved or replayed elsewhere. The ciphertext of a batch is computed once and cached, so retries
-resend identical bytes and the content address stays stable (a fresh key per salt rules out nonce
+moved or replayed elsewhere. `LiveSync` keeps the last sealed object in memory and re-sends it
+while the rebuilt batch has exactly the same cells, so a put that half-landed is retried under the
+same key instead of leaving a duplicate (a fresh key per salt rules out nonce
 reuse; decision 0010).
 
 ### Backend plugs
@@ -239,7 +240,7 @@ files in, create-only, and deletes the twin.
 | Plug | One batch is | Namespace is | Atomic publish | Create-only | `list` |
 |---|---|---|---|---|---|
 | Manual (v1) | the whole full-state snapshot, one file | - | file write | each export is a fresh compacted snapshot | - |
-| Synced folder (SAF) | a file | nested subfolders | write `.tmp_*` to local cache, then copy to cloud target | unique names; a retry re-seals under a fresh salt, so a put that half-landed leaves a duplicate | list children |
+| Synced folder (SAF) | a file | nested subfolders | write `.tmp_*` to local cache, then copy to cloud target | unique names; a retry re-sends the same sealed bytes | list children |
 | WebDAV | a resource | nested collections | `PUT`, or `PUT` temp + `MOVE` | `If-None-Match: *` | `PROPFIND Depth:1` |
 | Object storage (S3, R2, B2, MinIO) | an object | a key prefix | native | `If-None-Match: *` | `ListObjectsV2(prefix)` |
 | Relay | a file on disk | nested directories | relay does temp + rename | relay rejects existing names and checks the hash | relay lists the namespace |

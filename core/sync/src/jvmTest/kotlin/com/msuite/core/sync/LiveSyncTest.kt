@@ -80,6 +80,19 @@ private class LossyPlug(private val inner: BackendPlug = MemoryPlug()) : Backend
     }
 }
 
+/** A plug whose first put stores the object, then fails as if the response was lost. */
+private class HalfLandingPlug(private val inner: BackendPlug = MemoryPlug()) : BackendPlug by inner {
+    var fail = 1
+
+    override suspend fun put(key: String, bytes: ByteArray) {
+        inner.put(key, bytes)
+        if (fail > 0) {
+            fail--
+            throw java.io.IOException("connection reset")
+        }
+    }
+}
+
 /** Lists keys in sorted order (deltas before snapshots), then deletes one to mimic a prune mid-fetch. */
 private class DeleteAfterList(
     private val inner: BackendPlug,
@@ -99,6 +112,23 @@ private suspend fun writeDeltas(replica: Replica, sync: LiveSync, count: Int) {
 }
 
 class LiveSyncTest : StringSpec({
+    "a put retried after it half-landed re-sends the same object instead of a duplicate" {
+        val replica = Replica(driver(), local, TestClock(1_000))
+        val plug = HalfLandingPlug()
+        replica.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to title))
+        coroutineScope {
+            val sync = LiveSync(replica, plug, plugId, "todo", identity(), this)
+            sync.start()
+            sync.flush()
+            sync.healthy.value shouldBe false
+            sync.flush()
+            sync.healthy.value shouldBe true
+            sync.stop()
+        }
+
+        plug.list("todo/") shouldHaveSize 1
+    }
+
     "a published key names the local device, even when a peer's cell won the merge" {
         val record = Uuid.random()
         val replica = Replica(driver(), local, TestClock(1_000))

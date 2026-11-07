@@ -56,6 +56,7 @@ class LiveSync(
     private val log = Logger.withTag("LiveSync")
     private val publishLock = Mutex()
     private var retryPublish = false
+    private var lastSealed: Sealed? = null
     private val _healthy = MutableStateFlow(true)
 
     /** Whether the last plug operation succeeded. */
@@ -199,11 +200,10 @@ class LiveSync(
             hlcLo = cells.minOf { it.stamp.hlc },
             hlcHi = cells.maxOf { it.stamp.hlc },
         )
-        val bytes = envelope.seal(batch, prefix.text())
-        val key = prefix.withHash(ciphertextHash(bytes)).text()
-        plug.put(key, bytes)
-        replica.pushed(plugId, batch, key)
-        snapshotPending = key
+        val sealed = seal(batch, prefix)
+        plug.put(sealed.key, sealed.bytes)
+        replica.pushed(plugId, batch, sealed.key)
+        snapshotPending = sealed.key
     }
 
     private fun parseKey(key: String): ObjectKey? = try {
@@ -243,9 +243,24 @@ class LiveSync(
             hlcLo = delta.cells.minOf { it.stamp.hlc },
             hlcHi = delta.cells.maxOf { it.stamp.hlc },
         )
-        val bytes = envelope.seal(delta, prefix.text())
-        val key = prefix.withHash(ciphertextHash(bytes)).text()
-        plug.put(key, bytes)
-        replica.pushed(plugId, delta, key)
+        val sealed = seal(delta, prefix)
+        plug.put(sealed.key, sealed.bytes)
+        replica.pushed(plugId, delta, sealed.key)
     }
+
+    /**
+     * Seals [batch], or returns the last sealed object when [batch] has exactly the same cells: a
+     * put that failed after it landed is retried under the same key instead of a fresh salt's
+     * duplicate. Same cells, not the same HLC range: a peer cell can land inside that range.
+     */
+    private suspend fun seal(batch: Batch, prefix: ObjectKeyPrefix): Sealed {
+        val plain = ProtoBatchEncoder.encode(batch)
+        val prefixText = prefix.text()
+        lastSealed?.let { if (it.prefix == prefixText && it.plain.contentEquals(plain)) return it }
+        val bytes = envelope.seal(batch, prefixText)
+        return Sealed(prefixText, plain, prefix.withHash(ciphertextHash(bytes)).text(), bytes)
+            .also { lastSealed = it }
+    }
+
+    private class Sealed(val prefix: String, val plain: ByteArray, val key: String, val bytes: ByteArray)
 }

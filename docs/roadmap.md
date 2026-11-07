@@ -28,9 +28,6 @@ After v1, roughly in this order:
 - A provider that went invisible or a lost grant reads as an empty folder: pruning drops all
   `ingested_batch` rows (a full re-read later) and Settings only shows the problem once a write
   fails. Log and show the folder's identity (root name, child count) instead.
-- A put retried after one that half-landed re-seals under a fresh salt and leaves a duplicate
-  object. Caching the sealed bytes needs a safe "same delta" check, as a peer cell can land inside
-  the same HLC range.
 - Scanning a code from a device of the same group ends as "already paired" and ignores the code's
   relay, so moving an existing group to a relay means typing the address on every device
   (`PairingActions.adopt`, record 0080).
