@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 16 done; 17 (S3 plug) not started.**
+Status: **steps 0 to 16 done, code and device checks; 17 (S3 plug) not started.**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -118,32 +118,36 @@ Each step may take several commits; a step that grows big gets its own plan.
 Added 2026-11-07: the known problems that are cheap to fix, then an S3 plug, before the plan
 closes. Each problem slice removes its line from `roadmap.md` → Known problems.
 
-11. [x] **Pairing camera follows rotation.** The scanner unlocks its orientation instead of forcing
-    landscape. Checked on a device (no logic to test). Landed: `6dedf5c`, `dbf18a1` (own scan activity); checked 2026-11-07 on a device.
-12. [x] **A retried put reuses its sealed bytes.** `LiveSync` keeps the last sealed delta in memory
-    and re-sends the same bytes when the rebuilt delta has exactly the same cells (not just the
-    same HLC range), so the create-only put lands on the existing key. Test: a put that fails after
-    storing, then a retry, leaves one object. Landed: `e1ad481`.
-13. [x] **Scanning your own group's code offers its backend.** "Already paired" with a code whose
-    backend differs (e.g. a relay) offers to switch to it (`PairingActions`, record 0080). Test in
-    `apps/todo/domain`. Only a relay code offers a switch: a folder or manual code carries no setup. Landed: `680e765`.
-14. [x] **An empty listing after syncing is held, not believed.** A plug that lists nothing after
-    this device has ingested from it skips pruning and the recovery republish, and Settings warns
-    "folder looks empty" with a confirm to treat it as really empty. Tests in `core/sync` and
-    `apps/todo/domain`. Landed: `c0eda26` (decision 0082).
+11. [x] **Pairing camera follows rotation.** Our own `PairingScanActivity` around the library's
+    camera view: clear of the system bars, a square frame in both orientations, and our own
+    localized hint. No logic to test. Landed: `6dedf5c`, `dbf18a1`; checked 2026-11-07 on a device.
+12. [x] **A retried put reuses its sealed bytes.** `LiveSync` keeps the last sealed object in memory
+    and re-sends it when the rebuilt batch has exactly the same cells (not just the same HLC
+    range), so the create-only put lands on the existing key. Test: a put that fails after storing,
+    then a retry, leaves one object. Landed: `e1ad481`.
+13. [x] **Scanning your own group's code offers its relay.** A code of this device's group that
+    names another relay offers to switch to it; a URL this build refuses keeps the current backend.
+    Only a relay code offers a switch: a folder or manual code carries no setup. Tests in
+    `apps/todo/domain`. Landed: `680e765`; checked 2026-11-07 on a device and an emulator.
+14. [x] **An empty listing after syncing is held, not believed.** A plug that lists nothing although
+    this device synced through it before (ingested, or every publish confirmed) skips ingest,
+    pruning, recovery and confirm; Settings says it looks empty, with a confirm. Tests in
+    `core/sync` and `apps/todo/domain`. Landed: `c0eda26` (decision 0082); checked 2026-11-07 on a
+    device and an emulator.
 15. [x] **German strings say "du".** All German UI text in the informal form, instructions as
     du-imperatives, and "das Relay" throughout. No test: text only. Landed: `1f88744`.
-16. [x] **Build hygiene.** A decision record: "no native `.so`" means native code we add; AndroidX's
-    `libandroidx.graphics.path.so` (Apache-2, Compose's path iteration below API 34) is fine. Fix
-    the "commonTest was configured" warning if cheap: fixed with `withHostTest` in the Compose
-    convention. Landed: `686bbdf` (decision 0083).
+16. [x] **Build hygiene.** "No native `.so`" means native code we add; AndroidX's
+    `libandroidx.graphics.path.so` is fine (decision 0083). The "commonTest was configured" warning
+    is gone: the Compose convention adds a host-test compilation. Landed: `686bbdf`.
 17. [ ] **S3 plug.** A `BackendPlug` for S3-compatible storage (AWS, R2, B2, MinIO), in a new
     `core/s3` module: SigV4 on the Ktor client with cryptography-kotlin's HMAC/SHA-256, only PUT
     (`If-None-Match: *`), GET, DELETE and `ListObjectsV2`. Settings section; the secret stored
     under the KeyStore, never in settings. The QR carries endpoint, bucket, region, access key and
     secret as a new backend type's section. Tests: AWS's SigV4 vectors, the plug against Ktor's
     mock engine, the pairing section round trip. Checked on two devices against a real bucket.
-    Needs decision records (signing, pairing section).
+    Decided 2026-11-07: SigV4 written on Ktor, no SDK (aws-sdk-kotlin and minio-java are JVM-only
+    and heavy for four calls); the whole configuration, secret included, travels in the QR, which
+    already carries the root. Both get decision records when the slice lands.
 
 ## Open questions
 
