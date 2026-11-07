@@ -120,10 +120,10 @@ closes. Each problem slice removes its line from `roadmap.md` → Known problems
 
 11. [x] **Pairing camera follows rotation.** The scanner unlocks its orientation instead of forcing
     landscape. Checked on a device (no logic to test). Landed: `6dedf5c`, `dbf18a1` (own scan activity); checked 2026-11-07 on a device.
-12. [ ] **A retried put reuses its sealed bytes.** `LiveSync` keeps the last sealed delta in memory
+12. [x] **A retried put reuses its sealed bytes.** `LiveSync` keeps the last sealed delta in memory
     and re-sends the same bytes when the rebuilt delta has exactly the same cells (not just the
     same HLC range), so the create-only put lands on the existing key. Test: a put that fails after
-    storing, then a retry, leaves one object.
+    storing, then a retry, leaves one object. Landed: `e1ad481`.
 13. [ ] **Scanning your own group's code offers its backend.** "Already paired" with a code whose
     backend differs (e.g. a relay) offers to switch to it (`PairingActions`, record 0080). Test in
     `apps/todo/domain`.
