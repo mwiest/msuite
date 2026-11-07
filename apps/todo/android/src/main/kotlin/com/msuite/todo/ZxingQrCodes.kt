@@ -45,6 +45,7 @@ class ZxingQrCodes(private val activity: ComponentActivity) : QrCodes {
         pendingScan = scanned
         val options = ScanOptions().apply {
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            setOrientationLocked(false)
         }
         scanLauncher.launch(options)
         return scanned.await()
