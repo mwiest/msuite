@@ -131,7 +131,8 @@ closes. Each problem slice removes its line from `roadmap.md` → Known problems
     this device has ingested from it skips pruning and the recovery republish, and Settings warns
     "folder looks empty" with a confirm to treat it as really empty. Tests in `core/sync` and
     `apps/todo/domain`. Landed: `c0eda26` (decision 0082).
-15. [ ] **German strings say "du".** All German UI text in the informal form.
+15. [x] **German strings say "du".** All German UI text in the informal form, instructions as
+    du-imperatives, and "das Relay" throughout. No test: text only. Landed: `1f88744`.
 16. [ ] **Build hygiene.** A decision record: "no native `.so`" means native code we add; AndroidX's
     `libandroidx.graphics.path.so` (Apache-2, Compose's path iteration below API 34) is fine. Fix
     the "commonTest was configured" warning if cheap.
