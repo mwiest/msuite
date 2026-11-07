@@ -56,6 +56,10 @@ import com.msuite.todo.resources.pair_scan
 import com.msuite.todo.resources.pair_scan_prompt
 import com.msuite.todo.resources.pair_show
 import com.msuite.todo.resources.pair_show_hint
+import com.msuite.todo.resources.pair_switch_body
+import com.msuite.todo.resources.pair_switch_confirm
+import com.msuite.todo.resources.pair_switch_title
+import com.msuite.todo.resources.pair_switched_relay
 import com.msuite.todo.resources.pair_unreadable
 import com.msuite.todo.resources.pair_unsupported
 import com.msuite.todo.resources.pairing_hint
@@ -73,6 +77,7 @@ import org.jetbrains.compose.resources.stringResource
 fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit) {
     var code by remember { mutableStateOf<ByteArray?>(null) }
     var scanned by remember { mutableStateOf<ByteArray?>(null) }
+    var switchTo by remember { mutableStateOf<Pair<ByteArray, String>?>(null) }
     var result by remember { mutableStateOf<JoinResult?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -104,6 +109,7 @@ fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit) {
                     qr.scan(prompt)?.let { bytes ->
                         when (val preview = pairing.preview(bytes)) {
                             JoinPreview.Ready -> scanned = bytes
+                            is JoinPreview.SwitchBackend -> switchTo = bytes to preview.relayUrl
                             else -> result = preview.message()
                         }
                     }
@@ -124,6 +130,33 @@ fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit) {
             busy = false
         }
     }
+
+    ConfirmSwitch(switchTo?.second, { switchTo = null }) {
+        val bytes = switchTo?.first ?: return@ConfirmSwitch
+        switchTo = null
+        scope.launch { result = pairing.switchBackend(bytes) }
+    }
+}
+
+/** Moving a device that is already in the group to the relay its scanned code names (record 0080). */
+@Composable
+private fun ConfirmSwitch(relayUrl: String?, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    relayUrl ?: return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.pair_switch_title)) },
+        text = { Text(stringResource(Res.string.pair_switch_body, relayUrl)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(Res.string.pair_switch_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.cancel))
+            }
+        },
+    )
 }
 
 /** This device's code, shown only once asked for. */
@@ -205,7 +238,7 @@ private fun QrCode(matrix: QrMatrix, modifier: Modifier = Modifier) {
 
 /** The same outcome as the matching [JoinResult], so the screens show every message one way. */
 internal fun JoinPreview.message(): JoinResult = when (this) {
-    JoinPreview.Ready -> error("a ready code is confirmed, not reported")
+    JoinPreview.Ready, is JoinPreview.SwitchBackend -> error("a ready code is confirmed, not reported")
     JoinPreview.AlreadyThisGroup -> JoinResult.AlreadyThisGroup
     JoinPreview.UnsupportedKeyGen -> JoinResult.UnsupportedKeyGen
     JoinPreview.Unreadable -> JoinResult.Unreadable
@@ -220,6 +253,8 @@ private fun JoinResult.label() = when (this) {
     }
 
     JoinResult.Restored -> Res.string.restore_done
+
+    is JoinResult.SwitchedBackend -> Res.string.pair_switched_relay
 
     JoinResult.AlreadyThisGroup -> Res.string.pair_already
 

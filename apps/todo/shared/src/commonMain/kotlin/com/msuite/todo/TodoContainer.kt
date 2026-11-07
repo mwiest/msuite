@@ -41,6 +41,7 @@ class TodoContainer(
             }
         },
         onJoined = liveSync::applyJoinedBackend,
+        onSwitch = liveSync::applySwitchedBackend,
     )
     val live = liveSync
 }

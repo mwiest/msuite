@@ -231,7 +231,7 @@ private fun JoinResult.restoreLabel() = when (this) {
     JoinResult.UnsupportedKeyGen -> Res.string.pair_unsupported
 
     // Words never carry a backend; kept for exhaustiveness.
-    is JoinResult.Joined -> Res.string.restore_done
+    is JoinResult.Joined, is JoinResult.SwitchedBackend -> Res.string.restore_done
 }
 
 private const val COLUMNS = 2

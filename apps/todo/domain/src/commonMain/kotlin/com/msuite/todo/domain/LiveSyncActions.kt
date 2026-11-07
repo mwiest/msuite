@@ -54,6 +54,7 @@ fun isAllowedRelayUrl(url: String, allowInsecure: Boolean): Boolean =
  * [TodoSettings]. Polling, flush and status are backend-neutral; a switch stops the old sync before
  * the new one starts. The manual snapshot export/import stays in [SyncActions] (decision 0066).
  */
+@Suppress("TooManyFunctions") // One facade over the backend lifecycle: choose, join, switch, poll, report.
 class LiveSyncActions(
     private val replica: Replica,
     private val identity: StoredIdentity,
@@ -144,14 +145,18 @@ class LiveSyncActions(
      * chosen backend, any other type clears a backend left over from a previous group.
      */
     fun applyJoinedBackend(type: BackendType?, section: ByteArray) {
+        if (type == null || !applySwitchedBackend(type, section)) setBackend(SyncBackend.None)
+    }
+
+    /**
+     * Switches a device already in the group to the relay a code names. Unlike a join, a URL this
+     * build refuses keeps the current backend; returns whether it switched.
+     */
+    fun applySwitchedBackend(type: BackendType, section: ByteArray): Boolean {
         val relayUrl = if (type == BackendType.Relay) PairingPayload.relayUrl(section) else null
-        setBackend(
-            if (relayUrl != null && isAllowedRelayUrl(relayUrl, relay.allowInsecure)) {
-                SyncBackend.Relay(relayUrl)
-            } else {
-                SyncBackend.None
-            },
-        )
+        if (relayUrl == null || !isAllowedRelayUrl(relayUrl, relay.allowInsecure)) return false
+        setBackend(SyncBackend.Relay(relayUrl))
+        return true
     }
 
     /** Manually triggers a sync (pull from the backend). */

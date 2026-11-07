@@ -85,6 +85,57 @@ class PairingTest : StringSpec({
         pairing.preview(byteArrayOf(1, 2, 3)) shouldBe JoinPreview.Unreadable
     }
 
+    "a code of this group with another relay offers to switch to it, without touching the root" {
+        val url = "https://relay.example"
+        val code = PairingPayload.build(KEY_GEN_V1, group, BackendType.Relay, url.encodeToByteArray())
+        val store = MemoryRootStore(group)
+        var switched: String? = null
+        val pairing = PairingActions(
+            StoredIdentity(store),
+            backend = { PairingBackend(BackendType.Manual) },
+            onSwitch = { type, section ->
+                switched = "$type ${section.decodeToString()}"
+                true
+            },
+        )
+        val saves = store.saves
+
+        pairing.preview(code) shouldBe JoinPreview.SwitchBackend(url)
+        pairing.switchBackend(code) shouldBe JoinResult.SwitchedBackend(BackendType.Relay)
+
+        switched shouldBe "Relay $url"
+        store.saves shouldBe saves
+    }
+
+    "a code of this group with the same relay, or none, is just this group" {
+        val url = "https://relay.example".encodeToByteArray()
+        val onRelay = PairingActions(
+            StoredIdentity(MemoryRootStore(group)),
+            backend = { PairingBackend(BackendType.Relay, url) },
+            onSwitch = { _, _ -> error("nothing to switch") },
+        )
+
+        onRelay.preview(PairingPayload.build(KEY_GEN_V1, group, BackendType.Relay, url)) shouldBe
+            JoinPreview.AlreadyThisGroup
+        onRelay.preview(PairingPayload.build(KEY_GEN_V1, group, BackendType.Folder)) shouldBe
+            JoinPreview.AlreadyThisGroup
+    }
+
+    "a switch the backend refuses, or a code of another group, changes nothing" {
+        val relayCode = PairingPayload.build(KEY_GEN_V1, group, BackendType.Relay, "http://relay".encodeToByteArray())
+        val pairing = PairingActions(
+            StoredIdentity(MemoryRootStore(group)),
+            backend = { PairingBackend(BackendType.Manual) },
+            onSwitch = { _, _ -> false },
+        )
+
+        pairing.switchBackend(relayCode) shouldBe JoinResult.AlreadyThisGroup
+        pairing.switchBackend(
+            PairingPayload.build(KEY_GEN_V1, other, BackendType.Relay, "https://r".encodeToByteArray()),
+        ) shouldBe
+            JoinResult.Unreadable
+    }
+
     "scanning one's own code changes nothing and writes nothing" {
         val store = MemoryRootStore()
         val pairing = PairingActions(StoredIdentity(store), backend = { PairingBackend(BackendType.Manual) })

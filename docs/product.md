@@ -84,7 +84,8 @@ namespace is emptied, a device that has synced before refills it. Architecture i
   relay. All of them see only ciphertext.
 - A new device joins by scanning one QR code from a paired device. If it already holds lists and
   tasks, they are kept and shared with the other devices. A code from a relay group selects that
-  relay on the joining device; a folder is picked per device. A recovery key
+  relay on the joining device; a folder is picked per device. Scanning a code of the device's own
+  group that names another relay offers to switch to that relay. A recovery key
   (words, QR or file) is the fallback when no device is left. There is no password reset.
 - When two devices edit the same field while apart, the later edit wins and the other is lost
   (decision 0005).

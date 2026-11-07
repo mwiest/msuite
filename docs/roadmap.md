@@ -28,9 +28,6 @@ After v1, roughly in this order:
 - A provider that went invisible or a lost grant reads as an empty folder: pruning drops all
   `ingested_batch` rows (a full re-read later) and Settings only shows the problem once a write
   fails. Log and show the folder's identity (root name, child count) instead.
-- Scanning a code from a device of the same group ends as "already paired" and ignores the code's
-  relay, so moving an existing group to a relay means typing the address on every device
-  (`PairingActions.adopt`, record 0080).
 - A device that is wiped and re-paired gets a new `deviceId`, so the objects of its old identity
   stay (at most a snapshot and a few deltas) and no member prunes them; a group that reinstalls
   often accumulates one per install (decisions 0029, 0058).

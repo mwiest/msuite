@@ -22,6 +22,9 @@ sealed interface JoinResult {
      */
     data object Restored : JoinResult
 
+    /** This device was already in the group and now uses the code's [backend] (record 0080). */
+    data class SwitchedBackend(val backend: BackendType) : JoinResult
+
     /** This device already holds that root — the QR or words were its own. */
     data object AlreadyThisGroup : JoinResult
 
@@ -40,6 +43,9 @@ sealed interface JoinPreview {
     /** This device already holds that root — the QR or words were its own. */
     data object AlreadyThisGroup : JoinPreview
 
+    /** A code of this device's own group naming another relay; the UI offers to switch to it. */
+    data class SwitchBackend(val relayUrl: String) : JoinPreview
+
     /** A root generation this build doesn't hold (decision 0008). */
     data object UnsupportedKeyGen : JoinPreview
 
@@ -57,6 +63,7 @@ class PairingActions(
     private val identity: StoredIdentity,
     private val backend: () -> PairingBackend,
     private val onJoined: (BackendType?, ByteArray) -> Unit = { _, _ -> },
+    private val onSwitch: (BackendType, ByteArray) -> Boolean = { _, _ -> false },
 ) {
 
     /** The bytes this device shows as its QR, or `null` when it holds no root yet. */
@@ -74,7 +81,33 @@ class PairingActions(
      */
     suspend fun preview(code: ByteArray): JoinPreview {
         val payload = PairingPayload.parse(code) ?: return JoinPreview.Unreadable
-        return if (payload.keyGen == KEY_GEN_V1) previewRoot(payload.root) else JoinPreview.UnsupportedKeyGen
+        val relayUrl = switchableRelay(payload)
+        return when {
+            payload.keyGen != KEY_GEN_V1 -> JoinPreview.UnsupportedKeyGen
+            relayUrl != null -> JoinPreview.SwitchBackend(relayUrl)
+            else -> previewRoot(payload.root)
+        }
+    }
+
+    /**
+     * Moves this device to the relay a code of its own group names. Only a relay is offered: a
+     * folder or manual code carries no setup, and would only turn this device's sync off.
+     */
+    suspend fun switchBackend(code: ByteArray): JoinResult {
+        val payload = PairingPayload.parse(code)?.takeIf { it.keyGen == KEY_GEN_V1 && switchableRelay(it) != null }
+        return when {
+            payload == null -> JoinResult.Unreadable
+            onSwitch(BackendType.Relay, payload.backendSection) -> JoinResult.SwitchedBackend(BackendType.Relay)
+            else -> JoinResult.AlreadyThisGroup
+        }
+    }
+
+    /** The relay URL of a code of this device's own group, when it isn't the one in use. */
+    private fun switchableRelay(payload: PairingPayload): String? {
+        if (!payload.root.contentEquals(identity.root(KEY_GEN_V1)) || payload.backend != BackendType.Relay) return null
+        val current = backend()
+        val same = current.type == BackendType.Relay && current.section.contentEquals(payload.backendSection)
+        return if (same) null else PairingPayload.relayUrl(payload.backendSection)
     }
 
     /** Reads typed [words] without adopting them: the camera-less confirm step (0033, 0073). */

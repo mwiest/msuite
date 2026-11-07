@@ -171,6 +171,14 @@ class LiveSyncActionsTest : StringSpec({
             live.applyJoinedBackend(BackendType.Relay, "http://relay.example".encodeToByteArray())
             live.backend.value shouldBe SyncBackend.None
 
+            live.applySwitchedBackend(BackendType.Relay, "https://relay.example".encodeToByteArray()) shouldBe true
+            yield()
+            live.backend.value shouldBe SyncBackend.Relay("https://relay.example")
+            // A refused switch keeps the backend the device had; a join would have cleared it.
+            live.applySwitchedBackend(BackendType.Relay, "http://relay.example".encodeToByteArray()) shouldBe false
+            live.applySwitchedBackend(BackendType.Folder, ByteArray(0)) shouldBe false
+            live.backend.value shouldBe SyncBackend.Relay("https://relay.example")
+
             live.setBackend(SyncBackend.None)
         }
     }

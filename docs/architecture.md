@@ -339,10 +339,14 @@ build that doesn't know the backend type still reads the root and pairs. The typ
 preselects the relay it reads; a release build ignores an `http://` URL (0079).
 There is no salt — the same root and backend always produce the same QR.
 - In the UI (code: `PairingScreen` and `QrCodes`): a device shows its code on demand and never
-  stores it; the other scans it with zxing-android-embedded behind the domain seam (record 0074),
+  stores it; the other scans it with zxing-android-embedded's camera in its own `PairingScanActivity`
+  behind the domain seam (record 0074),
   reads the payload without adopting it, confirms that its lists and tasks will be shared (0033),
   and then adopts the root. The join message names the group's transport in words. A code or word
-  list that is already this device's own is reported as already in the group, and changes nothing.
+  list that is already this device's own is reported as already in the group, and changes nothing,
+  unless the code names a relay other than this device's backend: then the UI offers to switch to
+  it (`JoinPreview.SwitchBackend`); a URL this build refuses keeps the current backend. Folder and
+  manual codes carry no setup, so they never offer a switch.
 - A joining device keeps its data: it switches to the group's root and keeps its `deviceId`
   (decision 0033; code: `StoredIdentity.adopt` and `PairingActions` in `apps/todo/domain`, the one
   place a scanned QR and typed words both end). Pairing moves the key only; the data reaches the

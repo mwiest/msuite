@@ -107,6 +107,10 @@
     <string name="pair_joined_relay">Joined. This group syncs through a relay.</string>
     <string name="pair_joined_unknown">Joined. This group uses a sync method this app doesn\'t know.</string>
     <string name="pair_already">This device is already in that group.</string>
+    <string name="pair_switch_title">Use this relay?</string>
+    <string name="pair_switch_body">This device is already in that group. Its code syncs through %1$s; this device will sync through it too.</string>
+    <string name="pair_switch_confirm">Use relay</string>
+    <string name="pair_switched_relay">This device now syncs through the group's relay.</string>
     <string name="pair_unsupported">That code is from a newer app version. Update this app first.</string>
     <string name="pair_unreadable">That code is not a pairing code.</string>
     <string name="recovery">Recovery key</string>

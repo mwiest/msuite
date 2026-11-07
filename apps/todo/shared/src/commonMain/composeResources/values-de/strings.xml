@@ -97,6 +97,10 @@
     <string name="pair_show">Code anzeigen</string>
     <string name="pair_show_hint">Scannen Sie diesen Code mit der Kamera des anderen Geräts ab. Wer ihn fotografiert, hat den Schlüssel.</string>
     <string name="pair_join_hint">Den Code eines Geräts scannen, das bereits zur Gruppe gehört.</string>
+    <string name="pair_switch_title">Dieses Relay verwenden?</string>
+    <string name="pair_switch_body">Dieses Gerät ist schon in dieser Gruppe. Ihr Code synchronisiert über %1$s; dieses Gerät synchronisiert dann auch darüber.</string>
+    <string name="pair_switch_confirm">Relay verwenden</string>
+    <string name="pair_switched_relay">Dieses Gerät synchronisiert jetzt über das Relay der Gruppe.</string>
     <string name="pair_scan_prompt">Richte die Kamera auf den Code des anderen Geräts.</string>
     <string name="pair_scan">Code scannen</string>
     <string name="pair_confirm_title">Dieser Gruppe beitreten?</string>
