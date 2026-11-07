@@ -124,9 +124,9 @@ closes. Each problem slice removes its line from `roadmap.md` → Known problems
     and re-sends the same bytes when the rebuilt delta has exactly the same cells (not just the
     same HLC range), so the create-only put lands on the existing key. Test: a put that fails after
     storing, then a retry, leaves one object. Landed: `e1ad481`.
-13. [ ] **Scanning your own group's code offers its backend.** "Already paired" with a code whose
+13. [x] **Scanning your own group's code offers its backend.** "Already paired" with a code whose
     backend differs (e.g. a relay) offers to switch to it (`PairingActions`, record 0080). Test in
-    `apps/todo/domain`.
+    `apps/todo/domain`. Only a relay code offers a switch: a folder or manual code carries no setup. Landed: `680e765`.
 14. [ ] **An empty listing after syncing is held, not believed.** A plug that lists nothing after
     this device has ingested from it skips pruning and the recovery republish, and Settings warns
     "folder looks empty" with a confirm to treat it as really empty. Tests in `core/sync`; needs a
