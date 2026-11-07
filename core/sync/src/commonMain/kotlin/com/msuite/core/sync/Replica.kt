@@ -95,6 +95,15 @@ class Replica private constructor(
     /** Merges [batch] with no plug bookkeeping: the manual snapshot path (decision 0066). */
     suspend fun mergeRemote(batch: Batch): IngestResult = serialized { mergeLocked(batch) }
 
+    /**
+     * Whether [plug] has listed something for this device before: a batch was ingested from it, or
+     * every publish to it was confirmed. A publish not yet listed doesn't count (0077).
+     */
+    suspend fun hasSynced(plug: PlugId): Boolean = serialized {
+        store.plugs.ingestedKeys(plug).isNotEmpty() ||
+            (store.plugs.watermark(plug) != null && store.unconfirmed.all(plug).isEmpty())
+    }
+
     /** The keys [plug] has ingested; a pull uses the snapshots among them for the span skip (0029). */
     suspend fun ingestedKeys(plug: PlugId): Set<String> = serialized {
         store.plugs.ingestedKeys(plug).toSet()

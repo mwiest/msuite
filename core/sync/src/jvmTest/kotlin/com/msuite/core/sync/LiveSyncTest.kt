@@ -112,6 +112,54 @@ private suspend fun writeDeltas(replica: Replica, sync: LiveSync, count: Int) {
 }
 
 class LiveSyncTest : StringSpec({
+    "an empty listing after syncing is held: nothing is pruned or republished until accepted" {
+        val writer = Replica(driver(), local, TestClock(1_000))
+        val reader = Replica(driver(), peer, TestClock(1_000))
+        val plug = MemoryPlug()
+        writer.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to title))
+        publish(writer, plug)
+        pull(writer, plug) // confirms the publish, so recovery may republish later
+        pull(reader, plug)
+        val ingested = reader.ingestedKeys(plugId)
+        ingested shouldHaveSize 1
+        // A lost grant or an invisible provider: the folder reads as empty.
+        plug.list("todo/").forEach { plug.delete(it) }
+
+        coroutineScope {
+            for (replica in listOf(writer, reader)) {
+                val sync = LiveSync(replica, plug, plugId, "todo", identity(), this)
+                sync.start()
+                sync.pull()
+                sync.emptyHeld.value shouldBe true
+                sync.stop()
+            }
+        }
+        reader.ingestedKeys(plugId) shouldBe ingested
+        plug.list("todo/").shouldBeEmpty()
+
+        coroutineScope {
+            val sync = LiveSync(writer, plug, plugId, "todo", identity(), this)
+            sync.start()
+            sync.pull()
+            sync.acceptEmpty()
+            sync.pull()
+            sync.emptyHeld.value shouldBe false
+            sync.stop()
+        }
+        snapshotKeys(plug) shouldHaveSize 1
+    }
+
+    "an empty listing on a device that never synced through the plug is just a new backend" {
+        val replica = Replica(driver(), local, TestClock(1_000))
+        coroutineScope {
+            val sync = LiveSync(replica, MemoryPlug(), plugId, "todo", identity(), this)
+            sync.start()
+            sync.pull()
+            sync.emptyHeld.value shouldBe false
+            sync.stop()
+        }
+    }
+
     "a put retried after it half-landed re-sends the same object instead of a duplicate" {
         val replica = Replica(driver(), local, TestClock(1_000))
         val plug = HalfLandingPlug()
@@ -352,6 +400,9 @@ class LiveSyncTest : StringSpec({
             sync.pull() // confirm the delta and leave a watermark
             plug.list("todo/").forEach { plug.delete(it) }
 
+            sync.pull()
+            snapshotKeys(plug).shouldBeEmpty()
+            sync.acceptEmpty()
             sync.pull()
             snapshotKeys(plug) shouldHaveSize 1
             sync.stop()

@@ -36,12 +36,14 @@ data class RelayOptions(
 /**
  * Live sync over the chosen backend: last sync, pending changes, and whether it is failing. A relay
  * refusal carries the [RelayRefused] so Settings can say why (auth, registration, limits).
+ * [looksEmpty]: the backend listed nothing after syncing before, and waits for [LiveSyncActions.confirmEmpty].
  */
 data class SyncStatus(
     val lastSync: Instant?,
     val pendingChanges: Int,
     val failing: Boolean = false,
     val refused: RelayRefused? = null,
+    val looksEmpty: Boolean = false,
 )
 
 /** Whether [url] is a relay address this build may use: https, or http for a debug LAN/emulator. */
@@ -188,7 +190,14 @@ class LiveSyncActions(
             lastSync = if (healthy) clock.now() else current.lastSync,
             failing = !healthy,
             refused = sync.failure.value as? RelayRefused,
+            looksEmpty = sync.emptyHeld.value,
         )
+    }
+
+    /** The user confirms the backend really is empty: sync prunes and republishes (decision 0082). */
+    suspend fun confirmEmpty() {
+        liveSync?.acceptEmpty()
+        syncNow()
     }
 
     /** Stops the polling job. */

@@ -58,6 +58,9 @@
     <string name="folder_pick_hint">Pick the folder your sync tool uses (e.g. Syncthing, Nextcloud, Dropbox). You can create a dedicated folder like \"msuite-todo\" first, or pick an existing one. Your data will sync through this folder.</string>
     <string name="folder_pick_continue">Continue</string>
     <string name="folder_clear">Clear</string>
+    <string name="folder_looks_empty">The folder looks empty, although this device synced through it before. Maybe the app lost access to it, or the sync app hides it. Nothing is deleted or re-sent until you confirm.</string>
+    <string name="relay_looks_empty">The relay looks empty, although this device synced through it before. Nothing is deleted or re-sent until you confirm.</string>
+    <string name="sync_confirm_empty">It really is empty</string>
     <string name="folder_sync_failing">Can\'t reach the folder. Retrying every 10 seconds; your changes are kept on this device.</string>
     <string name="sync_backend">Sync method</string>
     <string name="sync_backend_none">Off</string>

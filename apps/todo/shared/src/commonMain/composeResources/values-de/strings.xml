@@ -58,6 +58,9 @@
     <string name="folder_pick_hint">Wähle den Ordner, den dein Sync-Tool nutzt (z.B. Syncthing, Nextcloud, Dropbox). Du kannst zuerst einen eigenen Ordner wie „msuite-todo" erstellen oder einen vorhandenen wählen. Deine Daten werden über diesen Ordner synchronisiert.</string>
     <string name="folder_pick_continue">Weiter</string>
     <string name="folder_clear">Löschen</string>
+    <string name="folder_looks_empty">Der Ordner wirkt leer, obwohl dieses Gerät schon darüber synchronisiert hat. Vielleicht hat die App den Zugriff verloren oder die Sync-App blendet ihn aus. Nichts wird gelöscht oder neu gesendet, bis du es bestätigst.</string>
+    <string name="relay_looks_empty">Das Relay wirkt leer, obwohl dieses Gerät schon darüber synchronisiert hat. Nichts wird gelöscht oder neu gesendet, bis du es bestätigst.</string>
+    <string name="sync_confirm_empty">Ja, wirklich leer</string>
     <string name="folder_sync_failing">Ordner nicht erreichbar. Neuer Versuch alle 10 Sekunden; Änderungen bleiben auf diesem Gerät erhalten.</string>
     <string name="sync_backend">Synchronisierungsart</string>
     <string name="sync_backend_none">Aus</string>

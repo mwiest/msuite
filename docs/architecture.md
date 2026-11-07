@@ -260,7 +260,8 @@ its manifest (decision 0076). Dropbox's provider reports `rename` as supported b
 throws, so the atomic publish stages in local temp (decision 0075). A tree URI and its grant are
 per device: a folder picked on one device means nothing on another, so each device picks its own
 (decision 0072). SAF reports a provider it can't see, or a grant that's gone, as an *empty
-folder*, not an error, so the plug can't tell that from a fresh folder; a write to it throws.
+folder*, not an error, so the plug can't tell that from a fresh folder (held, see Empty listing);
+a write to it throws.
 `LiveSync` catches every plug failure: `healthy` turns false (Settings says the folder can't be
 reached), and a failed publish is retried after the next successful pull. Copies and twin
 folders that the sync client makes are cleaned up as above (decision 0078).
@@ -293,6 +294,10 @@ writer's objects:
   its span, so a delta would not re-expose the old state but a snapshot does. Code:
   `Replica.canRecover` and `LiveSync.publishSnapshot`. Tests refill an emptied plug and converge a
   fresh peer from it.
+- **Empty listing.** A listing that is empty although this device synced through the plug before
+  (`Replica.hasSynced`) is held: the pull stops before ingest, pruning, recovery and confirm, and
+  `LiveSync.emptyHeld` turns true until the user confirms the backend really is empty
+  (`acceptEmpty`; decision 0082). A lost SAF grant reads exactly like that.
 
 Steady state publishes deltas, coarsely batched (per idle period, not per edit); snapshots are for
 joins (0033) and the periodic compaction of 0002.

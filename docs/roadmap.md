@@ -25,9 +25,6 @@ After v1, roughly in this order:
   0078) but nothing prevents them. Find a way at the root: a create-with-content call in a newer
   SAF or Dropbox provider, or a native Dropbox plug over its HTTP API instead of SAF (needs a
   decision: SDK or plain Ktor, app key handling).
-- A provider that went invisible or a lost grant reads as an empty folder: pruning drops all
-  `ingested_batch` rows (a full re-read later) and Settings only shows the problem once a write
-  fails. Log and show the folder's identity (root name, child count) instead.
 - A device that is wiped and re-paired gets a new `deviceId`, so the objects of its old identity
   stay (at most a snapshot and a few deltas) and no member prunes them; a group that reinstalls
   often accumulates one per install (decisions 0029, 0058).

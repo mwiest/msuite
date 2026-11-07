@@ -33,6 +33,7 @@ import com.msuite.todo.domain.isAllowedRelayUrl
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.cancel
 import com.msuite.todo.resources.folder_clear
+import com.msuite.todo.resources.folder_looks_empty
 import com.msuite.todo.resources.folder_pick
 import com.msuite.todo.resources.folder_pick_continue
 import com.msuite.todo.resources.folder_pick_hint
@@ -43,6 +44,7 @@ import com.msuite.todo.resources.relay_forbidden
 import com.msuite.todo.resources.relay_full
 import com.msuite.todo.resources.relay_group_id
 import com.msuite.todo.resources.relay_group_id_hint
+import com.msuite.todo.resources.relay_looks_empty
 import com.msuite.todo.resources.relay_save
 import com.msuite.todo.resources.relay_too_large
 import com.msuite.todo.resources.relay_unauthorized
@@ -57,6 +59,7 @@ import com.msuite.todo.resources.sync_backend_none
 import com.msuite.todo.resources.sync_backend_none_hint
 import com.msuite.todo.resources.sync_backend_relay
 import com.msuite.todo.resources.sync_backend_relay_hint
+import com.msuite.todo.resources.sync_confirm_empty
 import com.msuite.todo.resources.sync_last_sync
 import com.msuite.todo.resources.sync_never_synced
 import com.msuite.todo.resources.sync_now
@@ -167,7 +170,7 @@ fun SyncBackendSection(live: LiveSyncActions, allowInsecureRelay: Boolean) {
             )
         }
 
-        if (choice == backend) SyncStatusLines(status, choice)
+        if (choice == backend) SyncStatusLines(status, choice) { scope.launch { live.confirmEmpty() } }
     }
 
     if (showPickDialog) {
@@ -325,7 +328,7 @@ private fun FolderPickDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 }
 
 @Composable
-private fun SyncStatusLines(status: SyncStatus, backend: SyncBackend) {
+private fun SyncStatusLines(status: SyncStatus, backend: SyncBackend, onConfirmEmpty: () -> Unit) {
     Text(
         status.lastSync?.let { stringResource(Res.string.sync_last_sync, it.toString()) }
             ?: stringResource(Res.string.sync_never_synced),
@@ -340,6 +343,19 @@ private fun SyncStatusLines(status: SyncStatus, backend: SyncBackend) {
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(top = 4.dp),
         )
+    }
+    if (status.looksEmpty) {
+        Text(
+            stringResource(
+                if (backend is SyncBackend.Relay) Res.string.relay_looks_empty else Res.string.folder_looks_empty,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        TextButton(onClick = onConfirmEmpty) {
+            Text(stringResource(Res.string.sync_confirm_empty))
+        }
     }
 }
 

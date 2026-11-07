@@ -76,7 +76,8 @@ never closes the app; Settings says so and the edits wait on the device until it
 speaks plain HTTP behind a TLS reverse proxy; the app only accepts https addresses (a debug build
 also accepts http for a LAN or emulator). A device periodically folds its own edits into one
 snapshot and removes what the snapshot covers, so a backend stays bounded; if a folder or
-namespace is emptied, a device that has synced before refills it. Architecture in
+namespace is emptied, a device that has synced before says it looks empty and, once the user
+confirms that it is, refills it. Architecture in
 `architecture.md`.
 
 - Sync is optional. The user picks a backend: none (export/import a file), a synced folder

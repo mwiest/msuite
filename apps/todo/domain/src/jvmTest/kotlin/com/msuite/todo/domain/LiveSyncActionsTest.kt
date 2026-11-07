@@ -2,7 +2,9 @@ package com.msuite.todo.domain
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.msuite.core.crypto.BackendType
+import com.msuite.core.model.CellKey
 import com.msuite.core.model.DeviceId
+import com.msuite.core.model.FieldId
 import com.msuite.core.relay.RelayRefusal
 import com.msuite.core.relay.RelayRefused
 import com.msuite.core.storage.LocalStore
@@ -24,6 +26,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import java.io.IOException
 import java.util.Properties
+import kotlin.uuid.Uuid
 
 /** A folder that throws like an unreachable provider while [down] is set. */
 private class FlakyFileStore(private val inner: FileStore) : FileStore {
@@ -82,6 +85,41 @@ private fun replica(): Replica = Replica(
 )
 
 class LiveSyncActionsTest : StringSpec({
+    "a backend that empties after syncing shows as looking empty until confirmed" {
+        val plug = MemoryPlug()
+        val replica = replica()
+        val settings = TodoSettings(MapSettings())
+
+        coroutineScope {
+            val live = LiveSyncActions(
+                replica = replica,
+                identity = StoredIdentity(MemoryRootStore()),
+                settings = settings,
+                folderPick = NoPick,
+                fileStoreFactory = { error("no folder") },
+                scope = this,
+                relay = RelayOptions(plugFactory = { _, _ -> plug }),
+            )
+            live.setBackend(SyncBackend.Relay("https://relay.example"))
+            yield()
+            replica.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to byteArrayOf(1)))
+            live.flushPendingChanges()
+            live.syncNow()
+            live.status.value.looksEmpty shouldBe false
+
+            plug.list("todo/").forEach { plug.delete(it) }
+            live.syncNow()
+            live.status.value.looksEmpty shouldBe true
+            plug.list("todo/") shouldBe emptyList()
+
+            live.confirmEmpty()
+            live.status.value.looksEmpty shouldBe false
+            plug.list("todo/").size shouldBe 1
+
+            live.setBackend(SyncBackend.None)
+        }
+    }
+
     "an unreachable folder shows as failing until a sync gets through" {
         val store = FlakyFileStore(PlainFileStore(tempdir()))
         val settings = TodoSettings(MapSettings()).apply { setSyncedFolderUri("content://folder") }

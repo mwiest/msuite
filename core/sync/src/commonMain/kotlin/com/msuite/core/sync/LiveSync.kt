@@ -67,6 +67,21 @@ class LiveSync(
     /** The last plug failure, or `null` after a successful operation; a relay sets [RelayRefused]. */
     val failure: StateFlow<Throwable?> = _failure.asStateFlow()
 
+    private val _emptyHeld = MutableStateFlow(false)
+    private var emptyAccepted = false
+
+    /**
+     * Whether the last listing was empty although this device synced through the plug before, and
+     * the pull stopped there (decision 0082): a lost grant or an invisible provider reads as an
+     * empty folder, so nothing is pruned or republished until [acceptEmpty].
+     */
+    val emptyHeld: StateFlow<Boolean> = _emptyHeld.asStateFlow()
+
+    /** The user says the backend really is empty: the next pulls prune and recover as usual. */
+    fun acceptEmpty() {
+        emptyAccepted = true
+    }
+
     suspend fun start() {
         groupId = groupId(requireNotNull(identity.root(KEY_GEN_V1)) { "no root for keyGen $KEY_GEN_V1" })
         publishJob = scope.launch {
@@ -97,6 +112,13 @@ class LiveSync(
         val gid = groupId ?: return
         val prefix = "$appId/$gid/"
         val keys = plug.list(prefix)
+        if (keys.isNotEmpty()) {
+            emptyAccepted = false
+        } else if (!emptyAccepted && replica.hasSynced(plugId)) {
+            _emptyHeld.value = true
+            return
+        }
+        _emptyHeld.value = false
         val parsed = keys.associateWith { runCatching { ObjectKey.parse(it) }.getOrNull() }
         val ingested = replica.ingestedKeys(plugId).toMutableSet()
         for ((key, objectKey) in parsed) {
