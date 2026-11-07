@@ -47,7 +47,8 @@ Not to be broken without a new decision record.
   Jetpack (Apache-2) is fine.
 - **FOSS, local-first, no accounts, no mandatory backend.** Identity is a shared symmetric secret;
   sync is optional and set up by the user.
-- **Kotlin only, no native `.so`** (no SQLCipher, no libsodium yet).
+- **Kotlin only, no native `.so` we add** (no SQLCipher, no libsodium yet); a prebuilt AndroidX
+  one pulled in by a dependency is fine (decision 0083).
 - **Keep libraries web-capable**, but don't build the `js`/`wasm` target yet (decision 0012).
 - **All merge stays in the client.** Backends are dumb, interchangeable stores of ciphertext; never
   a second merge layer below the app's (decisions 0003, 0028).

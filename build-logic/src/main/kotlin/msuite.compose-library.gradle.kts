@@ -12,5 +12,7 @@ plugins {
 kotlin {
     android {
         msuiteAndroidDefaults()
+        // Gives the commonTest source set the Compose plugin creates a compilation to join.
+        withHostTest {}
     }
 }

@@ -56,7 +56,7 @@ KeyStore, camera QR, alarms) stays behind interfaces in the app layer, never in 
 | Convention plugin | Sets up | Used by |
 |---|---|---|
 | `msuite.kmp-library` | KMP + AGP KMP library, targets `android` and `jvm`, JUnit Platform | `core/{model,storage,sync,relay,crypto}`, `apps/todo/domain` |
-| `msuite.compose-library` | KMP + AGP KMP library + Compose Multiplatform, android target only | `core/design`, `apps/todo/shared` |
+| `msuite.compose-library` | KMP + AGP KMP library + Compose Multiplatform, android target only (with a host-test compilation for `commonTest`) | `core/design`, `apps/todo/shared` |
 | `msuite.android-app` | Android application with built-in Kotlin, Compose, `targetSdk` | `apps/todo/android` |
 | `msuite.jvm-library` | Kotlin/JVM, JDK 21 toolchain, Java 17 bytecode, JUnit Platform | `core/sync-testing` |
 | `msuite.jvm-app` | `msuite.jvm-library` plus `application` | `server` |
