@@ -1,6 +1,6 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 10 done, code and device checks; 11 to 17 (fixes, S3 plug) not started.**
+Status: **steps 0 to 16 done; 17 (S3 plug) not started.**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -133,9 +133,10 @@ closes. Each problem slice removes its line from `roadmap.md` → Known problems
     `apps/todo/domain`. Landed: `c0eda26` (decision 0082).
 15. [x] **German strings say "du".** All German UI text in the informal form, instructions as
     du-imperatives, and "das Relay" throughout. No test: text only. Landed: `1f88744`.
-16. [ ] **Build hygiene.** A decision record: "no native `.so`" means native code we add; AndroidX's
+16. [x] **Build hygiene.** A decision record: "no native `.so`" means native code we add; AndroidX's
     `libandroidx.graphics.path.so` (Apache-2, Compose's path iteration below API 34) is fine. Fix
-    the "commonTest was configured" warning if cheap.
+    the "commonTest was configured" warning if cheap: fixed with `withHostTest` in the Compose
+    convention. Landed: `686bbdf` (decision 0083).
 17. [ ] **S3 plug.** A `BackendPlug` for S3-compatible storage (AWS, R2, B2, MinIO), in a new
     `core/s3` module: SigV4 on the Ktor client with cryptography-kotlin's HMAC/SHA-256, only PUT
     (`If-None-Match: *`), GET, DELETE and `ListObjectsV2`. Settings section; the secret stored
