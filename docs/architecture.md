@@ -20,7 +20,7 @@ in `apps/todo`; the crypto primitives, the batch envelope and the object-key gra
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested and unreadable batch keys, per-plug watermarks and unconfirmed publishes, the device ID | `LocalStore` over all its tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, `ManualSync`, `ObjectKey`/`ObjectKeyPrefix`/`groupId`, simulator Layer 1 |
 | `core/relay` | KMP (android, jvm) | The relay wire contract shared with `server/`, and the plug that talks to it (decision 0079) | `RelayApi` paths/headers/status codes, `relayToken`, `RelayPlug`/`RelayRefused` |
-| `core/s3` | KMP (android, jvm) | The S3-compatible object-storage plug (plan `v1-s3-plug.md`) | `SigV4` request signing (decision 0084), `S3Credentials`, `SigV4Scope` |
+| `core/s3` | KMP (android, jvm) | The S3-compatible object-storage plug (plan `v1-s3-plug.md`) | `SigV4` request signing (decision 0084), `S3Credentials`, `S3Config`, `S3Plug`/`S3Refused` (see Sync → S3) |
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`, `EnvelopePlugStore`) with `Fetch`, `MemoryPlug`, `assertPlugContract`, `TestClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hmacSha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) and `RecoveryWords` over `BIP39_ENGLISH` (record 0073) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
@@ -323,6 +323,21 @@ when the relay starts. The first `put` to a namespace registers it by linking
 `_MAX_*_BYTES` limits from the environment once in `main`. The relay speaks plain HTTP; a reverse
 proxy or the host terminates TLS (0079). Hosting templates and their guide are in `deploy/` and
 `render.yaml` (0081). Cloudflare users need no relay: R2 works with the object-storage plug.
+
+### S3
+
+`core/s3` holds the object-storage plug (plan `v1-s3-plug.md`). `S3Plug` is the `BackendPlug` over a
+caller's Ktor `HttpClient`, like the relay's. Each request is signed by `SigV4` (decision 0084),
+with the payload hash in `x-amz-content-sha256`. `S3Config` holds the endpoint, region, bucket and an
+optional key prefix that goes in front of every 0029 key. AWS endpoints (`*.amazonaws.com`) put the
+bucket in the host name; every other store takes it in the path. `put` sends `If-None-Match: *`
+and counts a 412 as success. If a store answers 400 or 501 to that header (B2), the put is sent
+again without it, and later puts skip it for the plug's lifetime; content-addressed keys keep the
+overwrite harmless. `list` is `ListObjectsV2` across continuation tokens, read by `S3Xml`, which
+extracts the few elements it needs (no XML dependency). Errors map to `S3Refused(refusal)` for bad
+credentials, access denied, a missing bucket and clock skew (`RequestTimeTooSkewed`), and to
+`IOException` otherwise. Tests run against `FakeS3`, an in-memory bucket behind Ktor's
+`MockEngine` that re-checks each signature from the URL it received.
 
 ## Identity, pairing and recovery
 

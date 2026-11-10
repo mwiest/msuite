@@ -45,8 +45,8 @@ Decided 2026-11-10:
 2. [ ] **`S3Plug`** over a Ktor client the caller passes in: `put`/`get`/`delete`/`list` with
    pagination, the `If-None-Match` fallback, both addressing styles and the prefix; errors map to
    `S3Refused(reason)` (credentials, no bucket, clock skew, forbidden). Tests: `PlugContract` and
-   the error mapping on Ktor's `MockEngine`, and the listing parser on captured R2, AWS and B2
-   responses.
+   the error mapping on Ktor's `MockEngine`, and the listing parser on the AWS-documented shape;
+   real R2 and B2 responses are captured as test cases in slice 6.
 3. [ ] **Pairing section:** `BackendType.S3(3)` with its ProtoBuf section in `core/crypto`. Test:
    round trip, a malformed section rejected, and an older build still pairing from the root.
 4. [ ] **Secret at rest:** extract the sealed-file helper from `KeyStoreRootStore`; add a
