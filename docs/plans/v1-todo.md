@@ -139,7 +139,7 @@ closes. Each problem slice removes its line from `roadmap.md` → Known problems
 16. [x] **Build hygiene.** "No native `.so`" means native code we add; AndroidX's
     `libandroidx.graphics.path.so` is fine (decision 0083). The "commonTest was configured" warning
     is gone: the Compose convention adds a host-test compilation. Landed: `686bbdf`.
-17. [ ] **S3 plug.** A `BackendPlug` for S3-compatible storage (AWS, R2, B2, MinIO), in a new
+17. [ ] **S3 plug** (plan: `v1-s3-plug.md`). A `BackendPlug` for S3-compatible storage (AWS, R2, B2, MinIO), in a new
     `core/s3` module: SigV4 on the Ktor client with cryptography-kotlin's HMAC/SHA-256, only PUT
     (`If-None-Match: *`), GET, DELETE and `ListObjectsV2`. Settings section; the secret stored
     under the KeyStore, never in settings. The QR carries endpoint, bucket, region, access key and
