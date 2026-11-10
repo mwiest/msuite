@@ -22,7 +22,7 @@ in `apps/todo`; the crypto primitives, the batch envelope and the object-key gra
 | `core/relay` | KMP (android, jvm) | The relay wire contract shared with `server/`, and the plug that talks to it (decision 0079) | `RelayApi` paths/headers/status codes, `relayToken`, `RelayPlug`/`RelayRefused` |
 | `core/s3` | KMP (android, jvm) | The S3-compatible object-storage plug (plan `v1-s3-plug.md`) | `SigV4` request signing (decision 0084), `S3Credentials`, `S3Config`, `S3Plug`/`S3Refused` (see Sync → S3) |
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`, `EnvelopePlugStore`) with `Fetch`, `MemoryPlug`, `assertPlugContract`, `TestClock` |
-| `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hmacSha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) and `RecoveryWords` over `BIP39_ENGLISH` (record 0073) |
+| `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hmacSha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) with `S3Section` (record 0085) and `RecoveryWords` over `BIP39_ENGLISH` (record 0073) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`/`SyncBackend`, `ListCommands`, `TaskCommands`, `SyncActions`, `LiveSyncActions`/`SyncStatus`, `SnapshotFiles`, `StoredIdentity`, `RootStore`, `PairingActions`/`JoinResult`/`JoinPreview`, `QrCodes`/`QrMatrix` |
 | `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica, settings, version, shell, identity)` creates "My Tasks" if missing; `ShellServices` holds the platform halves (SAF picker, QR codes, clipboard, relay plug factory); `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI), `SyncBackendSection` (off/folder/relay), `PairingScreen` (shows and scans a code), `RecoveryScreen` (words, copy and restore) |
@@ -358,8 +358,11 @@ The checksum is the first 4 bytes of SHA-256 over everything before it: it catch
 not an attacker, since whoever sees the QR has the root (0008). Identity sits at fixed offsets, so a
 build that doesn't know the backend type still reads the root and pairs. The types are `manual`
 (0, the snapshot file, nothing to carry), `folder` (1, no config: a folder is picked per device,
-0072) and `relay` (2, the section is the relay URL in UTF-8, record 0080). A joining device
-preselects the relay it reads; a release build ignores an `http://` URL (0079).
+0072), `relay` (2, the section is the relay URL in UTF-8, record 0080) and `s3` (3, the section is
+an `S3Section` in ProtoBuf: endpoint, region, bucket, prefix, access key ID and secret, record
+0085). A joining device preselects the relay it reads; a release build ignores an `http://` URL
+(0079). Until the S3 plug is wired into the app (plan `v1-s3-plug.md`), an S3 code joins the group
+and clears the backend, as a folder code does.
 There is no salt — the same root and backend always produce the same QR.
 - In the UI (code: `PairingScreen` and `QrCodes`): a device shows its code on demand and never
   stores it; the other scans it with zxing-android-embedded's camera in its own `PairingScanActivity`

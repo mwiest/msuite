@@ -16,6 +16,8 @@ private const val BODY_BYTES = BACKEND_INDEX + 1
 private const val MIN_BYTES = BODY_BYTES + CHECKSUM_BYTES
 
 /** A backend the apps know how to configure, as a pairing QR names it (record 0072). */
+// The ids are the QR's wire format, not calculations.
+@Suppress("MagicNumber")
 enum class BackendType(val id: Int) {
     /** The manual snapshot file: the only plug so far, and one with nothing to carry (decision 0066). */
     Manual(0),
@@ -25,6 +27,9 @@ enum class BackendType(val id: Int) {
 
     /** The relay: its section is the relay URL in UTF-8 (record 0080). */
     Relay(2),
+
+    /** S3-compatible object storage: its section is an [S3Section], credentials included. */
+    S3(3),
 }
 
 /**
@@ -92,11 +97,15 @@ class PairingPayload private constructor(
             }
         }
 
-        /** Whether [section] is the one [type] carries: none except the relay's URL (record 0080). */
+        /** Whether [section] is the one [type] carries: a relay URL (0080), an S3 section, or none. */
         private fun sectionFits(type: BackendType, section: ByteArray): Boolean = when (type) {
             BackendType.Manual, BackendType.Folder -> section.isEmpty()
             BackendType.Relay -> relayUrl(section) != null
+            BackendType.S3 -> s3Section(section) != null
         }
+
+        /** The S3 configuration [section] encodes, or `null` when it isn't a usable one. */
+        fun s3Section(section: ByteArray): S3Section? = S3Section.decode(section)
 
         /** The relay URL [section] encodes, or `null` when it isn't a UTF-8 http(s) URL. */
         fun relayUrl(section: ByteArray): String? {

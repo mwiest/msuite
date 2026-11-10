@@ -14,8 +14,7 @@ second device syncs after one scan.
 Decided 2026-11-07 (plan `v1-todo.md` step 17); each gets a record when its slice lands:
 
 - SigV4 written on the Ktor client with cryptography-kotlin's HMAC/SHA-256; no SDK (decision 0084).
-- The whole configuration, secret included, travels in the pairing QR, which already carries the
-  root.
+- The whole configuration, secret included, travels in the pairing QR (decision 0085).
 
 Decided 2026-11-10:
 
@@ -32,8 +31,7 @@ Decided 2026-11-10:
   is confirmed in slice 6.
 - **Clock skew:** `RequestTimeTooSkewed` becomes a refusal shown in Settings ("check the device
   time"), with no automatic offset.
-- **QR section:** a kotlinx ProtoBuf message (endpoint, region, bucket, prefix, access key ID,
-  secret).
+- **QR section:** a kotlinx ProtoBuf message (decision 0085).
 - **Secret at rest:** the KeyStore wrap/unwrap moves out of `KeyStoreRootStore` into a shared
   sealed-file helper; the root and the S3 secret are separate files under the same wrapping key. The
   root's file format stays.

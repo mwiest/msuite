@@ -51,6 +51,7 @@ import com.msuite.todo.resources.pair_join_hint
 import com.msuite.todo.resources.pair_joined_file
 import com.msuite.todo.resources.pair_joined_folder
 import com.msuite.todo.resources.pair_joined_relay
+import com.msuite.todo.resources.pair_joined_s3
 import com.msuite.todo.resources.pair_joined_unknown
 import com.msuite.todo.resources.pair_scan
 import com.msuite.todo.resources.pair_scan_prompt
@@ -249,6 +250,7 @@ private fun JoinResult.label() = when (this) {
         BackendType.Manual -> Res.string.pair_joined_file
         BackendType.Folder -> Res.string.pair_joined_folder
         BackendType.Relay -> Res.string.pair_joined_relay
+        BackendType.S3 -> Res.string.pair_joined_s3
         null -> Res.string.pair_joined_unknown
     }
 

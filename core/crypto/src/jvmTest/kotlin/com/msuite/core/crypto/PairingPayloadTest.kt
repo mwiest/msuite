@@ -103,6 +103,60 @@ class PairingPayloadTest : StringSpec({
         PairingPayload.parse(payload(backendType = BackendType.Relay.id.toByte())) shouldBe null
     }
 
+    "an S3 payload round-trips its section" {
+        val section = S3Section(
+            endpoint = "https://0123abcd.r2.cloudflarestorage.com",
+            region = "auto",
+            bucket = "msuite",
+            prefix = "todo-sync",
+            accessKeyId = "a".repeat(32),
+            secretAccessKey = "b".repeat(64),
+        )
+        val bytes = PairingPayload.build(KEY_GEN, root(), BackendType.S3, section.encode())
+        val parsed = PairingPayload.parse(bytes).shouldNotBeNull()
+
+        parsed.backend shouldBe BackendType.S3
+        PairingPayload.s3Section(parsed.backendSection) shouldBe section
+    }
+
+    "the S3 section's field numbers are pinned" {
+        S3Section("https://e", "r", "b", "p", "AK", "SK").encode().hex() shouldBe
+            "0a09" + "68747470733a2f2f65" + // 1: endpoint
+            "1201" + "72" + // 2: region
+            "1a01" + "62" + // 3: bucket
+            "2201" + "70" + // 4: prefix
+            "2a02" + "414b" + // 5: access key ID
+            "3202" + "534b" // 6: secret
+        S3Section("https://e", "r", "b", "", "AK", "SK").encode().hex() shouldBe
+            "0a0968747470733a2f2f65120172" + "1a0162" + "2a02414b" + "3202534b"
+    }
+
+    "an S3 section from a newer build with an extra field still reads" {
+        val section = S3Section("https://e", "r", "b", "", "AK", "SK")
+        PairingPayload.s3Section(section.encode() + byteArrayOf(0x3a, 1, 'x'.code.toByte())) shouldBe section
+    }
+
+    "an S3 section that isn't usable is refused" {
+        val bad = listOf(
+            ByteArray(0),
+            byteArrayOf(1, 2, 3),
+            S3Section("ftp://e", "r", "b", "", "AK", "SK").encode(),
+            S3Section("https://e", "r", " ", "", "AK", "SK").encode(),
+            S3Section("https://e", "", "b", "", "AK", "SK").encode(),
+            S3Section("https://e", "r", "b", "", "", "SK").encode(),
+            S3Section("https://e", "r", "b", "", "AK", "").encode(),
+        )
+        bad.forEach { section ->
+            PairingPayload.s3Section(section) shouldBe null
+            shouldThrow<IllegalArgumentException> { PairingPayload.build(KEY_GEN, root(), BackendType.S3, section) }
+            PairingPayload.parse(payload(backendType = BackendType.S3.id.toByte(), section = section)) shouldBe null
+        }
+    }
+
+    "an S3 section never prints its secret" {
+        S3Section("https://e", "r", "b", "", "AK", "TOPSECRET").toString().contains("TOPSECRET") shouldBe false
+    }
+
     "a type without a section refuses one" {
         shouldThrow<IllegalArgumentException> {
             PairingPayload.build(KEY_GEN, root(), BackendType.Manual, byteArrayOf(1))

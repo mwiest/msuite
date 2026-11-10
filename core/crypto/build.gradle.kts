@@ -1,5 +1,6 @@
 plugins {
     id("msuite.kmp-library")
+    id("msuite.serialization")
 }
 
 kotlin {
@@ -12,6 +13,9 @@ kotlin {
             // SHA-256, HKDF-SHA256, AES-256-GCM and the RNG; we only compose them (decision 0010).
             implementation(libs.cryptography.core)
             implementation(libs.cryptography.random)
+            // Backend sections of the pairing QR that carry more than one field (decision 0016).
+            implementation(libs.kotlinx.serialization.core)
+            implementation(libs.kotlinx.serialization.protobuf)
         }
         // The JDK provider (JCA, Conscrypt on Android) backs android and jvm; web gets its own (0012).
         androidMain.dependencies {
