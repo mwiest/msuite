@@ -1,6 +1,6 @@
 # Plan: the S3 plug (v1 step 17)
 
-Status: **slices 1 to 3 done; slice 4 (secret at rest) next.** Started 2026-11-10.
+Status: **slices 1 to 4 done; slice 5 (Settings and wiring) next.** Started 2026-11-10.
 
 ## Goal
 
@@ -51,9 +51,10 @@ Decided 2026-11-10:
 3. [x] **Pairing section:** `BackendType.S3(3)` with its ProtoBuf section in `core/crypto`. Test:
    round trip, a malformed section rejected, and an older build still pairing from the root (the
    unknown-type test of 0072 covers it). Landed: `f77cbfb` (decision 0085).
-4. [ ] **Secret at rest:** extract the sealed-file helper from `KeyStoreRootStore`; add a
+4. [x] **Secret at rest:** extract the sealed-file helper from `KeyStoreRootStore`; add a
    `SecretStore` seam in `apps/todo/domain`; `SyncBackend.S3` in `TodoSettings` without the secret.
-   Test: domain tests with an in-memory store, showing settings never hold the secret.
+   Test: `TodoSettingsTest` shows the stored keys hold no secret; the KeyStore side has no JVM test,
+   as for the root (0039). Landed: `e9301c5`.
 5. [ ] **Settings and wiring:** the S3 form in `SyncBackendSection` (EN and DE), the plug factory in
    `ShellServices`, joining and the step 13 switch offer for S3 codes. Tests in `LiveSyncActions`
    and `Pairing`.
