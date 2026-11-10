@@ -13,8 +13,7 @@ second device syncs after one scan.
 
 Decided 2026-11-07 (plan `v1-todo.md` step 17); each gets a record when its slice lands:
 
-- SigV4 written on the Ktor client with cryptography-kotlin's HMAC/SHA-256; no SDK (aws-sdk-kotlin
-  and minio-java are JVM-only and heavy for four calls).
+- SigV4 written on the Ktor client with cryptography-kotlin's HMAC/SHA-256; no SDK (decision 0084).
 - The whole configuration, secret included, travels in the pairing QR, which already carries the
   root.
 

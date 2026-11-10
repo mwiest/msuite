@@ -41,6 +41,13 @@ class CryptoTest : StringSpec({
         hkdf(input, salt, "a") shouldNotBe hkdf(input, ByteArray(8) { 3 }, "a")
     }
 
+    "hmacSha256 matches RFC 4231 test cases 1 and 2" {
+        hmacSha256(ByteArray(20) { 0x0b }, "Hi There".encodeToByteArray()).hex() shouldBe
+            "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
+        hmacSha256("Jefe".encodeToByteArray(), "what do ya want for nothing?".encodeToByteArray()).hex() shouldBe
+            "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
+    }
+
     "AES-256-GCM seals and opens under a fresh key" {
         val arbBytes = Arb.byteArray(Arb.int(0..64), Arb.byte())
         checkAll(arbBytes, arbBytes) { plaintext, aad ->

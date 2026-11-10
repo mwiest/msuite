@@ -5,6 +5,7 @@ import dev.whyoleg.cryptography.CryptographyProvider
 import dev.whyoleg.cryptography.DelicateCryptographyApi
 import dev.whyoleg.cryptography.algorithms.AES
 import dev.whyoleg.cryptography.algorithms.HKDF
+import dev.whyoleg.cryptography.algorithms.HMAC
 import dev.whyoleg.cryptography.algorithms.SHA256
 import dev.whyoleg.cryptography.random.CryptographyRandom
 
@@ -16,6 +17,12 @@ private val provider = CryptographyProvider.Default
 
 /** The SHA-256 digest of [bytes]: content addressing and the `groupId` (decisions 0003, 0029). */
 suspend fun sha256(bytes: ByteArray): ByteArray = provider.get(SHA256).hasher().hash(bytes)
+
+/** HMAC-SHA256 of [data] under [key]: the request signature of S3's SigV4 (plan `v1-s3-plug.md`). */
+suspend fun hmacSha256(key: ByteArray, data: ByteArray): ByteArray = provider.get(HMAC).keyDecoder(SHA256)
+    .decodeFromByteArray(HMAC.Key.Format.RAW, key)
+    .signatureGenerator()
+    .generateSignature(data)
 
 /** HKDF-SHA256 (decision 0010): [size] bytes from [input], salted with [salt], bound to [info]. */
 suspend fun hkdf(input: ByteArray, salt: ByteArray, info: ByteArray, size: Int = SECRET_SIZE): ByteArray =
