@@ -331,11 +331,13 @@ caller's Ktor `HttpClient`, like the relay's. Each request is signed by `SigV4` 
 with the payload hash in `x-amz-content-sha256`. `S3Config` holds the endpoint, region, bucket and an
 optional key prefix that goes in front of every 0029 key. AWS endpoints (`*.amazonaws.com`) put the
 bucket in the host name; every other store takes it in the path. `put` sends `If-None-Match: *`
-and counts a 412 as success. If a store answers 400 or 501 to that header (B2), the put is sent
-again without it, and later puts skip it for the plug's lifetime; content-addressed keys keep the
-overwrite harmless. `list` is `ListObjectsV2` across continuation tokens, read by `S3Xml`, which
+and counts a 412 as success. If a store answers 501, or a 400 that maps to no refusal, to that
+header (B2), the put is sent again without it, and later puts skip it for the plug's lifetime (one
+sync session, so each app start probes once); content-addressed keys keep the overwrite
+harmless. `list` is `ListObjectsV2` across continuation tokens, read by `S3Xml`, which
 extracts the few elements it needs (no XML dependency). Errors map to `S3Refused(refusal)` for bad
-credentials, access denied, a missing bucket and clock skew (`RequestTimeTooSkewed`), and to
+credentials, access denied, a missing bucket, a wrong region (`AuthorizationHeaderMalformed`,
+`PermanentRedirect`) and clock skew (`RequestTimeTooSkewed`), and to
 `IOException` otherwise. Tests run against `FakeS3`, an in-memory bucket behind Ktor's
 `MockEngine` that re-checks each signature from the URL it received.
 

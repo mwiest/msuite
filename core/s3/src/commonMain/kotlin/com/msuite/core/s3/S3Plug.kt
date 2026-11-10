@@ -18,7 +18,7 @@ import kotlin.concurrent.Volatile
 import kotlin.time.Clock
 
 /** Why the store refused a request, for a reason the user can act on; Settings maps each to a message. */
-enum class S3Refusal { BadCredentials, Forbidden, NoSuchBucket, ClockSkew }
+enum class S3Refusal { BadCredentials, Forbidden, NoSuchBucket, WrongRegion, ClockSkew }
 
 /** The store refused a request: [code] is S3's error code, when the body carried one. */
 class S3Refused(val refusal: S3Refusal, val status: Int, val code: String?) :
@@ -35,7 +35,8 @@ class S3Plug(
     private val client: HttpClient,
     private val clock: Clock = Clock.System,
 ) : BackendPlug {
-    // Cleared once a store refuses the header (B2); content-addressed keys keep an overwrite harmless.
+    // Cleared once a store refuses the header (B2), for this plug's lifetime: one sync session.
+    // Content-addressed keys keep an overwrite harmless.
     @Volatile
     private var conditionalPuts = true
 
@@ -43,10 +44,10 @@ class S3Plug(
         if (conditionalPuts) {
             val response = send(HttpMethod.Put, config.path(config.keyPrefix + key), body = bytes, ifNoneMatch = true)
             val status = response.status.value
-            when {
-                status in SUCCESS || status == PRECONDITION_FAILED -> return
-                status != BAD_REQUEST && status != NOT_IMPLEMENTED -> throw failure(response)
-            }
+            if (status in SUCCESS || status == PRECONDITION_FAILED) return
+            // Only an unexplained 400 or a 501 may be the header itself; a known refusal is not.
+            val failure = failure(response)
+            if ((status != BAD_REQUEST && status != NOT_IMPLEMENTED) || failure is S3Refused) throw failure
         }
         val response = send(HttpMethod.Put, config.path(config.keyPrefix + key), body = bytes)
         if (response.status.value !in SUCCESS) throw failure(response)
@@ -142,6 +143,8 @@ class S3Plug(
 
             code == "NoSuchBucket" -> S3Refusal.NoSuchBucket
 
+            code in WRONG_REGION_CODES -> S3Refusal.WrongRegion
+
             status == FORBIDDEN -> S3Refusal.Forbidden
 
             else -> null
@@ -164,5 +167,8 @@ class S3Plug(
         const val NOT_FOUND = 404
         const val PRECONDITION_FAILED = 412
         const val NOT_IMPLEMENTED = 501
+
+        /** AWS's answers to a region that doesn't match the bucket or the endpoint. */
+        val WRONG_REGION_CODES = setOf("AuthorizationHeaderMalformed", "PermanentRedirect")
     }
 }

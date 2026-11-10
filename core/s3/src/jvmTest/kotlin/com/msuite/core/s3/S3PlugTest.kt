@@ -34,9 +34,12 @@ private fun fake(
 private fun FakeS3.plug(config: S3Config = pathStyle(), credentials: S3Credentials = keys) =
     S3Plug(config, credentials, client, fixedClock)
 
-/** A plug whose every request is answered with [status] and the S3 error [code]. */
-private fun failing(status: HttpStatusCode, code: String): S3Plug {
-    val engine = MockEngine { respond("<Error><Code>$code</Code><Message>m</Message></Error>", status) }
+/** A plug whose every request is answered with [status] and the S3 error [code]; [onRequest] counts them. */
+private fun failing(status: HttpStatusCode, code: String, onRequest: () -> Unit = {}): S3Plug {
+    val engine = MockEngine {
+        onRequest()
+        respond("<Error><Code>$code</Code><Message>m</Message></Error>", status)
+    }
     return S3Plug(pathStyle(), keys, HttpClient(engine) { expectSuccess = false }, fixedClock)
 }
 
@@ -150,6 +153,25 @@ class S3PlugTest : StringSpec({
         val error = shouldThrow<IOException> { failing(HttpStatusCode.InternalServerError, "InternalError").get("k") }
         error.shouldNotBeInstanceOf<S3Refused>()
         error.message shouldBe "S3 answered 500 (InternalError)"
+    }
+
+    "a wrong region is WrongRegion and is not retried without If-None-Match" {
+        var requests = 0
+        val plug = failing(HttpStatusCode.BadRequest, "AuthorizationHeaderMalformed") { requests++ }
+        shouldThrow<S3Refused> { plug.put("k", byteArrayOf(1)) }.refusal shouldBe S3Refusal.WrongRegion
+        requests shouldBe 1
+    }
+
+    "a bucket in another region's endpoint is WrongRegion" {
+        shouldThrow<S3Refused> { failing(HttpStatusCode.MovedPermanently, "PermanentRedirect").list("") }
+            .refusal shouldBe S3Refusal.WrongRegion
+    }
+
+    "a refusal on a conditional put is reported, not retried" {
+        var requests = 0
+        val plug = failing(HttpStatusCode.BadRequest, "InvalidAccessKeyId") { requests++ }
+        shouldThrow<S3Refused> { plug.put("k", byteArrayOf(1)) }.refusal shouldBe S3Refusal.BadCredentials
+        requests shouldBe 1
     }
 
     "a failed retry without If-None-Match reports the retry's error" {

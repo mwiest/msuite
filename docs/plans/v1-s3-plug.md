@@ -27,6 +27,9 @@ Decided 2026-11-10:
 - **Layout:** an optional key prefix (for example `msuite/`) goes in front of the 0029 keys; it is
   part of the config and the QR.
 - **Addressing:** virtual-hosted style for `amazonaws.com` endpoints, path style everywhere else.
+- **Fallback scope:** only a 501, or a 400 that maps to no refusal, triggers the retry without the
+  header; a wrong region (`WrongRegion`) or bad credentials are reported at once. B2's exact answer
+  is confirmed in slice 6.
 - **Clock skew:** `RequestTimeTooSkewed` becomes a refusal shown in Settings ("check the device
   time"), with no automatic offset.
 - **QR section:** a kotlinx ProtoBuf message (endpoint, region, bucket, prefix, access key ID,
