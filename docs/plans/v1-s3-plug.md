@@ -1,6 +1,6 @@
 # Plan: the S3 plug (v1 step 17)
 
-Status: **slices 1 and 2 done; slice 3 (pairing section) next.** Started 2026-11-10.
+Status: **slices 1 to 3 done; slice 4 (secret at rest) next.** Started 2026-11-10.
 
 ## Goal
 
@@ -48,8 +48,9 @@ Decided 2026-11-10:
    `S3Refused(reason)` (credentials, no bucket, clock skew, forbidden). Tests: `PlugContract` and
    the error mapping on Ktor's `MockEngine`, and the listing parser on the AWS-documented shape;
    real R2 and B2 responses are captured as test cases in slice 6. Landed: `289ecf3`.
-3. [ ] **Pairing section:** `BackendType.S3(3)` with its ProtoBuf section in `core/crypto`. Test:
-   round trip, a malformed section rejected, and an older build still pairing from the root.
+3. [x] **Pairing section:** `BackendType.S3(3)` with its ProtoBuf section in `core/crypto`. Test:
+   round trip, a malformed section rejected, and an older build still pairing from the root (the
+   unknown-type test of 0072 covers it). Landed: `f77cbfb` (decision 0085).
 4. [ ] **Secret at rest:** extract the sealed-file helper from `KeyStoreRootStore`; add a
    `SecretStore` seam in `apps/todo/domain`; `SyncBackend.S3` in `TodoSettings` without the secret.
    Test: domain tests with an in-memory store, showing settings never hold the secret.
