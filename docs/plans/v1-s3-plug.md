@@ -1,6 +1,6 @@
 # Plan: the S3 plug (v1 step 17)
 
-Status: **not started.** Started 2026-11-10.
+Status: **slice 1 done; slice 2 (the plug) next.** Started 2026-11-10.
 
 ## Goal
 
@@ -40,8 +40,8 @@ Decided 2026-11-10:
 
 ## Slices
 
-1. [ ] **SigV4 signer** in a new KMP module `core/s3` (canonical request, string to sign, signing
-   key, `Authorization` header). Test: AWS's SigV4 test vectors.
+1. [x] **SigV4 signer** in a new KMP module `core/s3` (canonical request, string to sign, signing
+   key, `Authorization` header). Test: AWS's SigV4 test vectors. Landed: `644c1ec` (decision 0084).
 2. [ ] **`S3Plug`** over a Ktor client the caller passes in: `put`/`get`/`delete`/`list` with
    pagination, the `If-None-Match` fallback, both addressing styles and the prefix; errors map to
    `S3Refused(reason)` (credentials, no bucket, clock skew, forbidden). Tests: `PlugContract` and
