@@ -52,4 +52,30 @@ class TodoSettingsTest : StringSpec({
         settings.setSyncBackend(SyncBackend.None)
         TodoSettings(stored).syncBackend.value shouldBe SyncBackend.None
     }
+
+    "an S3 backend round-trips, without a secret anywhere in the settings" {
+        val stored = MapSettings()
+        val s3 = SyncBackend.S3("https://acc.r2.cloudflarestorage.com", "auto", "msuite", "todo", "AKID")
+        TodoSettings(stored).setSyncBackend(s3)
+
+        TodoSettings(stored).syncBackend.value shouldBe s3
+        stored.keys shouldBe
+            setOf("syncBackend", "s3.endpoint", "s3.region", "s3.bucket", "s3.prefix", "s3.accessKeyId")
+    }
+
+    "leaving S3 removes its keys" {
+        val stored = MapSettings()
+        val settings = TodoSettings(stored)
+        settings.setSyncBackend(SyncBackend.S3("https://e", "r", "b", "", "AKID"))
+        settings.setSyncBackend(SyncBackend.Relay("https://relay.example"))
+        stored.keys shouldBe setOf("syncBackend")
+        settings.setSyncBackend(SyncBackend.S3("https://e", "r", "b", "", "AKID"))
+        settings.setSyncBackend(SyncBackend.None)
+        stored.keys shouldBe emptySet()
+    }
+
+    "an S3 backend with a field missing reads as none" {
+        val stored = MapSettings("syncBackend" to "s3", "s3.endpoint" to "https://e", "s3.region" to "r")
+        TodoSettings(stored).syncBackend.value shouldBe SyncBackend.None
+    }
 })

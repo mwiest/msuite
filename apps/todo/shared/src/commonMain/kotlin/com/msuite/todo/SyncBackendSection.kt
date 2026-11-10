@@ -168,6 +168,9 @@ fun SyncBackendSection(live: LiveSyncActions, allowInsecureRelay: Boolean) {
                     }
                 },
             )
+
+            // Nothing selects S3 until plan v1-s3-plug.md slice 5 adds its form here.
+            is SyncBackend.S3 -> Unit
         }
 
         if (choice == backend) SyncStatusLines(status, choice) { scope.launch { live.confirmEmpty() } }

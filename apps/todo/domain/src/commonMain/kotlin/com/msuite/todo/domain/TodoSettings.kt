@@ -17,6 +17,15 @@ sealed interface SyncBackend {
 
     /** A self-hosted relay; the token comes from the root (decisions 0030, 0079). */
     data class Relay(val url: String) : SyncBackend
+
+    /** An S3-compatible bucket; its secret lives in a [SecretStore], never here (plan `v1-s3-plug.md`). */
+    data class S3(
+        val endpoint: String,
+        val region: String,
+        val bucket: String,
+        val prefix: String,
+        val accessKeyId: String,
+    ) : SyncBackend
 }
 
 /** Device-local, non-synced preferences (decision 0064). Never backend credentials. */
@@ -73,25 +82,55 @@ class TodoSettings(private val settings: Settings) {
         ?: SyncBackend.None
 
     private fun setPersisted(value: SyncBackend) {
+        S3_KEYS.forEach(settings::remove)
         when (value) {
             SyncBackend.None -> settings.remove(SYNC_BACKEND)
+
             is SyncBackend.Folder -> settings.putString(SYNC_BACKEND, "folder:${value.uri}")
+
             is SyncBackend.Relay -> settings.putString(SYNC_BACKEND, "relay:${value.url}")
+
+            is SyncBackend.S3 -> {
+                settings.putString(SYNC_BACKEND, S3)
+                settings.putString(S3_ENDPOINT, value.endpoint)
+                settings.putString(S3_REGION, value.region)
+                settings.putString(S3_BUCKET, value.bucket)
+                settings.putString(S3_PREFIX, value.prefix)
+                settings.putString(S3_ACCESS_KEY_ID, value.accessKeyId)
+            }
         }
     }
+
+    /** The S3 backend from its own keys, or `null` if one is missing. */
+    private fun loadS3(): SyncBackend.S3? = SyncBackend.S3(
+        endpoint = settings.getStringOrNull(S3_ENDPOINT) ?: return null,
+        region = settings.getStringOrNull(S3_REGION) ?: return null,
+        bucket = settings.getStringOrNull(S3_BUCKET) ?: return null,
+        prefix = settings.getStringOrNull(S3_PREFIX) ?: return null,
+        accessKeyId = settings.getStringOrNull(S3_ACCESS_KEY_ID) ?: return null,
+    )
 
     private companion object {
         const val THEME = "theme"
         const val LAST_LIST = "lastList"
         const val SYNCED_FOLDER_URI = "syncedFolderUri"
         const val SYNC_BACKEND = "syncBackend"
+        const val S3 = "s3"
 
-        fun decode(stored: String?): SyncBackend? = when {
-            stored == null -> null
-            stored == "none" -> SyncBackend.None
-            stored.startsWith("folder:") -> SyncBackend.Folder(stored.removePrefix("folder:"))
-            stored.startsWith("relay:") -> SyncBackend.Relay(stored.removePrefix("relay:"))
-            else -> null
-        }
+        const val S3_ENDPOINT = "s3.endpoint"
+        const val S3_REGION = "s3.region"
+        const val S3_BUCKET = "s3.bucket"
+        const val S3_PREFIX = "s3.prefix"
+        const val S3_ACCESS_KEY_ID = "s3.accessKeyId"
+        val S3_KEYS = listOf(S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_PREFIX, S3_ACCESS_KEY_ID)
+    }
+
+    private fun decode(stored: String?): SyncBackend? = when {
+        stored == null -> null
+        stored == S3 -> loadS3() ?: SyncBackend.None
+        stored == "none" -> SyncBackend.None
+        stored.startsWith("folder:") -> SyncBackend.Folder(stored.removePrefix("folder:"))
+        stored.startsWith("relay:") -> SyncBackend.Relay(stored.removePrefix("relay:"))
+        else -> null
     }
 }

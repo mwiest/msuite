@@ -137,6 +137,9 @@ class LiveSyncActions(
                 } else {
                     relay.plugFactory?.let { it.create(chosen.url, root) to PlugId("relay:${chosen.url}") }
                 }
+
+            // Nothing selects S3 until plan v1-s3-plug.md slice 5 wires the plug in here.
+            is SyncBackend.S3 -> null
         }
 
     /** The group ID an operator's relay allowlist names; computed from the root, never stored. */

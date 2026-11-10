@@ -31,7 +31,7 @@ class TodoApplication : Application() {
 
     /** The group root, generated on first use and wrapped at rest (decisions 0008, 0039). */
     val identity: StoredIdentity by lazy {
-        StoredIdentity(KeyStoreRootStore(File(filesDir, ROOT_FILE)))
+        StoredIdentity(KeyStoreRootStore(KeyStoreSealedFile(File(filesDir, ROOT_FILE))))
     }
 
     /** Copying the recovery key (decision 0041). */

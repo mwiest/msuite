@@ -36,8 +36,13 @@ class TodoContainer(
         backend = {
             when (val backend = settings.syncBackend.value) {
                 SyncBackend.None -> PairingBackend(BackendType.Manual)
+
                 is SyncBackend.Folder -> PairingBackend(BackendType.Folder)
+
                 is SyncBackend.Relay -> PairingBackend(BackendType.Relay, backend.url.encodeToByteArray())
+
+                // Nothing selects S3 until plan v1-s3-plug.md slice 5, which puts its section here.
+                is SyncBackend.S3 -> PairingBackend(BackendType.Manual)
             }
         },
         onJoined = liveSync::applyJoinedBackend,
