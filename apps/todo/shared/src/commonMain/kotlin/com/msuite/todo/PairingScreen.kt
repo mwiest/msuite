@@ -59,8 +59,12 @@ import com.msuite.todo.resources.pair_show
 import com.msuite.todo.resources.pair_show_hint
 import com.msuite.todo.resources.pair_switch_body
 import com.msuite.todo.resources.pair_switch_confirm
+import com.msuite.todo.resources.pair_switch_s3_body
+import com.msuite.todo.resources.pair_switch_s3_confirm
+import com.msuite.todo.resources.pair_switch_s3_title
 import com.msuite.todo.resources.pair_switch_title
 import com.msuite.todo.resources.pair_switched_relay
+import com.msuite.todo.resources.pair_switched_s3
 import com.msuite.todo.resources.pair_unreadable
 import com.msuite.todo.resources.pair_unsupported
 import com.msuite.todo.resources.pairing_hint
@@ -78,7 +82,7 @@ import org.jetbrains.compose.resources.stringResource
 fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit) {
     var code by remember { mutableStateOf<ByteArray?>(null) }
     var scanned by remember { mutableStateOf<ByteArray?>(null) }
-    var switchTo by remember { mutableStateOf<Pair<ByteArray, String>?>(null) }
+    var switchTo by remember { mutableStateOf<Pair<ByteArray, JoinPreview.SwitchBackend>?>(null) }
     var result by remember { mutableStateOf<JoinResult?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -110,7 +114,7 @@ fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit) {
                     qr.scan(prompt)?.let { bytes ->
                         when (val preview = pairing.preview(bytes)) {
                             JoinPreview.Ready -> scanned = bytes
-                            is JoinPreview.SwitchBackend -> switchTo = bytes to preview.relayUrl
+                            is JoinPreview.SwitchBackend -> switchTo = bytes to preview
                             else -> result = preview.message()
                         }
                     }
@@ -139,17 +143,20 @@ fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit) {
     }
 }
 
-/** Moving a device that is already in the group to the relay its scanned code names (record 0080). */
+/** Moving a device already in the group to the relay or bucket its scanned code names (0080, 0085). */
 @Composable
-private fun ConfirmSwitch(relayUrl: String?, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    relayUrl ?: return
+private fun ConfirmSwitch(switch: JoinPreview.SwitchBackend?, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    switch ?: return
+    val s3 = switch.backend == BackendType.S3
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.pair_switch_title)) },
-        text = { Text(stringResource(Res.string.pair_switch_body, relayUrl)) },
+        title = { Text(stringResource(if (s3) Res.string.pair_switch_s3_title else Res.string.pair_switch_title)) },
+        text = {
+            Text(stringResource(if (s3) Res.string.pair_switch_s3_body else Res.string.pair_switch_body, switch.target))
+        },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringResource(Res.string.pair_switch_confirm))
+                Text(stringResource(if (s3) Res.string.pair_switch_s3_confirm else Res.string.pair_switch_confirm))
             }
         },
         dismissButton = {
@@ -256,7 +263,8 @@ private fun JoinResult.label() = when (this) {
 
     JoinResult.Restored -> Res.string.restore_done
 
-    is JoinResult.SwitchedBackend -> Res.string.pair_switched_relay
+    is JoinResult.SwitchedBackend ->
+        if (backend == BackendType.S3) Res.string.pair_switched_s3 else Res.string.pair_switched_relay
 
     JoinResult.AlreadyThisGroup -> Res.string.pair_already
 

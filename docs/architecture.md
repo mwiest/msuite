@@ -25,8 +25,8 @@ in `apps/todo`; the crypto primitives, the batch envelope and the object-key gra
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hmacSha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) with `S3Section` (record 0085) and `RecoveryWords` over `BIP39_ENGLISH` (record 0073) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
 | `apps/todo/domain` | KMP (android, jvm), no Compose, package `com.msuite.todo.domain` | ToDo logic: IDs, record types and fields, the projection over `field_state`, read-time rules, commands (decision 0051) | `TodoIds`, `TodoTypes`, `TodoFields`, `projectTodos()`, `todoStates()`, `toPickerMillis()`, `TodoSettings`/`SyncBackend` (none, folder, relay, S3 without its secret), `ListCommands`, `TaskCommands`, `SyncActions`, `LiveSyncActions`/`SyncStatus`, `SnapshotFiles`, `StoredIdentity`, `RootStore`, `SecretStore` (the S3 secret, never in `TodoSettings`), `PairingActions`/`JoinResult`/`JoinPreview`, `QrCodes`/`QrMatrix` |
-| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica, settings, version, shell, identity)` creates "My Tasks" if missing; `ShellServices` holds the platform halves (SAF picker, QR codes, clipboard, relay plug factory); `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI), `SyncBackendSection` (off/folder/relay), `PairingScreen` (shows and scans a code), `RecoveryScreen` (words, copy and restore) |
-| `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `TodoApplication` opens the one `Replica`, the `TodoSettings`, the `StoredIdentity` over `KeyStoreRootStore` (both it and `KeyStoreSecretStore` sit on `KeyStoreSealedFile`, one file each under the same KeyStore key), the app-scoped clipboard timer and the OkHttp relay client; `MainActivity` calls `TodoApp`; `SafSnapshotFiles` (SAF), `ZxingQrCodes` (record 0074: encoder and camera scanner) and `AndroidSensitiveClipboard` (decision 0041); backup off (decision 0060) |
+| `apps/todo/shared` | Compose Multiplatform (android only for now, source in `commonMain`), package `com.msuite.todo` | The ToDo UI: screens and composition root (decisions 0019, 0037, 0051) | `TodoApp(replica, settings, version, shell, identity)` creates "My Tasks" if missing; `ShellServices` holds the platform halves (SAF picker, QR codes, clipboard, relay plug factory); `TodoContainer` wires the commands and `todoStates()`; `TasksScreen`, `TaskEditorSheet`, `ListMenu` and the list dialogs, `SettingsScreen` (see ToDo app wiring and UI), `SyncBackendSection` (off/folder/relay/S3, the S3 form in `S3Details`), `PairingScreen` (shows and scans a code), `RecoveryScreen` (words, copy and restore) |
+| `apps/todo/android` | Android application `com.msuite.todo` | Thin shell: `MainActivity`, manifest, resources, Android-only implementations (decision 0037) | `TodoApplication` opens the one `Replica`, the `TodoSettings`, the `StoredIdentity` over `KeyStoreRootStore`, the S3 secret in `KeyStoreSecretStore` (both sit on `KeyStoreSealedFile`, one file each under the same KeyStore key), the app-scoped clipboard timer and the one OkHttp client the relay and S3 plugs share; `MainActivity` calls `TodoApp`; `SafSnapshotFiles` (SAF), `ZxingQrCodes` (record 0074: encoder and camera scanner) and `AndroidSensitiveClipboard` (decision 0041); backup off (decision 0060) |
 | `server` | Kotlin/JVM application | The dumb relay, a Ktor CIO binary (decision 0017) | `BlobStore` over a data directory, `relayModule` with the `/v1` routes and `/health`, `RelayConfig` from `MSUITE_RELAY_*`, `main` starting CIO |
 | `web/` | Not a module | Deferred web app; see `web/README.md` | - |
 
@@ -339,7 +339,20 @@ extracts the few elements it needs (no XML dependency). Errors map to `S3Refused
 credentials, access denied, a missing bucket, a wrong region (`AuthorizationHeaderMalformed`,
 `PermanentRedirect`) and clock skew (`RequestTimeTooSkewed`), and to
 `IOException` otherwise. Tests run against `FakeS3`, an in-memory bucket behind Ktor's
-`MockEngine` that re-checks each signature from the URL it received.
+`MockEngine` that re-checks each signature from the URL it received. `S3Section.toConfig()` turns a
+pairing section into an `S3Config`, or `null` where the config's stricter check refuses it.
+
+In the ToDo app, `LiveSyncActions` takes `S3Options` (the shell's `S3PlugFactory`, the
+`SecretStore`, and whether http is allowed). `connectS3(backend, secret)` checks the config, saves
+the secret first and then chooses the backend, so S3 is never chosen without one; a blank secret
+keeps the stored one, and a connect always restarts the sync, so a new secret takes effect.
+Choosing any other backend clears the secret. Without a readable secret (the KeyStore key was
+lost) the backend stays chosen but doesn't sync, and `needsS3Secret()` lets Settings ask for it.
+`pairingBackend()` builds the device's QR descriptor, with the S3 section and its secret; S3
+without a secret shows as `manual`. A scanned S3 code joins or switches through the same
+`connectS3`, and a code of the device's own group naming another bucket is offered as a switch
+(`JoinPreview.SwitchBackend(type, target)`). Refusals reach `SyncStatus.s3Refused`, which Settings
+maps to one message each. The plug ID is `s3:{endpoint}/{bucket}/{prefix}`.
 
 ## Identity, pairing and recovery
 
@@ -360,9 +373,8 @@ build that doesn't know the backend type still reads the root and pairs. The typ
 (0, the snapshot file, nothing to carry), `folder` (1, no config: a folder is picked per device,
 0072), `relay` (2, the section is the relay URL in UTF-8, record 0080) and `s3` (3, the section is
 an `S3Section` in ProtoBuf: endpoint, region, bucket, prefix, access key ID and secret, record
-0085). A joining device preselects the relay it reads; a release build ignores an `http://` URL
-(0079). Until the S3 plug is wired into the app (plan `v1-s3-plug.md`), an S3 code joins the group
-and clears the backend, as a folder code does.
+0085). A joining device preselects the relay or bucket it reads; a release build ignores an
+`http://` URL or endpoint (0079).
 There is no salt — the same root and backend always produce the same QR.
 - In the UI (code: `PairingScreen` and `QrCodes`): a device shows its code on demand and never
   stores it; the other scans it with zxing-android-embedded's camera in its own `PairingScanActivity`

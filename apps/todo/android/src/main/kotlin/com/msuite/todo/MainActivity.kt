@@ -9,9 +9,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
 import com.msuite.core.relay.RelayPlug
+import com.msuite.core.s3.S3Plug
 import com.msuite.todo.domain.LiveSyncActions
 import com.msuite.todo.domain.RelayOptions
 import com.msuite.todo.domain.RelayPlugFactory
+import com.msuite.todo.domain.S3Options
+import com.msuite.todo.domain.S3PlugFactory
 import com.msuite.todo.domain.ThemeMode
 import kotlinx.coroutines.launch
 
@@ -32,7 +35,7 @@ class MainActivity : ComponentActivity() {
             clipboard = app.clipboard,
             fileStoreFactory = { uri -> SafFileStore(applicationContext, android.net.Uri.parse(uri)) },
             relayPlugFactory = RelayPlugFactory { url, root ->
-                RelayPlug(url, "todo", root, app.relayClient)
+                RelayPlug(url, "todo", root, app.httpClient)
             },
             allowInsecureRelay = debug,
         )
@@ -46,6 +49,11 @@ class MainActivity : ComponentActivity() {
             relay = RelayOptions(
                 plugFactory = shell.relayPlugFactory,
                 allowInsecure = shell.allowInsecureRelay,
+            ),
+            s3 = S3Options(
+                plugFactory = S3PlugFactory { config, credentials -> S3Plug(config, credentials, app.httpClient) },
+                secrets = app.s3Secret,
+                allowInsecure = debug,
             ),
         )
         liveSync.startSyncIfConfigured()

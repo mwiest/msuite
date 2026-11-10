@@ -26,10 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.msuite.core.relay.RelayRefusal
+import com.msuite.core.s3.S3Refusal
 import com.msuite.todo.domain.LiveSyncActions
 import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.domain.SyncStatus
-import com.msuite.todo.domain.isAllowedRelayUrl
+import com.msuite.todo.domain.isAllowedServerUrl
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.cancel
 import com.msuite.todo.resources.folder_clear
@@ -53,12 +54,20 @@ import com.msuite.todo.resources.relay_url
 import com.msuite.todo.resources.relay_url_hint
 import com.msuite.todo.resources.relay_url_insecure
 import com.msuite.todo.resources.relay_url_invalid
+import com.msuite.todo.resources.s3_bad_credentials
+import com.msuite.todo.resources.s3_clock_skew
+import com.msuite.todo.resources.s3_forbidden
+import com.msuite.todo.resources.s3_looks_empty
+import com.msuite.todo.resources.s3_no_bucket
+import com.msuite.todo.resources.s3_unreachable
+import com.msuite.todo.resources.s3_wrong_region
 import com.msuite.todo.resources.sync_backend
 import com.msuite.todo.resources.sync_backend_folder
 import com.msuite.todo.resources.sync_backend_none
 import com.msuite.todo.resources.sync_backend_none_hint
 import com.msuite.todo.resources.sync_backend_relay
 import com.msuite.todo.resources.sync_backend_relay_hint
+import com.msuite.todo.resources.sync_backend_s3
 import com.msuite.todo.resources.sync_confirm_empty
 import com.msuite.todo.resources.sync_last_sync
 import com.msuite.todo.resources.sync_never_synced
@@ -70,9 +79,9 @@ import org.jetbrains.compose.resources.stringResource
 private enum class RelayUrlError { Invalid, Insecure }
 
 /**
- * The live-sync backend chooser (plan v1 step 9): off, a synced folder, or a self-hosted relay.
- * A relay is only accepted over https unless this is a debug build; the group ID is shown for the
- * operator's allowlist.
+ * The live-sync backend chooser (plan v1 step 9): off, a synced folder, a self-hosted relay, or an
+ * S3 bucket. A relay or bucket is only accepted over https unless this is a debug build; the group
+ * ID is shown for the operator's allowlist.
  */
 @Suppress("LongMethod") // One screen section; the parts below are already split out.
 @Composable
@@ -113,6 +122,7 @@ fun SyncBackendSection(live: LiveSyncActions, allowInsecureRelay: Boolean) {
             relayError = null
             choice = SyncBackend.Relay((backend as? SyncBackend.Relay)?.url.orEmpty())
         },
+        onS3 = { choice = backend.s3Draft() },
     )
 
     Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
@@ -153,7 +163,7 @@ fun SyncBackendSection(live: LiveSyncActions, allowInsecureRelay: Boolean) {
                 onConnect = {
                     val url = relayUrl.trim()
                     relayError = when {
-                        !isAllowedRelayUrl(url, allowInsecureRelay) ->
+                        !isAllowedServerUrl(url, allowInsecureRelay) ->
                             if (url.startsWith("http://")) RelayUrlError.Insecure else RelayUrlError.Invalid
 
                         else -> null
@@ -169,8 +179,19 @@ fun SyncBackendSection(live: LiveSyncActions, allowInsecureRelay: Boolean) {
                 },
             )
 
-            // Nothing selects S3 until plan v1-s3-plug.md slice 5 adds its form here.
-            is SyncBackend.S3 -> Unit
+            is SyncBackend.S3 -> S3Details(
+                initial = selected,
+                backend = backend,
+                live = live,
+                busy = busy,
+                onSync = {
+                    scope.launch {
+                        busy = true
+                        live.syncNow()
+                        busy = false
+                    }
+                },
+            )
         }
 
         if (choice == backend) SyncStatusLines(status, choice) { scope.launch { live.confirmEmpty() } }
@@ -196,11 +217,18 @@ fun SyncBackendSection(live: LiveSyncActions, allowInsecureRelay: Boolean) {
 }
 
 @Composable
-private fun BackendChooser(choice: SyncBackend, onNone: () -> Unit, onFolder: () -> Unit, onRelay: () -> Unit) {
+private fun BackendChooser(
+    choice: SyncBackend,
+    onNone: () -> Unit,
+    onFolder: () -> Unit,
+    onRelay: () -> Unit,
+    onS3: () -> Unit,
+) {
     Column(Modifier.padding(horizontal = 16.dp).selectableGroup()) {
         BackendOption(Res.string.sync_backend_none, choice is SyncBackend.None, onNone)
         BackendOption(Res.string.sync_backend_folder, choice is SyncBackend.Folder, onFolder)
         BackendOption(Res.string.sync_backend_relay, choice is SyncBackend.Relay, onRelay)
+        BackendOption(Res.string.sync_backend_s3, choice is SyncBackend.S3, onS3)
     }
 }
 
@@ -350,7 +378,11 @@ private fun SyncStatusLines(status: SyncStatus, backend: SyncBackend, onConfirmE
     if (status.looksEmpty) {
         Text(
             stringResource(
-                if (backend is SyncBackend.Relay) Res.string.relay_looks_empty else Res.string.folder_looks_empty,
+                when (backend) {
+                    is SyncBackend.Relay -> Res.string.relay_looks_empty
+                    is SyncBackend.S3 -> Res.string.s3_looks_empty
+                    else -> Res.string.folder_looks_empty
+                },
             ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
@@ -362,18 +394,27 @@ private fun SyncStatusLines(status: SyncStatus, backend: SyncBackend, onConfirmE
     }
 }
 
-private fun statusMessage(status: SyncStatus, backend: SyncBackend): StringResource? = when (status.refused?.refusal) {
+private fun statusMessage(status: SyncStatus, backend: SyncBackend): StringResource? =
+    status.refused?.refusal?.message()
+        ?: status.s3Refused?.refusal?.message()
+        ?: when {
+            !status.failing -> null
+            backend is SyncBackend.Relay -> Res.string.relay_unreachable
+            backend is SyncBackend.S3 -> Res.string.s3_unreachable
+            else -> Res.string.folder_sync_failing
+        }
+
+private fun RelayRefusal.message(): StringResource = when (this) {
     RelayRefusal.Unauthorized -> Res.string.relay_unauthorized
-
     RelayRefusal.Forbidden -> Res.string.relay_forbidden
-
     RelayRefusal.NamespaceFull -> Res.string.relay_full
-
     RelayRefusal.ObjectTooLarge -> Res.string.relay_too_large
+}
 
-    null -> when {
-        status.failing && backend is SyncBackend.Relay -> Res.string.relay_unreachable
-        status.failing -> Res.string.folder_sync_failing
-        else -> null
-    }
+private fun S3Refusal.message(): StringResource = when (this) {
+    S3Refusal.BadCredentials -> Res.string.s3_bad_credentials
+    S3Refusal.Forbidden -> Res.string.s3_forbidden
+    S3Refusal.NoSuchBucket -> Res.string.s3_no_bucket
+    S3Refusal.WrongRegion -> Res.string.s3_wrong_region
+    S3Refusal.ClockSkew -> Res.string.s3_clock_skew
 }

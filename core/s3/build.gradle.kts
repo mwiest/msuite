@@ -10,7 +10,7 @@ kotlin {
         commonMain.dependencies {
             api(project(":core:sync"))
             api(libs.ktor.client.core)
-            implementation(project(":core:crypto"))
+            api(project(":core:crypto"))
             implementation(libs.kotlinx.datetime)
         }
         jvmTest.dependencies {

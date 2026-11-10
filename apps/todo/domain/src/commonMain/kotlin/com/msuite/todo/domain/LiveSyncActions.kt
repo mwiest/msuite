@@ -3,8 +3,14 @@ package com.msuite.todo.domain
 import com.msuite.core.crypto.BackendType
 import com.msuite.core.crypto.KEY_GEN_V1
 import com.msuite.core.crypto.PairingPayload
+import com.msuite.core.crypto.S3Section
 import com.msuite.core.model.PlugId
 import com.msuite.core.relay.RelayRefused
+import com.msuite.core.s3.S3Config
+import com.msuite.core.s3.S3Credentials
+import com.msuite.core.s3.S3Refused
+import com.msuite.core.s3.credentials
+import com.msuite.core.s3.toConfig
 import com.msuite.core.sync.BackendPlug
 import com.msuite.core.sync.FileStore
 import com.msuite.core.sync.FolderPlug
@@ -33,9 +39,36 @@ data class RelayOptions(
     val allowInsecure: Boolean = false,
 )
 
+/** Builds the S3 plug; the shell injects the HTTP engine, like the relay's (plan `v1-s3-plug.md`). */
+fun interface S3PlugFactory {
+    fun create(config: S3Config, credentials: S3Credentials): BackendPlug
+}
+
+/** The S3 half of [LiveSyncActions]: the plug factory, where the secret lives, and whether http is allowed. */
+data class S3Options(
+    val plugFactory: S3PlugFactory,
+    val secrets: SecretStore,
+    val allowInsecure: Boolean = false,
+)
+
+/** Why [LiveSyncActions.connectS3] refused a configuration. */
+enum class S3SetupError {
+    /** A field is blank, or the endpoint is not an `http(s)://host[:port]`. */
+    Invalid,
+
+    /** An `http://` endpoint in a release build (as for the relay, decision 0079). */
+    Insecure,
+
+    /** No secret typed and none stored. */
+    MissingSecret,
+
+    /** This build has no S3 plug. */
+    Unsupported,
+}
+
 /**
  * Live sync over the chosen backend: last sync, pending changes, and whether it is failing. A relay
- * refusal carries the [RelayRefused] so Settings can say why (auth, registration, limits).
+ * or S3 refusal carries the [RelayRefused] or [S3Refused] so Settings can say why.
  * [looksEmpty]: the backend listed nothing after syncing before, and waits for [LiveSyncActions.confirmEmpty].
  */
 data class SyncStatus(
@@ -44,10 +77,11 @@ data class SyncStatus(
     val failing: Boolean = false,
     val refused: RelayRefused? = null,
     val looksEmpty: Boolean = false,
+    val s3Refused: S3Refused? = null,
 )
 
-/** Whether [url] is a relay address this build may use: https, or http for a debug LAN/emulator. */
-fun isAllowedRelayUrl(url: String, allowInsecure: Boolean): Boolean =
+/** Whether [url] is a relay or S3 address this build may use: https, or http for a debug LAN/emulator. */
+fun isAllowedServerUrl(url: String, allowInsecure: Boolean): Boolean =
     (url.startsWith("https://") && url.length > "https://".length) ||
         (allowInsecure && url.startsWith("http://") && url.length > "http://".length)
 
@@ -56,7 +90,8 @@ fun isAllowedRelayUrl(url: String, allowInsecure: Boolean): Boolean =
  * [TodoSettings]. Polling, flush and status are backend-neutral; a switch stops the old sync before
  * the new one starts. The manual snapshot export/import stays in [SyncActions] (decision 0066).
  */
-@Suppress("TooManyFunctions") // One facade over the backend lifecycle: choose, join, switch, poll, report.
+// One facade over the backend lifecycle (choose, join, switch, poll, report), with one options object per backend.
+@Suppress("TooManyFunctions", "LongParameterList")
 class LiveSyncActions(
     private val replica: Replica,
     private val identity: StoredIdentity,
@@ -65,6 +100,7 @@ class LiveSyncActions(
     private val fileStoreFactory: (String) -> FileStore,
     private val scope: CoroutineScope,
     private val relay: RelayOptions = RelayOptions(),
+    private val s3: S3Options? = null,
 ) {
     private val clock: Clock = Clock.System
     private val _status = MutableStateFlow(SyncStatus(lastSync = null, pendingChanges = 0))
@@ -90,15 +126,62 @@ class LiveSyncActions(
     /** Clears the backend and stops the sync. */
     fun clearFolder() = setBackend(SyncBackend.None)
 
-    /** Chooses one backend, stopping the previous one first (plan v1 step 9). */
-    fun setBackend(value: SyncBackend) {
+    /**
+     * Chooses one backend, stopping the previous one first (plan v1 step 9). Leaving S3 deletes its
+     * stored secret, so no credential outlives its backend.
+     */
+    fun setBackend(value: SyncBackend) = switchTo(value, restart = false)
+
+    /**
+     * Chooses the S3 bucket [backend] with [secret], or the stored secret when [secret] is blank.
+     * The secret is saved before the backend is chosen, so S3 is never chosen without one.
+     */
+    fun connectS3(backend: SyncBackend.S3, secret: String): S3SetupError? {
+        val options = s3 ?: return S3SetupError.Unsupported
+        val typed = secret.trim()
+        val section = backend.section(typed.ifEmpty { options.secrets.load().orEmpty() })
+        val wellFormed = section.toConfig() != null &&
+            PairingPayload.s3Section(section.copy(secretAccessKey = "-").encode()) != null
+        return when {
+            !wellFormed -> S3SetupError.Invalid
+
+            !isAllowedServerUrl(backend.endpoint, options.allowInsecure) -> S3SetupError.Insecure
+
+            section.secretAccessKey.isBlank() -> S3SetupError.MissingSecret
+
+            else -> {
+                if (typed.isNotEmpty()) options.secrets.save(typed)
+                switchTo(backend, restart = true)
+                null
+            }
+        }
+    }
+
+    /** Whether the chosen S3 backend lacks its secret (lost with the KeyStore key): Settings asks for it. */
+    fun needsS3Secret(): Boolean = settings.syncBackend.value is SyncBackend.S3 && s3?.secrets?.load() == null
+
+    /** What this device's pairing code carries (record 0072); S3 without its secret carries none. */
+    fun pairingBackend(): PairingBackend = when (val chosen = settings.syncBackend.value) {
+        SyncBackend.None -> PairingBackend(BackendType.Manual)
+
+        is SyncBackend.Folder -> PairingBackend(BackendType.Folder)
+
+        is SyncBackend.Relay -> PairingBackend(BackendType.Relay, chosen.url.encodeToByteArray())
+
+        is SyncBackend.S3 -> s3?.secrets?.load()
+            ?.let { PairingBackend(BackendType.S3, chosen.section(it).encode()) }
+            ?: PairingBackend(BackendType.Manual)
+    }
+
+    private fun switchTo(value: SyncBackend, restart: Boolean) {
         val normalized = when (value) {
             is SyncBackend.Relay -> value.copy(url = value.url.trimEnd('/'))
             else -> value
         }
+        if (normalized !is SyncBackend.S3) s3?.secrets?.clear()
         val changed = settings.syncBackend.value != normalized
         settings.setSyncBackend(normalized)
-        if (!changed && liveSync != null) return
+        if (!changed && !restart && liveSync != null) return
         stopLiveSync()
         _status.value = SyncStatus(lastSync = null, pendingChanges = 0)
         startSyncIfConfigured()
@@ -132,36 +215,56 @@ class LiveSyncActions(
                 FolderPlug(fileStoreFactory(chosen.uri)) to PlugId("folder:${chosen.uri}")
 
             is SyncBackend.Relay ->
-                if (!isAllowedRelayUrl(chosen.url, relay.allowInsecure)) {
+                if (!isAllowedServerUrl(chosen.url, relay.allowInsecure)) {
                     null
                 } else {
                     relay.plugFactory?.let { it.create(chosen.url, root) to PlugId("relay:${chosen.url}") }
                 }
 
-            // Nothing selects S3 until plan v1-s3-plug.md slice 5 wires the plug in here.
-            is SyncBackend.S3 -> null
+            is SyncBackend.S3 -> s3Connection(chosen)
         }
+
+    /** The S3 plug, or `null` without a secret (lost with the KeyStore key) or with a refused endpoint. */
+    private fun s3Connection(chosen: SyncBackend.S3): Pair<BackendPlug, PlugId>? {
+        val options = s3 ?: return null
+        val section = options.secrets.load()?.let(chosen::section)
+        val config = section?.toConfig()?.takeIf { isAllowedServerUrl(chosen.endpoint, options.allowInsecure) }
+        return if (section == null || config == null) {
+            null
+        } else {
+            options.plugFactory.create(config, section.credentials()) to
+                PlugId("s3:${chosen.endpoint}/${chosen.bucket}/${config.keyPrefix}")
+        }
+    }
 
     /** The group ID an operator's relay allowlist names; computed from the root, never stored. */
     suspend fun groupId(): String? = identity.root(KEY_GEN_V1)?.let { com.msuite.core.sync.groupId(it) }
 
     /**
-     * Applies the backend descriptor of a just-joined group (record 0080): a relay URL becomes the
-     * chosen backend, any other type clears a backend left over from a previous group.
+     * Applies the backend descriptor of a just-joined group (records 0080, 0085): a relay URL or an
+     * S3 bucket becomes the chosen backend, any other type clears one left from a previous group.
      */
     fun applyJoinedBackend(type: BackendType?, section: ByteArray) {
         if (type == null || !applySwitchedBackend(type, section)) setBackend(SyncBackend.None)
     }
 
     /**
-     * Switches a device already in the group to the relay a code names. Unlike a join, a URL this
-     * build refuses keeps the current backend; returns whether it switched.
+     * Switches a device already in the group to the relay or bucket a code names. Unlike a join, a
+     * section this build refuses keeps the current backend; returns whether it switched.
      */
-    fun applySwitchedBackend(type: BackendType, section: ByteArray): Boolean {
-        val relayUrl = if (type == BackendType.Relay) PairingPayload.relayUrl(section) else null
-        if (relayUrl == null || !isAllowedRelayUrl(relayUrl, relay.allowInsecure)) return false
-        setBackend(SyncBackend.Relay(relayUrl))
-        return true
+    fun applySwitchedBackend(type: BackendType, section: ByteArray): Boolean = when (type) {
+        BackendType.Relay -> {
+            val url = PairingPayload.relayUrl(section)?.takeIf { isAllowedServerUrl(it, relay.allowInsecure) }
+            url?.let { setBackend(SyncBackend.Relay(it)) }
+            url != null
+        }
+
+        BackendType.S3 -> {
+            val joined = PairingPayload.s3Section(section)
+            joined != null && connectS3(joined.backend(), joined.secretAccessKey) == null
+        }
+
+        BackendType.Manual, BackendType.Folder -> false
     }
 
     /** Manually triggers a sync (pull from the backend). */
@@ -194,6 +297,7 @@ class LiveSyncActions(
             failing = !healthy,
             refused = sync.failure.value as? RelayRefused,
             looksEmpty = sync.emptyHeld.value,
+            s3Refused = sync.failure.value as? S3Refused,
         )
     }
 
@@ -218,3 +322,9 @@ class LiveSyncActions(
         liveSync?.flush()
     }
 }
+
+/** The pairing section for this backend under [secret] (decision 0085). */
+fun SyncBackend.S3.section(secret: String): S3Section = S3Section(endpoint, region, bucket, prefix, accessKeyId, secret)
+
+/** The settings half of a pairing section: everything but the secret. */
+fun S3Section.backend(): SyncBackend.S3 = SyncBackend.S3(endpoint, region, bucket, prefix, accessKeyId)

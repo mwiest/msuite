@@ -3,9 +3,9 @@
 What msuite is and what its apps do today. When behaviour changes, this file changes in the same
 commit. What is intended but not built is in `roadmap.md` and the plans.
 
-Checked against the code on 2026-10-31: **the ToDo app works offline on one device, syncs live
-with paired devices through a folder the user already syncs (Dropbox, Syncthing, Nextcloud) or a
-self-hosted relay, exports
+Checked against the code on 2026-11-10: **the ToDo app works offline on one device, syncs live
+with paired devices through a folder the user already syncs (Dropbox, Syncthing, Nextcloud), a
+self-hosted relay or an S3-compatible bucket, exports
 an encrypted whole-state snapshot file, pairs a second device by QR, and shows or restores the group
 key as 24 recovery words.** On first
 start it
@@ -18,10 +18,13 @@ mark done or not done, and delete in the overflow menu. Title and notes are save
 field or close the sheet. A long press drags an open task to a new place. The "+" tab creates a list;
 the top bar's menu renames the selected list, moves it left or right, or deletes it after confirming
 how many tasks go with it ("My Tasks" can't be deleted). The gear opens the settings: the theme
-(system default, light or dark), a Sync method chooser (off, a synced folder, or a self-hosted
-relay) that picks the folder or takes the relay's https address, shows the group ID an operator's
-allowlist needs, and reports the last sync or why it is failing (folder unreachable, relay
-unreachable, key refused, registration refused, namespace full), with sync on demand, a Sync
+(system default, light or dark), a Sync method chooser (off, a synced folder, a self-hosted relay,
+or S3 storage) that picks the folder, takes the relay's https address, or takes a bucket's endpoint,
+region, bucket name, optional folder and access key pair (the secret is never shown again, and an
+empty field keeps it), shows the group ID an operator's allowlist needs, and reports the last sync
+or why it is failing (folder, relay or bucket unreachable, key refused, registration refused,
+namespace full, access key rejected or not allowed, no such bucket, wrong region, device clock
+off, or a bucket secret this device no longer has), with sync on demand, a Sync
 section that exports the device's whole state to an
 encrypted file or merges one in (the file is ciphertext under the group's root, so it imports on
 another device once the two are paired), a Pairing section that shows this device's QR code or scans
@@ -71,10 +74,14 @@ that holds the group's root, which pairing by QR gives it. Live sync runs throug
 time, chosen in Settings: a synced folder, where each device writes its edits 10 seconds after the
 last one as encrypted files into the picked folder and reads the others' every 10 seconds while
 the app is open, or a self-hosted relay, where each device stores the same encrypted objects over
-HTTP and authenticates with a token derived from the root. A folder or relay that can't be reached
-never closes the app; Settings says so and the edits wait on the device until it can. A relay
-speaks plain HTTP behind a TLS reverse proxy; the app only accepts https addresses (a debug build
-also accepts http for a LAN or emulator). A device periodically folds its own edits into one
+HTTP and authenticates with a token derived from the root, or an S3-compatible bucket (Cloudflare
+R2, Backblaze B2, AWS, MinIO), where each device stores the same encrypted objects and signs its
+requests with the bucket's access key. The bucket's secret key is kept wrapped under the Android
+KeyStore, like the group's root, never in the plain settings, and is deleted when the device
+switches to another backend. A folder, relay or bucket that can't be reached never closes the app;
+Settings says so and the edits wait on the device until it can. A relay speaks plain HTTP behind a
+TLS reverse proxy; the app only accepts https addresses for a relay or bucket (a debug build also
+accepts http for a LAN or emulator). A device periodically folds its own edits into one
 snapshot and removes what the snapshot covers, so a backend stays bounded; if a folder or
 namespace is emptied, a device that has synced before says it looks empty and, once the user
 confirms that it is, refills it. Architecture in
@@ -85,8 +92,9 @@ confirms that it is, refills it. Architecture in
   relay. All of them see only ciphertext.
 - A new device joins by scanning one QR code from a paired device. If it already holds lists and
   tasks, they are kept and shared with the other devices. A code from a relay group selects that
-  relay on the joining device; a folder is picked per device. Scanning a code of the device's own
-  group that names another relay offers to switch to that relay. A recovery key
+  relay on the joining device; a code from an S3 group selects that bucket, access key included, so
+  whoever sees the code can also use the bucket; a folder is picked per device. Scanning a code of
+  the device's own group that names another relay or bucket offers to switch to it. A recovery key
   (words, QR or file) is the fallback when no device is left. There is no password reset.
 - When two devices edit the same field while apart, the later edit wins and the other is lost
   (decision 0005).

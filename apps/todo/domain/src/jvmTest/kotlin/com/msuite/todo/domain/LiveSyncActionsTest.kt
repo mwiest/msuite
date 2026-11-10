@@ -182,11 +182,11 @@ class LiveSyncActionsTest : StringSpec({
     }
 
     "only https relay URLs are allowed unless the debug build opts in" {
-        isAllowedRelayUrl("https://relay.example", allowInsecure = false) shouldBe true
-        isAllowedRelayUrl("http://127.0.0.1:8080", allowInsecure = false) shouldBe false
-        isAllowedRelayUrl("http://127.0.0.1:8080", allowInsecure = true) shouldBe true
-        isAllowedRelayUrl("https://", allowInsecure = true) shouldBe false
-        isAllowedRelayUrl("relay.example", allowInsecure = true) shouldBe false
+        isAllowedServerUrl("https://relay.example", allowInsecure = false) shouldBe true
+        isAllowedServerUrl("http://127.0.0.1:8080", allowInsecure = false) shouldBe false
+        isAllowedServerUrl("http://127.0.0.1:8080", allowInsecure = true) shouldBe true
+        isAllowedServerUrl("https://", allowInsecure = true) shouldBe false
+        isAllowedServerUrl("relay.example", allowInsecure = true) shouldBe false
     }
 
     "a joined relay URL becomes the chosen backend" {

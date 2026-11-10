@@ -4,6 +4,7 @@ import com.msuite.core.crypto.BackendType
 import com.msuite.core.crypto.KEY_GEN_V1
 import com.msuite.core.crypto.PairingPayload
 import com.msuite.core.crypto.RecoveryWords
+import com.msuite.core.crypto.S3Section
 import com.msuite.core.crypto.SECRET_SIZE
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -100,11 +101,36 @@ class PairingTest : StringSpec({
         )
         val saves = store.saves
 
-        pairing.preview(code) shouldBe JoinPreview.SwitchBackend(url)
+        pairing.preview(code) shouldBe JoinPreview.SwitchBackend(BackendType.Relay, url)
         pairing.switchBackend(code) shouldBe JoinResult.SwitchedBackend(BackendType.Relay)
 
         switched shouldBe "Relay $url"
         store.saves shouldBe saves
+    }
+
+    "a code of this group with another bucket offers to switch to it; the same bucket is just this group" {
+        val section = S3Section("https://acc.r2.cloudflarestorage.com", "auto", "msuite", "", "AKID", "SECRET")
+        val code = PairingPayload.build(KEY_GEN_V1, group, BackendType.S3, section.encode())
+        var switched: BackendType? = null
+        val pairing = PairingActions(
+            StoredIdentity(MemoryRootStore(group)),
+            backend = { PairingBackend(BackendType.Manual) },
+            onSwitch = { type, _ ->
+                switched = type
+                true
+            },
+        )
+
+        pairing.preview(code) shouldBe
+            JoinPreview.SwitchBackend(BackendType.S3, "msuite (https://acc.r2.cloudflarestorage.com)")
+        pairing.switchBackend(code) shouldBe JoinResult.SwitchedBackend(BackendType.S3)
+        switched shouldBe BackendType.S3
+
+        val onBucket = PairingActions(
+            StoredIdentity(MemoryRootStore(group)),
+            backend = { PairingBackend(BackendType.S3, section.encode()) },
+        )
+        onBucket.preview(code) shouldBe JoinPreview.AlreadyThisGroup
     }
 
     "a code of this group with the same relay, or none, is just this group" {

@@ -43,8 +43,11 @@ sealed interface JoinPreview {
     /** This device already holds that root — the QR or words were its own. */
     data object AlreadyThisGroup : JoinPreview
 
-    /** A code of this device's own group naming another relay; the UI offers to switch to it. */
-    data class SwitchBackend(val relayUrl: String) : JoinPreview
+    /**
+     * A code of this device's group naming another relay or bucket; the UI offers to switch to it.
+     * [target] is what the user recognizes: the relay URL, or the bucket and its endpoint.
+     */
+    data class SwitchBackend(val backend: BackendType, val target: String) : JoinPreview
 
     /** A root generation this build doesn't hold (decision 0008). */
     data object UnsupportedKeyGen : JoinPreview
@@ -81,33 +84,44 @@ class PairingActions(
      */
     suspend fun preview(code: ByteArray): JoinPreview {
         val payload = PairingPayload.parse(code) ?: return JoinPreview.Unreadable
-        val relayUrl = switchableRelay(payload)
+        val switch = switchable(payload)
         return when {
             payload.keyGen != KEY_GEN_V1 -> JoinPreview.UnsupportedKeyGen
-            relayUrl != null -> JoinPreview.SwitchBackend(relayUrl)
+            switch != null -> switch
             else -> previewRoot(payload.root)
         }
     }
 
     /**
-     * Moves this device to the relay a code of its own group names. Only a relay is offered: a
-     * folder or manual code carries no setup, and would only turn this device's sync off.
+     * Moves this device to the relay or bucket a code of its own group names. Only those are
+     * offered: a folder or manual code carries no setup, and would only turn this device's sync off.
      */
     suspend fun switchBackend(code: ByteArray): JoinResult {
-        val payload = PairingPayload.parse(code)?.takeIf { it.keyGen == KEY_GEN_V1 && switchableRelay(it) != null }
+        val payload = PairingPayload.parse(code)?.takeIf { it.keyGen == KEY_GEN_V1 }
+        val switch = payload?.let(::switchable)
         return when {
-            payload == null -> JoinResult.Unreadable
-            onSwitch(BackendType.Relay, payload.backendSection) -> JoinResult.SwitchedBackend(BackendType.Relay)
+            payload == null || switch == null -> JoinResult.Unreadable
+            onSwitch(switch.backend, payload.backendSection) -> JoinResult.SwitchedBackend(switch.backend)
             else -> JoinResult.AlreadyThisGroup
         }
     }
 
-    /** The relay URL of a code of this device's own group, when it isn't the one in use. */
-    private fun switchableRelay(payload: PairingPayload): String? {
-        if (!payload.root.contentEquals(identity.root(KEY_GEN_V1)) || payload.backend != BackendType.Relay) return null
+    /** The relay or bucket a code of this device's own group names, when it isn't the one in use. */
+    private fun switchable(payload: PairingPayload): JoinPreview.SwitchBackend? {
+        val section = payload.backendSection
+        val offer = when (payload.backend) {
+            BackendType.Relay -> PairingPayload.relayUrl(section)?.let {
+                JoinPreview.SwitchBackend(BackendType.Relay, it)
+            }
+
+            BackendType.S3 -> PairingPayload.s3Section(section)
+                ?.let { JoinPreview.SwitchBackend(BackendType.S3, "${it.bucket} (${it.endpoint})") }
+
+            BackendType.Manual, BackendType.Folder, null -> null
+        }
         val current = backend()
-        val same = current.type == BackendType.Relay && current.section.contentEquals(payload.backendSection)
-        return if (same) null else PairingPayload.relayUrl(payload.backendSection)
+        val inUse = current.type == payload.backend && current.section.contentEquals(section)
+        return offer.takeIf { payload.root.contentEquals(identity.root(KEY_GEN_V1)) && !inUse }
     }
 
     /** Reads typed [words] without adopting them: the camera-less confirm step (0033, 0073). */

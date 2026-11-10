@@ -4,6 +4,7 @@ import android.app.Application
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.msuite.core.storage.LocalStore
 import com.msuite.core.sync.Replica
+import com.msuite.todo.domain.SecretStore
 import com.msuite.todo.domain.SensitiveClipboard
 import com.msuite.todo.domain.StoredIdentity
 import com.msuite.todo.domain.TodoSettings
@@ -37,12 +38,16 @@ class TodoApplication : Application() {
     /** Copying the recovery key (decision 0041). */
     val clipboard: SensitiveClipboard by lazy { AndroidSensitiveClipboard(this, appScope) }
 
-    /** The one HTTP client behind the relay plug; OkHttp is the injected engine (decision 0079). */
-    val relayClient: HttpClient by lazy {
+    /** The one HTTP client behind the relay and S3 plugs; OkHttp is the injected engine (decision 0079). */
+    val httpClient: HttpClient by lazy {
         HttpClient(OkHttp) { expectSuccess = false }
     }
 
+    /** The S3 secret, wrapped like the root and never in [settings] (plan `v1-s3-plug.md`). */
+    val s3Secret: SecretStore by lazy { KeyStoreSecretStore(KeyStoreSealedFile(File(filesDir, S3_SECRET_FILE))) }
+
     private companion object {
         const val ROOT_FILE = "identity.root"
+        const val S3_SECRET_FILE = "s3.secret"
     }
 }

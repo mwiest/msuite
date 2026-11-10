@@ -1,17 +1,14 @@
 package com.msuite.todo
 
-import com.msuite.core.crypto.BackendType
 import com.msuite.core.sync.FileStore
 import com.msuite.core.sync.ManualSync
 import com.msuite.core.sync.Replica
 import com.msuite.todo.domain.ListCommands
 import com.msuite.todo.domain.LiveSyncActions
 import com.msuite.todo.domain.PairingActions
-import com.msuite.todo.domain.PairingBackend
 import com.msuite.todo.domain.SnapshotFiles
 import com.msuite.todo.domain.StoredIdentity
 import com.msuite.todo.domain.SyncActions
-import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.domain.TaskCommands
 import com.msuite.todo.domain.TodoSettings
 import com.msuite.todo.domain.TodoState
@@ -33,18 +30,7 @@ class TodoContainer(
     val sync = SyncActions(ManualSync(replica, identity), files)
     val pairing = PairingActions(
         identity = identity,
-        backend = {
-            when (val backend = settings.syncBackend.value) {
-                SyncBackend.None -> PairingBackend(BackendType.Manual)
-
-                is SyncBackend.Folder -> PairingBackend(BackendType.Folder)
-
-                is SyncBackend.Relay -> PairingBackend(BackendType.Relay, backend.url.encodeToByteArray())
-
-                // Nothing selects S3 until plan v1-s3-plug.md slice 5, which puts its section here.
-                is SyncBackend.S3 -> PairingBackend(BackendType.Manual)
-            }
-        },
+        backend = liveSync::pairingBackend,
         onJoined = liveSync::applyJoinedBackend,
         onSwitch = liveSync::applySwitchedBackend,
     )

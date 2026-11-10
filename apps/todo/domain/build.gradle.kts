@@ -11,6 +11,7 @@ kotlin {
             api(project(":core:model"))
             api(project(":core:sync"))
             api(project(":core:relay"))
+            api(project(":core:s3"))
             api(libs.multiplatform.settings)
         }
         jvmTest.dependencies {
