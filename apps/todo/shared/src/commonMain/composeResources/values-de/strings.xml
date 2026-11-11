@@ -156,7 +156,7 @@
     <string name="s3_missing_secret">Gib den geheimen Zugriffsschlüssel ein.</string>
     <string name="s3_unreachable">Bucket nicht erreichbar. Neuer Versuch alle 10 Sekunden; Änderungen bleiben auf diesem Gerät erhalten.</string>
     <string name="s3_bad_credentials">Der Speicher hat den Zugriffsschlüssel abgelehnt. Prüfe die Key-ID und den geheimen Schlüssel.</string>
-    <string name="s3_forbidden">Dieser Zugriffsschlüssel darf den Bucket nicht nutzen. Gib ihm Rechte zum Lesen, Schreiben, Auflisten und Löschen.</string>
+    <string name="s3_forbidden">Dieser Zugriffsschlüssel darf den Bucket nicht nutzen. Prüfe den Bucket-Namen und ob der Schlüssel Rechte zum Lesen, Schreiben, Auflisten und Löschen hat.</string>
     <string name="s3_no_bucket">Den Bucket gibt es nicht. Prüfe seinen Namen und den Endpunkt.</string>
     <string name="s3_wrong_region">Die Region passt nicht zum Bucket. Prüfe die Region.</string>
     <string name="s3_clock_skew">Die Uhr dieses Geräts geht falsch. Stelle Datum und Uhrzeit auf automatisch und synchronisiere erneut.</string>

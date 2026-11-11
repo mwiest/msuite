@@ -35,10 +35,14 @@ private fun FakeS3.plug(config: S3Config = pathStyle(), credentials: S3Credentia
     S3Plug(config, credentials, client, fixedClock)
 
 /** A plug whose every request is answered with [status] and the S3 error [code]; [onRequest] counts them. */
-private fun failing(status: HttpStatusCode, code: String, onRequest: () -> Unit = {}): S3Plug {
+private fun failing(status: HttpStatusCode, code: String, onRequest: () -> Unit = {}): S3Plug =
+    answering(status, "<Error><Code>$code</Code><Message>m</Message></Error>", onRequest)
+
+/** A plug whose every request is answered with [status] and [body]. */
+private fun answering(status: HttpStatusCode, body: String, onRequest: () -> Unit = {}): S3Plug {
     val engine = MockEngine {
         onRequest()
-        respond("<Error><Code>$code</Code><Message>m</Message></Error>", status)
+        respond(body, status)
     }
     return S3Plug(pathStyle(), keys, HttpClient(engine) { expectSuccess = false }, fixedClock)
 }
@@ -165,6 +169,35 @@ class S3PlugTest : StringSpec({
     "a bucket in another region's endpoint is WrongRegion" {
         shouldThrow<S3Refused> { failing(HttpStatusCode.MovedPermanently, "PermanentRedirect").list("") }
             .refusal shouldBe S3Refusal.WrongRegion
+    }
+
+    "R2's wrong region is WrongRegion and is not retried without If-None-Match" {
+        var requests = 0
+        val plug = answering(HttpStatusCode.BadRequest, R2Responses.INVALID_REGION) { requests++ }
+        shouldThrow<S3Refused> { plug.put("k", byteArrayOf(1)) }.refusal shouldBe S3Refusal.WrongRegion
+        requests shouldBe 1
+        shouldThrow<S3Refused> { plug.list("") }.refusal shouldBe S3Refusal.WrongRegion
+    }
+
+    "R2's refusals map like AWS's" {
+        shouldThrow<S3Refused> { answering(HttpStatusCode.Forbidden, R2Responses.ACCESS_DENIED).list("") }
+            .refusal shouldBe S3Refusal.Forbidden
+        shouldThrow<S3Refused> { answering(HttpStatusCode.Forbidden, R2Responses.SIGNATURE_DOES_NOT_MATCH).list("") }
+            .refusal shouldBe S3Refusal.BadCredentials
+        shouldThrow<S3Refused> { answering(HttpStatusCode.Unauthorized, R2Responses.UNAUTHORIZED).list("") }
+            .refusal shouldBe S3Refusal.BadCredentials
+        answering(HttpStatusCode.NotFound, R2Responses.NO_SUCH_KEY).get("k").shouldBeNull()
+    }
+
+    "R2's listing is read with its prefix stripped" {
+        val plug = S3Plug(
+            S3Config("http://localhost:9000", REGION, BUCKET, "todo-check"),
+            keys,
+            HttpClient(MockEngine { respond(R2Responses.LIST_PAGE) }) { expectSuccess = false },
+            fixedClock,
+        )
+        plug.list("todo/") shouldBe
+            listOf("todo/GROUP0000000000000000000000/v1_d_WRITER_06GK2MUHUK000_06GMB3H0LG000_HASH")
     }
 
     "a refusal on a conditional put is reported, not retried" {

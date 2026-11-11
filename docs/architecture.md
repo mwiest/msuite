@@ -339,7 +339,7 @@ sync session, so each app start probes once); content-addressed keys keep the ov
 harmless. `list` is `ListObjectsV2` across continuation tokens, read by `S3Xml`, which
 extracts the few elements it needs (no XML dependency). Errors map to `S3Refused(refusal)` for bad
 credentials, access denied, a missing bucket, a wrong region (`AuthorizationHeaderMalformed`,
-`PermanentRedirect`) and clock skew (`RequestTimeTooSkewed`), and to
+`PermanentRedirect`, R2's `InvalidRegionName`) and clock skew (`RequestTimeTooSkewed`), and to
 `IOException` otherwise. Tests run against `FakeS3`, an in-memory bucket behind Ktor's
 `MockEngine` that re-checks each signature from the URL it received. `S3Section.toConfig()` turns a
 pairing section into an `S3Config`, or `null` where the config's stricter check refuses it.

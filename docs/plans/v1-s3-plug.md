@@ -77,10 +77,13 @@ Each item is settled during slice 6.
 1. **B2's refusal of `If-None-Match`.** Only secondhand (Proxmox reports that B2 fails the request);
    the fallback therefore accepts any unexplained 400 or a 501. Capture B2's real status and error
    code, then narrow the fallback to it, with a test.
-2. **Real responses as fixtures.** `S3XmlTest` uses the shape AWS documents. Add an R2 and a B2
-   `ListObjectsV2` page and their error bodies (`NoSuchBucket`, `SignatureDoesNotMatch`) verbatim.
-3. **R2's answer to a wrong region.** R2 wants `auto`; which code it returns for another region is
-   unknown, so it may surface as "S3 answered 400". Map it to `WrongRegion` if it is distinct.
+2. **Real responses as fixtures.** R2 done 2026-11-11 (`R2Responses` in `S3PlugTest`): a listing,
+   `InvalidRegionName`, `AccessDenied`, `SignatureDoesNotMatch`, `Unauthorized` (401, unknown key),
+   `NoSuchKey`. A token scoped to one bucket gets `403 AccessDenied` for a bucket that doesn't
+   exist, never `NoSuchBucket`, so the Forbidden message now also names the bucket name. B2 open.
+3. **R2's answer to a wrong region.** Settled 2026-11-11: R2 accepts `auto`, `us-east-1` and its
+   location hints (`wnam`, `eeur`, …), and answers any other region `400 InvalidRegionName`, now
+   mapped to `WrongRegion`.
 4. **No S3-specific signature vector.** The signer passes AWS's generic suite; the S3 parts (the
    payload-hash header, single path encoding) are proven only by a real bucket accepting requests.
 5. **The KeyStore refactor on an existing install.** It is designed to change nothing for the

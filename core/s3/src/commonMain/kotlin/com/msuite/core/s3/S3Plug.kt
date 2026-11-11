@@ -168,7 +168,7 @@ class S3Plug(
         const val PRECONDITION_FAILED = 412
         const val NOT_IMPLEMENTED = 501
 
-        /** AWS's answers to a region that doesn't match the bucket or the endpoint. */
-        val WRONG_REGION_CODES = setOf("AuthorizationHeaderMalformed", "PermanentRedirect")
+        /** Answers to a region that doesn't match the bucket or the endpoint: AWS's two, then R2's. */
+        val WRONG_REGION_CODES = setOf("AuthorizationHeaderMalformed", "PermanentRedirect", "InvalidRegionName")
     }
 }
