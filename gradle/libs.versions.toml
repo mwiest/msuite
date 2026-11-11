@@ -1,29 +1,29 @@
 [versions]
-agp = "9.4.1"
+agp = "9.5.1"
 kotlin = "2.4.21"
-composeMultiplatform = "1.12.1"
+composeMultiplatform = "1.12.2"
 composeMaterial3 = "1.9.0"
 coroutines = "1.11.0"
-kotlinxSerialization = "1.11.0"
+kotlinxSerialization = "1.13.0"
 kotlinxDatetime = "0.8.0"
-kotest = "6.2.5"
+kotest = "6.2.6"
 sqldelight = "2.4.1"
 androidxActivityCompose = "1.13.0"
 androidxDocumentFile = "1.1.0"
 # ZXing: the QR encoder, and zxing-android-embedded for the camera scanner (record 0074). Apache-2.
-zxing = "3.5.3"
+zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 detekt = "1.23.8"
-spotless = "8.10.4"
+spotless = "8.11.0"
 
 # Wired: cryptography-kotlin (decision 0010). The rest are pinned but NOT yet wired into
 # compilation; each has a `// TODO` at its use site.
 cryptographyKotlin = "0.6.0"
 multiplatformSettings = "1.3.0"
 kermit = "2.2.0"
-navigationCompose = "2.9.2"
+navigationCompose = "2.10.0"
 reorderable = "3.1.0"
-ktor = "3.6.0"
+ktor = "3.6.1"
 
 [libraries]
 # --- wired into the skeleton now ---
