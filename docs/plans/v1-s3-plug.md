@@ -1,7 +1,8 @@
 # Plan: the S3 plug (v1 step 17)
 
 Status: **slices 1 to 5 done (all code, green in `allTests`); slice 6, the device check against
-real buckets, is open.** Started 2026-11-10.
+real buckets, in progress: R2 checks 1 to 4, 8 and 16 passed on 2026-11-11 (see Results), B2 not
+started.** Started 2026-11-10.
 
 ## Goal
 
@@ -94,6 +95,15 @@ Each item is settled during slice 6.
    Cheap per call, but measure; cache it in `LiveSyncActions` if Settings stutters.
 8. **The licences line** in Settings doesn't name Ktor, OkHttp or cryptography-kotlin (a gap since
    the relay, not new here). Fix it in both languages.
+9. **Connect and Sync now** (relay and S3 forms; found 2026-11-11). Connect only validates the form
+   and saves; it doesn't check that the backend works, so a wrong region or bucket shows only after
+   the next sync, while the form already says the secret is "stored on this device", which reads
+   as if the setup was accepted. Connect also feels wrong for a small edit such as the prefix.
+   Rethink both actions and their labels, e.g. Connect runs a first sync and reports its refusal
+   in the form; needs a decision on the options.
+10. **`'` shows in English UI text** (found 2026-11-11). Compose resources don't unescape `'`, so
+    17 English strings (`Can't reach …`, `device's key`, …) show the backslash; German has none.
+    Write a plain `'` and add a test that no `strings.xml` contains `'`.
 
 ## Test plan (slice 6)
 
@@ -147,6 +157,31 @@ Each item is settled during slice 6.
 
 Log signature: `LiveSync` warns `<operation> failed, retrying later` with the exception; an
 `S3Refused` names the refusal and S3's error code, and Settings shows the matching message.
+
+## Results
+
+R2 (bucket `msuite-check`, prefix `todo-check`), 2026-11-11: emulator `Medium_Phone_API_36.1` as
+device 1 (form filled by paste), Motorola edge 70 pro as device 2 (joined by scanning the code from
+the monitor).
+
+- **1 Connect:** passed; one object under `todo-check/todo/{groupId}/` named per 0029. The failed
+  attempts before it wrote nothing.
+- **2 Wrong secret:** passed. R2: `403 SignatureDoesNotMatch`; an unknown key ID `401 Unauthorized`.
+- **3 Wrong bucket:** R2 answers a token scoped to one bucket with `403 AccessDenied`, so the app
+  shows the Forbidden message, which now names the bucket name too (`b1717db`).
+- **4 Wrong region:** R2 accepts `us-east-1` and its location hints; others get `400
+  InvalidRegionName`, now `WrongRegion` (`b1717db`). The message shows only after the next sync,
+  not on Connect (open item 9).
+- **7 Bad endpoints:** a path and a blank field refused in the form; the `http://` release case is
+  not run yet.
+- **8 Join by QR:** passed: S3 preselected, nothing typed, both converged, quick scan.
+- **16 Keep or replace the secret:** passed. The form now shows a stored secret as stored, with
+  Change (`908bea4`).
+- **18 Upgrade:** partly: device 2 had run a pre-refactor build since 2026-10-27 and kept its data
+  through the 2026-11-10 upgrade; the words weren't noted, so rerun it on a fresh device.
+
+Next session: on R2 checks 5, 6, 7 (`http://` in a release build), 9 to 15, 17, 18, 20, 21; then
+B2 (19); then settle open items 1, 2 (B2), 4 to 10.
 
 ## How to verify
 

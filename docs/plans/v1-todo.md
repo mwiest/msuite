@@ -1,7 +1,7 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 16 done, code and device checks; 17 (S3 plug) code done, its device check
-open (plan `v1-s3-plug.md`).**
+Status: **steps 0 to 16 done, code and device checks; 17 (S3 plug) code done, its device check in
+progress: R2 partly checked 2026-11-11 (plan `v1-s3-plug.md`).**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
