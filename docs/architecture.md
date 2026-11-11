@@ -36,9 +36,11 @@ KeyStore, camera QR, alarms) stays behind interfaces in the app layer, never in 
 
 ## Build
 
-- One version catalog: `gradle/libs.versions.toml`. It has no `[plugins]` section: Gradle plugins
-  are dependencies of `build-logic` and are applied only through the convention plugins. Aliasing a
-  plugin in a module would clash with the build-logic classpath.
+- One version catalog: `gradle/libs.versions.toml`. Gradle plugins are dependencies of
+  `build-logic` and are applied only through the convention plugins. Aliasing a plugin in a module
+  would clash with the build-logic classpath. The one `[plugins]` entry, AGP, is declared
+  `apply false` in the root `build.gradle.kts` only so Android Studio's AGP Upgrade Assistant can
+  find the version (it doesn't read included builds); it shares the `agp` version with build-logic.
 - `build-logic/` is an included build (`pluginManagement { includeBuild("build-logic") }`) that
   reads the same catalog. Shared levels are in `build-logic/src/main/kotlin/MsuiteBuild.kt`
   (decision 0022: `minSdk` 26, `compileSdk`/`targetSdk` 37, JDK 21 toolchain, Java 17 bytecode).

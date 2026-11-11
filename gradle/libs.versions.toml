@@ -80,5 +80,8 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 # Tests only: the S3 plug against an in-memory fake bucket.
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 
-# No [plugins] section: Gradle plugins are build-logic dependencies (above), applied
-# through the msuite.* convention plugins.
+# Gradle plugins are build-logic dependencies (above), applied through the msuite.*
+# convention plugins. This entry exists only so Android Studio's AGP Upgrade Assistant
+# finds the version: the root build declares it `apply false`. Never alias it in a module.
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

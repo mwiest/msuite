@@ -1,6 +1,7 @@
 // Module configuration lives in the build-logic convention plugins (msuite.*).
 // The root project only lints the root scripts and build-logic itself.
 plugins {
+    alias(libs.plugins.android.application) apply false
     id("msuite.quality")
 }
 
