@@ -13,13 +13,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
 
+      # v5, not v6: v6 moved caching into a proprietary component (2026-11-11).
       - uses: gradle/actions/setup-gradle@v5
 
       - name: Format and lint
