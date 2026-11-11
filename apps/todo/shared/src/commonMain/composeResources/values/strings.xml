@@ -150,6 +150,8 @@
     <string name="s3_access_key">Access key ID</string>
     <string name="s3_secret">Secret access key</string>
     <string name="s3_secret_stored">Leave empty to keep the stored key.</string>
+    <string name="s3_secret_on_device">Secret access key stored on this device</string>
+    <string name="s3_secret_change">Change</string>
     <string name="s3_secret_missing">This device no longer has the secret key. Enter it again or scan the group\'s code.</string>
     <string name="s3_invalid">Fill in endpoint, region, bucket and both keys. The endpoint is https:// and a host, without a path.</string>
     <string name="s3_insecure">This build only accepts https:// endpoints.</string>

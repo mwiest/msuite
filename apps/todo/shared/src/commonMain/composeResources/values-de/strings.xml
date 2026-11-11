@@ -150,6 +150,8 @@
     <string name="s3_access_key">Access-Key-ID</string>
     <string name="s3_secret">Geheimer Zugriffsschlüssel</string>
     <string name="s3_secret_stored">Leer lassen, um den gespeicherten Schlüssel zu behalten.</string>
+    <string name="s3_secret_on_device">Geheimer Zugriffsschlüssel auf diesem Gerät gespeichert</string>
+    <string name="s3_secret_change">Ändern</string>
     <string name="s3_secret_missing">Dieses Gerät hat den geheimen Schlüssel nicht mehr. Gib ihn erneut ein oder scanne den Code der Gruppe.</string>
     <string name="s3_invalid">Fülle Endpunkt, Region, Bucket und beide Schlüssel aus. Der Endpunkt ist https:// und ein Host, ohne Pfad.</string>
     <string name="s3_insecure">Diese Version akzeptiert nur https://-Endpunkte.</string>

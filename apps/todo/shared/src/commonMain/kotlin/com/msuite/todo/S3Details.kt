@@ -1,9 +1,12 @@
 package com.msuite.todo
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -22,6 +25,7 @@ import com.msuite.todo.domain.LiveSyncActions
 import com.msuite.todo.domain.S3SetupError
 import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.resources.Res
+import com.msuite.todo.resources.ic_check
 import com.msuite.todo.resources.relay_save
 import com.msuite.todo.resources.s3_access_key
 import com.msuite.todo.resources.s3_bucket
@@ -34,11 +38,14 @@ import com.msuite.todo.resources.s3_prefix
 import com.msuite.todo.resources.s3_region
 import com.msuite.todo.resources.s3_region_hint
 import com.msuite.todo.resources.s3_secret
+import com.msuite.todo.resources.s3_secret_change
 import com.msuite.todo.resources.s3_secret_missing
+import com.msuite.todo.resources.s3_secret_on_device
 import com.msuite.todo.resources.s3_secret_stored
 import com.msuite.todo.resources.sync_backend_s3_hint
 import com.msuite.todo.resources.sync_now
 import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 /** Whether a secret for the chosen S3 backend is on this device. */
@@ -64,8 +71,8 @@ private fun LiveSyncActions.s3Secret(backend: SyncBackend): S3Secret = when {
 }
 
 /**
- * The S3 form (plan `v1-s3-plug.md`). The secret field starts empty: a stored secret is never shown,
- * and an empty field keeps it.
+ * The S3 form (plan `v1-s3-plug.md`). A stored secret is never shown: the form says it is stored and
+ * offers an empty field to replace it, which keeps it when left empty.
  */
 @Suppress("LongMethod") // One field per configuration value; nothing to split out.
 @Composable
@@ -83,6 +90,7 @@ internal fun S3Details(
     var prefix by remember(initial) { mutableStateOf(initial.prefix) }
     var accessKey by remember(initial) { mutableStateOf(initial.accessKeyId) }
     var secret by remember(initial) { mutableStateOf("") }
+    var changingSecret by remember(initial) { mutableStateOf(false) }
     var error by remember(initial) { mutableStateOf<S3SetupError?>(null) }
 
     Text(
@@ -96,12 +104,16 @@ internal fun S3Details(
     S3Field(bucket, Res.string.s3_bucket) { bucket = it }
     S3Field(prefix, Res.string.s3_prefix) { prefix = it }
     S3Field(accessKey, Res.string.s3_access_key) { accessKey = it }
-    S3Field(
-        secret,
-        Res.string.s3_secret,
-        Res.string.s3_secret_stored.takeIf { secretState == S3Secret.Stored },
-        secret = true,
-    ) { secret = it }
+    if (secretState == S3Secret.Stored && !changingSecret) {
+        StoredSecret(enabled = !busy) { changingSecret = true }
+    } else {
+        S3Field(
+            secret,
+            Res.string.s3_secret,
+            Res.string.s3_secret_stored.takeIf { secretState == S3Secret.Stored },
+            secret = true,
+        ) { secret = it }
+    }
     val message = when (error) {
         S3SetupError.Invalid, S3SetupError.Unsupported -> Res.string.s3_invalid
         S3SetupError.Insecure -> Res.string.s3_insecure
@@ -128,7 +140,10 @@ internal fun S3Details(
                     accessKey.trim(),
                 )
                 error = live.connectS3(typed, secret)
-                if (error == null) secret = ""
+                if (error == null) {
+                    secret = ""
+                    changingSecret = false
+                }
             },
         ) {
             Text(stringResource(Res.string.relay_save))
@@ -137,6 +152,22 @@ internal fun S3Details(
             TextButton(enabled = !busy, onClick = onSync) {
                 Text(stringResource(Res.string.sync_now))
             }
+        }
+    }
+}
+
+@Composable
+private fun StoredSecret(enabled: Boolean, onChange: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Icon(
+            painterResource(Res.drawable.ic_check),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.size(8.dp))
+        Text(stringResource(Res.string.s3_secret_on_device), modifier = Modifier.weight(1f))
+        TextButton(enabled = enabled, onClick = onChange) {
+            Text(stringResource(Res.string.s3_secret_change))
         }
     }
 }
