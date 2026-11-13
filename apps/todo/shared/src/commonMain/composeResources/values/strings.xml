@@ -138,7 +138,7 @@
     <string name="license_name">GNU GPL v3 or later</string>
     <string name="source_code">Source code</string>
     <string name="third_party">Open-source libraries</string>
-    <string name="third_party_licenses">Kotlin, kotlinx (coroutines, datetime, serialization), Compose Multiplatform (Material 3, Navigation), AndroidX, SQLDelight, multiplatform-settings, Reorderable, Material icons and ZXing, all under the Apache License 2.0</string>
+    <string name="third_party_licenses">Kotlin, kotlinx (coroutines, datetime, serialization, io), Compose Multiplatform (Material 3, Navigation), AndroidX, SQLDelight, multiplatform-settings, Reorderable, Ktor, OkHttp, Okio, cryptography-kotlin, Kermit, Material icons and ZXing, all under the Apache License 2.0; SLF4J under the MIT License</string>
     <string name="sync_backend_s3">S3 storage</string>
     <string name="sync_backend_s3_hint">Sync through an S3-compatible bucket (Cloudflare R2, Backblaze B2, AWS, MinIO). It stores only encrypted data. Use a key that can reach only this bucket.</string>
     <string name="s3_endpoint">Endpoint</string>

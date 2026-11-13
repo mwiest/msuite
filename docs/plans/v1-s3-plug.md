@@ -93,8 +93,9 @@ Each item is settled during slice 6.
    normal brightness.
 7. **`needsS3Secret()` reads the KeyStore during composition** (Settings recomposes on every poll).
    Cheap per call, but measure; cache it in `LiveSyncActions` if Settings stutters.
-8. **The licences line** in Settings doesn't name Ktor, OkHttp or cryptography-kotlin (a gap since
-   the relay, not new here). Fix it in both languages.
+8. **The licences line.** Settled 2026-11-13: it now names every non-AndroidX library in the
+   release runtime classpath (Ktor, OkHttp, Okio, cryptography-kotlin, Kermit and kotlinx-io were
+   missing), and SLF4J apart, as it is MIT, not Apache 2.0.
 9. **Connect and Sync now** (relay and S3 forms; found 2026-11-11). Connect only validates the form
    and saves; it doesn't check that the backend works, so a wrong region or bucket shows only after
    the next sync, while the form already says the secret is "stored on this device", which reads
@@ -181,7 +182,7 @@ the monitor).
   through the 2026-11-10 upgrade; the words weren't noted, so rerun it on a fresh device.
 
 Next session: on R2 checks 5, 6, 7 (`http://` in a release build), 9 to 15, 17, 18, 20, 21; then
-B2 (19); then settle open items 1, 2 (B2), 4 to 9.
+B2 (19); then settle open items 1, 2 (B2), 4 to 7 and 9.
 
 ## How to verify
 
