@@ -72,7 +72,7 @@ private fun LiveSyncActions.s3Secret(backend: SyncBackend): S3Secret = when {
 }
 
 /**
- * The S3 form (plan `v1-s3-plug.md`). A stored secret is never shown: the form says it is stored and
+ * The S3 form (decision 0087). A stored secret is never shown: the form says it is stored and
  * offers an empty field to replace it, which keeps it when left empty.
  */
 @Suppress("LongMethod") // One field per configuration value; nothing to split out.

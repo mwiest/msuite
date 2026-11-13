@@ -20,7 +20,7 @@ in `apps/todo`; the crypto primitives, the batch envelope and the object-key gra
 | `core/storage` | KMP (android, jvm) | SQLDelight database (decision 0046): the generic `field_state` table (decision 0035), ingested and unreadable batch keys, per-plug watermarks and unconfirmed publishes, the device ID | `LocalStore` over all its tables (see Sync → Data and merge) |
 | `core/sync` | KMP (android, jvm) | HLC, LWW merge behind `merge()`, batch building and ingest, backend-plug interface (`put`/`list`/`get`), object keys, plug adapters | `HlcClock`, `merge()`, `ingest()`, `buildDelta()`, `Replica`, `BackendPlug`, `ManualSync`, `ObjectKey`/`ObjectKeyPrefix`/`groupId`, simulator Layer 1 |
 | `core/relay` | KMP (android, jvm) | The relay wire contract shared with `server/`, and the plug that talks to it (decision 0079) | `RelayApi` paths/headers/status codes, `relayToken`, `RelayPlug`/`RelayRefused` |
-| `core/s3` | KMP (android, jvm) | The S3-compatible object-storage plug (plan `v1-s3-plug.md`) | `SigV4` request signing (decision 0084), `S3Credentials`, `S3Config`, `S3Plug`/`S3Refused` (see Sync → S3) |
+| `core/s3` | KMP (android, jvm) | The S3-compatible object-storage plug (decisions 0084, 0087) | `SigV4` request signing (decision 0084), `S3Credentials`, `S3Config`, `S3Plug`/`S3Refused` (see Sync → S3) |
 | `core/sync-testing` | Kotlin/JVM library, used by tests only | The multi-device simulator harness (decision 0057) | `Cluster`, `SimDevice`, `NetStep`, `SimState` (`MemoryState`, `ReplicaState`), `SimStore` (`BatchStore`, `PlugStore`, `EnvelopePlugStore`) with `Fetch`, `MemoryPlug`, `assertPlugContract`, `TestClock` |
 | `core/crypto` | KMP (android, jvm) | Root secret, per-batch HKDF into AES-256-GCM, QR pairing payload, BIP39 recovery (cryptography-kotlin, decision 0010) | `sha256`, `hmacSha256`, `hkdf`, `randomSecret`, `AesGcm`, the `BatchEnvelope` (the primitives and envelope of decisions 0010, 0070) and `PairingPayload`/`BackendType` (record 0072) with `S3Section` (record 0085) and `RecoveryWords` over `BIP39_ENGLISH` (record 0073) |
 | `core/design` | Compose Multiplatform (android only for now, source in `commonMain`) | Material 3 theme and shared components (decision 0018) | `MsuiteTheme` wrapping `MaterialTheme` |
@@ -329,13 +329,13 @@ proxy or the host terminates TLS (0079). Hosting templates and their guide are i
 
 ### S3
 
-`core/s3` holds the object-storage plug (plan `v1-s3-plug.md`). `S3Plug` is the `BackendPlug` over a
+`core/s3` holds the object-storage plug (decision 0087). `S3Plug` is the `BackendPlug` over a
 caller's Ktor `HttpClient`, like the relay's. Each request is signed by `SigV4` (decision 0084),
 with the payload hash in `x-amz-content-sha256`. `S3Config` holds the endpoint, region, bucket and an
 optional key prefix that goes in front of every 0029 key. AWS endpoints (`*.amazonaws.com`) put the
 bucket in the host name; every other store takes it in the path. `put` sends `If-None-Match: *`
 and counts a 412 as success. If a store answers 501, or a 400 that maps to no refusal, to that
-header (B2), the put is sent again without it, and later puts skip it for the plug's lifetime (one
+header (reported for B2), the put is sent again without it, and later puts skip it for the plug's lifetime (one
 sync session, so each app start probes once); content-addressed keys keep the overwrite
 harmless. `list` is `ListObjectsV2` across continuation tokens, read by `S3Xml`, which
 extracts the few elements it needs (no XML dependency). Errors map to `S3Refused(refusal)` for bad

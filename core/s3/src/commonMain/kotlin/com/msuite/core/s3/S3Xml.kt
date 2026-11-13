@@ -4,7 +4,7 @@ package com.msuite.core.s3
 internal class ListPage(val keys: List<String>, val nextToken: String?)
 
 /**
- * The few elements the plug reads from S3's XML (plan `v1-s3-plug.md`: no XML dependency). S3
+ * The few elements the plug reads from S3's XML (decision 0087: no XML dependency). S3
  * escapes text content, so a raw `<` never appears inside an element and `[^<]*` is enough.
  */
 internal object S3Xml {

@@ -258,6 +258,61 @@ and turn the debug network config off implicitly by using a release build for TL
 relay's data directory must be writable; a new namespace is registered by the first `put`, so a
 typo in the URL creates another namespace rather than failing.
 
+## Two-device check (S3)
+
+Run on Cloudflare R2 2026-11-11 and 2026-11-13 (bucket `msuite-check`, prefix `todo-check`): an
+Android 16 emulator (`Medium_Phone_API_36.1`, form filled by paste) and a Motorola edge 70 pro
+(joined by scanning the code from the monitor), the same debug build on both, https only. Every
+row passed but the release-build half of "Bad endpoints", which was skipped (`S3SyncTest` covers
+the rule). Backblaze B2 has not been run yet (`plans/v1-todo.md` → Open items).
+
+- Wrong secret, wrong bucket, wrong region and a read-only token were each refused in the form on
+  Connect (decision 0086), with the current setup still syncing and no probe object left. R2
+  answers a wrong secret `403 SignatureDoesNotMatch`, an unknown key ID `401 Unauthorized`, a
+  bucket outside a scoped token's reach `403 AccessDenied` (never `NoSuchBucket`), and any region
+  but `auto`, `us-east-1` or a location hint `400 InvalidRegionName`; these are fixtures in
+  `S3PlugTest` (`R2Responses`).
+- Joining by QR preselected S3 with nothing typed and scanned quickly; a code of the group naming
+  another prefix offered the switch.
+- Simultaneous, staggered, offline and crossing edits converged; the 10-minute soak ended with
+  `field_state` identical cell for cell (319 cells), `unconfirmed_publish` empty.
+- Compaction kept the objects per writer near `SNAPSHOT_EVERY` + 1; a wiped prefix showed "looks
+  empty" and refilled after confirming; a downloaded object held no task title.
+- The secret: Off deleted `files/s3.secret` and the S3 settings, and `shared_prefs/todo.xml` never
+  held the secret; a deleted secret stopped sync with its message, and scanning the group's code
+  restored it; an install of `7856935` (before `KeyStoreSealedFile`) upgraded to the same 24 words,
+  tasks and `identity.root`.
+- After a reboot both resumed; the phone, uninstalled and paired again, rebuilt from the bucket
+  alone, identical cell for cell.
+
+Setup: a private bucket and a key limited to it with read, write, list and delete (R2: an API token
+with *Object Read & Write* on the bucket, region `auto`; B2: an application key, region as in
+`https://s3.<region>.backblazeb2.com`). Inspect the bucket with the AWS CLI and a profile holding
+that key: `aws s3 ls --recursive s3://<bucket>/<prefix>/ --endpoint-url <endpoint> --profile <p>`;
+`aws s3api … --debug` prints raw responses for fixtures. Read app files with
+`adb shell run-as com.msuite.todo`.
+
+| Check | How | Pass |
+|---|---|---|
+| Connect | S3 storage, fill the form, Connect | `Last sync` appears; objects under `{prefix}/todo/{groupId}/` named per 0029 |
+| Refusals | a wrong secret, bucket, region; a read-only key | the matching message in the form; the old setup keeps syncing; no `probe_` object left |
+| Bad endpoints | `http://…` in a release build; an endpoint with a path; a blank field | refused in the form |
+| Clock off | automatic time off, clock 30 min ahead, Sync now | the clock message; syncs once the time is restored |
+| Join and switch | scan a code with no backend; scan a group code naming another bucket or prefix | S3 preselected, nothing typed; the switch dialog names the bucket |
+| Edits and soak | as for the relay | converge; `field_state` identical, `unreadable_batch` and `unconfirmed_publish` empty |
+| Compaction | count objects per writer after many edits | near `SNAPSHOT_EVERY` + 1 per writer |
+| Prefix wiped | delete everything under the prefix | "looks empty"; after confirming both refill and converge |
+| Ciphertext only | download an object and search it for a task title | no plaintext |
+| Secret lifecycle | switch to Off, then read `files/` and `shared_prefs/todo.xml` | `s3.secret` gone; the prefs never held the secret |
+| Keep or replace the secret | change the prefix with the secret empty; then a new secret | the empty field keeps it; a new one applies without a restart |
+| Lost secret | `rm files/s3.secret`, force-stop, reopen | the missing-secret message, no sync; entering or scanning it resumes |
+| Upgrade | an older build with data, then this one over it | same words, same data |
+| Reboot and reinstall | reboot both; reinstall one and pair it again | both resume; the reinstalled one rebuilds from the bucket |
+| German | walk the form and two errors in German | every string German, informal "du" |
+
+Log signatures: `LiveSync` warns `<operation> failed, retrying later`; an `S3Refused` names the
+refusal and the store's error code. A failed Connect is not logged; the form shows it.
+
 ## Formatting and static analysis
 
 Spotless (ktlint) and detekt (decision 0026). CI runs them with the tests (decision 0025); the

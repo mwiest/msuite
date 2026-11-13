@@ -43,7 +43,7 @@ class TodoApplication : Application() {
         HttpClient(OkHttp) { expectSuccess = false }
     }
 
-    /** The S3 secret, wrapped like the root and never in [settings] (plan `v1-s3-plug.md`). */
+    /** The S3 secret, wrapped like the root and never in [settings] (decision 0087). */
     val s3Secret: SecretStore by lazy { KeyStoreSecretStore(KeyStoreSealedFile(File(filesDir, S3_SECRET_FILE))) }
 
     private companion object {

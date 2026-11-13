@@ -25,7 +25,7 @@ class S3Refused(val refusal: S3Refusal, val status: Int, val code: String?) :
     IOException("S3 refused ($status ${code.orEmpty()}): $refusal")
 
 /**
- * The [BackendPlug] over S3-compatible object storage (plan `v1-s3-plug.md`): `PUT` with
+ * The [BackendPlug] over S3-compatible object storage (decision 0087): `PUT` with
  * `If-None-Match: *`, `GET`, `DELETE` and `ListObjectsV2`, each signed by [SigV4]. [client] is the
  * caller's (OkHttp on Android, Ktor's mock in tests); [clock] dates the signatures.
  */

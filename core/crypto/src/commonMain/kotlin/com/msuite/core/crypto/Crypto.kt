@@ -18,7 +18,7 @@ private val provider = CryptographyProvider.Default
 /** The SHA-256 digest of [bytes]: content addressing and the `groupId` (decisions 0003, 0029). */
 suspend fun sha256(bytes: ByteArray): ByteArray = provider.get(SHA256).hasher().hash(bytes)
 
-/** HMAC-SHA256 of [data] under [key]: the request signature of S3's SigV4 (plan `v1-s3-plug.md`). */
+/** HMAC-SHA256 of [data] under [key]: the request signature of S3's SigV4 (decision 0084). */
 suspend fun hmacSha256(key: ByteArray, data: ByteArray): ByteArray = provider.get(HMAC).keyDecoder(SHA256)
     .decodeFromByteArray(HMAC.Key.Format.RAW, key)
     .signatureGenerator()

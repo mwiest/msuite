@@ -1,7 +1,7 @@
 package com.msuite.todo.domain
 
 /**
- * Where a backend credential is kept at rest: the S3 secret (plan `v1-s3-plug.md`). Like the root
+ * Where a backend credential is kept at rest: the S3 secret (decision 0087). Like the root
  * (decision 0039), the shell wraps it with the Android KeyStore; it never goes into [TodoSettings].
  */
 interface SecretStore {
