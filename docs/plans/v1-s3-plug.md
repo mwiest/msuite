@@ -101,7 +101,7 @@ Each item is settled during slice 6.
    with the new settings and saves only if that works; otherwise the form shows the refusal and the
    current backend stays. With that, "stored on this device" only appears for a working setup, and
    Connect fits a small edit too, so the labels stay. A list doesn't prove write rights (check 5's
-   read-only token passes it and fails at the first publish). S3 done (`<hash>`); the relay's
+   read-only token passes it and fails at the first publish). S3 done (`4f916fb`); the relay's
    Connect is next.
 10. **`\'` showed in English UI text.** Settled 2026-11-13: Compose resources don't unescape
     `\'`, so the 17 English strings now use a plain `'`, and `StringResourcesTest` (in
