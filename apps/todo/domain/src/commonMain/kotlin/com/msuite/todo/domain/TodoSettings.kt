@@ -18,7 +18,7 @@ sealed interface SyncBackend {
     /** A self-hosted relay; the token comes from the root (decisions 0030, 0079). */
     data class Relay(val url: String) : SyncBackend
 
-    /** An S3-compatible bucket; its secret lives in a [SecretStore], never here (plan `v1-s3-plug.md`). */
+    /** An S3-compatible bucket; its secret lives in a [SecretStore], never here (decision 0087). */
     data class S3(
         val endpoint: String,
         val region: String,

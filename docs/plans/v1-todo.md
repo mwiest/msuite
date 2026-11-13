@@ -1,7 +1,7 @@
 # Plan: v1, a ToDo app that validates the shared sync layer
 
-Status: **steps 0 to 16 done, code and device checks; 17 (S3 plug) code done, its device check in
-progress: R2 partly checked 2026-11-11 (plan `v1-s3-plug.md`).**
+Status: **steps 0 to 17 done, code and device checks (17 on R2; B2 not run). Open items below,
+collected 2026-11-13.**
 Started 2026-07-02; reordered 2026-10-11 (decision 0034).
 
 ## Goal
@@ -140,15 +140,57 @@ closes. Each problem slice removes its line from `roadmap.md` → Known problems
 16. [x] **Build hygiene.** "No native `.so`" means native code we add; AndroidX's
     `libandroidx.graphics.path.so` is fine (decision 0083). The "commonTest was configured" warning
     is gone: the Compose convention adds a host-test compilation. Landed: `686bbdf`.
-17. [ ] **S3 plug** (plan: `v1-s3-plug.md`). A `BackendPlug` for S3-compatible storage (AWS, R2, B2, MinIO), in a new
-    `core/s3` module: SigV4 on the Ktor client with cryptography-kotlin's HMAC/SHA-256, only PUT
-    (`If-None-Match: *`), GET, DELETE and `ListObjectsV2`. Settings section; the secret stored
-    under the KeyStore, never in settings. The QR carries endpoint, bucket, region, access key and
-    secret as a new backend type's section. Tests: AWS's SigV4 vectors, the plug against Ktor's
-    mock engine, the pairing section round trip. Checked on two devices against a real bucket.
-    Decided 2026-11-07: SigV4 written on Ktor, no SDK (aws-sdk-kotlin and minio-java are JVM-only
-    and heavy for four calls); the whole configuration, secret included, travels in the QR, which
-    already carries the root. Both get decision records when the slice lands.
+17. [x] **S3 plug.** A `BackendPlug` for S3-compatible storage (AWS, R2, B2, MinIO) in a new
+    `core/s3` module: SigV4 on the Ktor client with cryptography-kotlin's HMAC/SHA-256 (no SDK),
+    only PUT (`If-None-Match: *`), GET, DELETE and `ListObjectsV2`; an S3 form in Settings; the
+    secret wrapped under the KeyStore, never in settings; the QR carries the whole configuration.
+    Connect checks a relay or bucket before saving it (list, write and delete a probe object).
+    Decisions 0084 to 0087; design in `architecture.md` → S3. Landed: `644c1ec`, `289ecf3`,
+    `b6405b7`, `f77cbfb`, `e9301c5`, `f60a7ea`, then the device check's fixes `b1717db`, `908bea4`,
+    `4f916fb`, `df3bdc7`, `83f7af3`. Checked 2026-11-11 to 2026-11-13 on an emulator and a phone
+    against Cloudflare R2 (`testing.md` → Two-device check (S3)).
+
+## Open items
+
+Collected 2026-11-13 from the old `todo.md` and the S3 device check.
+
+- [ ] General: color scheme from the icon, and an adaptive-colors setting
+- [ ] General: fix the app icon's margins; white on a teal background
+- [ ] General: make the app name just "ToDo"
+- [ ] Pairing: give an "account" (the group key) a name that paired devices show, so the user
+  recognises it
+- [ ] Settings: a design screen with an icon and a popup for the choice (like Voclet)
+- [ ] Settings: move "Sync" (export/import) into an item with an icon in a "Backup & Recovery"
+  section
+- [ ] Settings: move the recovery key into "Account backup & recovery" in that section
+- [ ] Settings: rename the "Pairing" section to "Connected devices", with a screen whose accordion
+  shows either "Share this device" (a blank QR code and a warning before revealing it) or "Connect
+  to other device" (a scan button); both explained
+- [ ] Settings: move About into its own screen, like Voclet
+- [ ] Settings: switching the sync method doesn't lose the other methods' settings (today Off
+  clears the S3 fields)
+- [ ] Settings: after scanning a code, go back to Settings and show a toast
+- [x] Settings: English texts showed `\'` escapes (`441ace5`)
+- [ ] Settings: after a successful Connect the status reads "Never synced" until the next poll,
+  even on a device that just synced; sync once right after Connect
+- [ ] Settings: `Last sync` shows a raw UTC instant (`2026-11-13T21:56:47.135563Z`); show local
+  time, formatted for the language
+- [ ] Settings: `needsS3Secret()` reads the KeyStore on every recomposition (each poll); measure,
+  and cache it in `LiveSyncActions` if Settings stutters
+- [ ] Tasks: set details from the start, with icons as in Google Tasks
+- [ ] Tasks: round checkboxes (filled when done), a completion animation (ripple) and more padding
+- [ ] Tasks: collapse done tasks
+- [ ] Tasks: sync with a pull-down gesture
+- [ ] Tasks: scroll to the top after adding a task
+- [ ] Tasks: order done tasks by completion time, newest first
+- [ ] Sync: bookkeeping of plugs no longer used stays (`plug_watermark`, `ingested_batch`,
+  `unreadable_batch` rows of an old folder, relay or prefix); clear a plug's rows when another
+  backend is chosen
+- [ ] S3: run the device check on Backblaze B2 (Connect, join by QR, edits, prefix wiped); capture
+  B2's answer to `If-None-Match` with `aws s3api put-object --if-none-match '*' --debug`, narrow
+  the header fallback to it with a test (decision 0087), and add B2's responses as fixtures
+- [ ] Relay: push `main` and redeploy the hosted relay; one older than decision 0086 refuses
+  Connect's probe
 
 ## Open questions
 

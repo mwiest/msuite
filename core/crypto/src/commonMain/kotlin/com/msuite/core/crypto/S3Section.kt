@@ -9,7 +9,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import kotlinx.serialization.protobuf.ProtoNumber
 
 /**
- * The S3 backend's section of a pairing QR (plan `v1-s3-plug.md`): the whole configuration, the
+ * The S3 backend's section of a pairing QR (decision 0085): the whole configuration, the
  * secret included, since whoever sees the QR has the root anyway. ProtoBuf, so a later field is
  * skipped by an older reader. The field numbers are pinned by a test and can never change.
  */

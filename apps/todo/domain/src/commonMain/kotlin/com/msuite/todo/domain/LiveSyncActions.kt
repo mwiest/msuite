@@ -48,7 +48,7 @@ data class RelayOptions(
     val allowInsecure: Boolean = false,
 )
 
-/** Builds the S3 plug; the shell injects the HTTP engine, like the relay's (plan `v1-s3-plug.md`). */
+/** Builds the S3 plug; the shell injects the HTTP engine, like the relay's (decision 0087). */
 fun interface S3PlugFactory {
     fun create(config: S3Config, credentials: S3Credentials): BackendPlug
 }
