@@ -5,6 +5,7 @@ import com.msuite.core.crypto.KEY_GEN_V1
 import com.msuite.core.crypto.PairingPayload
 import com.msuite.core.crypto.S3Section
 import com.msuite.core.model.PlugId
+import com.msuite.core.relay.RelayRefusal
 import com.msuite.core.relay.RelayRefused
 import com.msuite.core.s3.S3Config
 import com.msuite.core.s3.S3Credentials
@@ -76,6 +77,24 @@ sealed interface S3SetupError {
     data object Unreachable : S3SetupError
 }
 
+/** Why [LiveSyncActions.connectRelay] refused a relay address. */
+sealed interface RelaySetupError {
+    /** Not an `http(s)://` address. */
+    data object Invalid : RelaySetupError
+
+    /** An `http://` address in a release build (decision 0079). */
+    data object Insecure : RelaySetupError
+
+    /** This build has no relay plug. */
+    data object Unsupported : RelaySetupError
+
+    /** The relay refused the listing made before saving. */
+    data class Refused(val refusal: RelayRefusal) : RelaySetupError
+
+    /** The listing made before saving failed without an answer from the relay. */
+    data object Unreachable : RelaySetupError
+}
+
 /**
  * Live sync over the chosen backend: last sync, pending changes, and whether it is failing. A relay
  * or S3 refusal carries the [RelayRefused] or [S3Refused] so Settings can say why.
@@ -142,6 +161,27 @@ class LiveSyncActions(
      */
     fun setBackend(value: SyncBackend) = switchTo(value, restart = false)
 
+    /** Chooses the relay at [url] after listing this group's objects there; a refusal keeps the current backend. */
+    suspend fun connectRelay(url: String): RelaySetupError? {
+        val address = url.trim().trimEnd('/')
+        val factory = relay.plugFactory
+        val root = identity.root(KEY_GEN_V1)
+        val error = when {
+            factory == null || root == null -> RelaySetupError.Unsupported
+
+            !isAllowedServerUrl(address, relay.allowInsecure) ->
+                if (address.startsWith("http://")) RelaySetupError.Insecure else RelaySetupError.Invalid
+
+            else -> when (val failure = probe(factory.create(address, root))) {
+                null -> null
+                is RelayRefused -> RelaySetupError.Refused(failure.refusal)
+                else -> RelaySetupError.Unreachable
+            }
+        }
+        if (error == null) setBackend(SyncBackend.Relay(address))
+        return error
+    }
+
     /**
      * Chooses the S3 bucket [backend] with [secret], or the stored secret when [secret] is blank,
      * after listing this group's objects with them: a refusal keeps the current backend and secret.
@@ -175,21 +215,25 @@ class LiveSyncActions(
         }
     }
 
-    // Plugs throw platform exceptions (IOException and others), so anything but a refusal reads as unreachable.
-    @Suppress("TooGenericExceptionCaught")
     private suspend fun probeS3(section: S3Section): S3SetupError? {
         val plug = requireNotNull(s3).plugFactory.create(requireNotNull(section.toConfig()), section.credentials())
-        val prefix = groupId()?.let { "$APP_ID/$it/" } ?: "$APP_ID/"
-        return try {
-            plug.list(prefix)
-            null
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: S3Refused) {
-            S3SetupError.Refused(e.refusal)
-        } catch (_: Exception) {
-            S3SetupError.Unreachable
+        return when (val failure = probe(plug)) {
+            null -> null
+            is S3Refused -> S3SetupError.Refused(failure.refusal)
+            else -> S3SetupError.Unreachable
         }
+    }
+
+    /** Lists this group's objects through [plug]: what it threw, or `null` if the backend answered. */
+    // Plugs throw platform exceptions (IOException and others), so catch broadly.
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun probe(plug: BackendPlug): Exception? = try {
+        plug.list(groupId()?.let { "$APP_ID/$it/" } ?: "$APP_ID/")
+        null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        e
     }
 
     /** The secret is saved before the backend is chosen, so S3 is never chosen without one. */

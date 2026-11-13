@@ -42,6 +42,14 @@ when the plan closes):
   the relay (decision 0079).
 - Payloads are signed (SHA-256 of the body), not `UNSIGNED-PAYLOAD`: batches are small.
 
+Decided 2026-11-13:
+
+- **Connect probes before saving** (relay and S3), over "save, then sync" and relabelling only:
+  it lists the group's prefix with the new settings and saves only if that works; otherwise the
+  form shows the refusal and the current backend stays. A scanned code skips the probe (it comes
+  from a working device; a join must not need the network). A list doesn't prove write rights:
+  check 5's read-only token, or a relay allowlist, still fails only at the first publish.
+
 ## Slices
 
 1. [x] **SigV4 signer** in a new KMP module `core/s3` (canonical request, string to sign, signing
@@ -96,13 +104,10 @@ Each item is settled during slice 6.
 8. **The licences line.** Settled 2026-11-13: it now names every non-AndroidX library in the
    release runtime classpath (Ktor, OkHttp, Okio, cryptography-kotlin, Kermit and kotlinx-io were
    missing), and SLF4J apart, as it is MIT, not Apache 2.0.
-9. **Connect and Sync now** (relay and S3 forms; found 2026-11-11). Decided 2026-11-13: Connect
-   probes before saving (over "save, then sync" and relabelling only): it lists the group's prefix
-   with the new settings and saves only if that works; otherwise the form shows the refusal and the
-   current backend stays. With that, "stored on this device" only appears for a working setup, and
-   Connect fits a small edit too, so the labels stay. A list doesn't prove write rights (check 5's
-   read-only token passes it and fails at the first publish). S3 done (`4f916fb`); the relay's
-   Connect is next.
+9. **Connect and Sync now** (relay and S3 forms; found 2026-11-11). Settled 2026-11-13: Connect
+   probes before saving (see Decisions); S3 in `4f916fb`, the relay in `<hash>`. With that, "stored
+   on this device" only appears for a working setup, and Connect fits a small edit too, so the
+   labels stay.
 10. **`\'` showed in English UI text.** Settled 2026-11-13: Compose resources don't unescape
     `\'`, so the 17 English strings now use a plain `'`, and `StringResourcesTest` (in
     `apps/todo/domain`, as `shared` has no tests) fails on any `\'`.
@@ -183,7 +188,7 @@ the monitor).
   through the 2026-11-10 upgrade; the words weren't noted, so rerun it on a fresh device.
 
 Next session: on R2 checks 5, 6, 7 (`http://` in a release build), 9 to 15, 17, 18, 20, 21; then
-B2 (19); then settle open items 1, 2 (B2), 4 to 7 and 9.
+B2 (19); then settle open items 1, 2 (B2), 4 to 7.
 
 ## How to verify
 

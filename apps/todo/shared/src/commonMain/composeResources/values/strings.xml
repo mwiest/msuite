@@ -76,6 +76,7 @@
     <string name="relay_group_id">Group ID: %1$s</string>
     <string name="relay_group_id_hint">Give this ID to the relay operator if the relay has an allowlist.</string>
     <string name="relay_unreachable">Can't reach the relay. Retrying every 10 seconds; your changes are kept on this device.</string>
+    <string name="relay_probe_unreachable">Can't reach the relay. Check its address and this device's connection.</string>
     <string name="relay_unauthorized">The relay rejected this device's key. Check that both devices were paired and use the same relay.</string>
     <string name="relay_forbidden">This relay does not allow this group. Ask the operator to add its group ID.</string>
     <string name="relay_full">The relay is full for this group. Ask the operator to raise the limit or remove old objects.</string>

@@ -3,7 +3,6 @@ package com.msuite.todo
 import com.msuite.core.sync.FileStore
 import com.msuite.todo.domain.FolderPick
 import com.msuite.todo.domain.QrCodes
-import com.msuite.todo.domain.RelayPlugFactory
 import com.msuite.todo.domain.SensitiveClipboard
 import com.msuite.todo.domain.SnapshotFiles
 
@@ -19,6 +18,4 @@ class ShellServices(
     val qr: QrCodes,
     val clipboard: SensitiveClipboard,
     val fileStoreFactory: (String) -> FileStore,
-    val relayPlugFactory: RelayPlugFactory,
-    val allowInsecureRelay: Boolean,
 )

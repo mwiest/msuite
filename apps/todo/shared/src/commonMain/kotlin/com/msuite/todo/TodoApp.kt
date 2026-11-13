@@ -47,7 +47,7 @@ fun TodoApp(container: TodoContainer, version: String, shell: ShellServices) {
         NavHost(nav, startDestination = TasksRoute) {
             composable<TasksRoute> { TasksScreen(container) { nav.navigate(SettingsRoute) } }
             composable<SettingsRoute> {
-                SettingsScreen(container, version, shell.allowInsecureRelay, { nav.popBackStack() }) {
+                SettingsScreen(container, version, { nav.popBackStack() }) {
                     nav.navigate(
                         when (it) {
                             SettingsDestination.Pairing -> PairingRoute

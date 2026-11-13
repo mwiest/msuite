@@ -28,9 +28,9 @@ import androidx.compose.ui.unit.dp
 import com.msuite.core.relay.RelayRefusal
 import com.msuite.core.s3.S3Refusal
 import com.msuite.todo.domain.LiveSyncActions
+import com.msuite.todo.domain.RelaySetupError
 import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.domain.SyncStatus
-import com.msuite.todo.domain.isAllowedServerUrl
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.cancel
 import com.msuite.todo.resources.folder_clear
@@ -46,6 +46,7 @@ import com.msuite.todo.resources.relay_full
 import com.msuite.todo.resources.relay_group_id
 import com.msuite.todo.resources.relay_group_id_hint
 import com.msuite.todo.resources.relay_looks_empty
+import com.msuite.todo.resources.relay_probe_unreachable
 import com.msuite.todo.resources.relay_save
 import com.msuite.todo.resources.relay_too_large
 import com.msuite.todo.resources.relay_unauthorized
@@ -76,8 +77,6 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
-private enum class RelayUrlError { Invalid, Insecure }
-
 /**
  * The live-sync backend chooser (plan v1 step 9): off, a synced folder, a self-hosted relay, or an
  * S3 bucket. A relay or bucket is only accepted over https unless this is a debug build; the group
@@ -85,13 +84,13 @@ private enum class RelayUrlError { Invalid, Insecure }
  */
 @Suppress("LongMethod") // One screen section; the parts below are already split out.
 @Composable
-fun SyncBackendSection(live: LiveSyncActions, allowInsecureRelay: Boolean) {
+fun SyncBackendSection(live: LiveSyncActions) {
     val backend by live.backend.collectAsState()
     val status by live.status.collectAsState()
     val folderUri by live.folderUri.collectAsState()
     var choice by remember(backend) { mutableStateOf(backend) }
     var relayUrl by remember(choice) { mutableStateOf((choice as? SyncBackend.Relay)?.url.orEmpty()) }
-    var relayError by remember { mutableStateOf<RelayUrlError?>(null) }
+    var relayError by remember { mutableStateOf<RelaySetupError?>(null) }
     var showPickDialog by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -161,14 +160,14 @@ fun SyncBackendSection(live: LiveSyncActions, allowInsecureRelay: Boolean) {
                     relayError = null
                 },
                 onConnect = {
-                    val url = relayUrl.trim()
-                    relayError = when {
-                        !isAllowedServerUrl(url, allowInsecureRelay) ->
-                            if (url.startsWith("http://")) RelayUrlError.Insecure else RelayUrlError.Invalid
-
-                        else -> null
+                    scope.launch {
+                        busy = true
+                        try {
+                            relayError = live.connectRelay(relayUrl)
+                        } finally {
+                            busy = false
+                        }
                     }
-                    if (relayError == null) live.setBackend(SyncBackend.Relay(url))
                 },
                 onSync = {
                     scope.launch {
@@ -285,7 +284,7 @@ private fun FolderDetails(
 @Composable
 private fun RelayDetails(
     url: String,
-    error: RelayUrlError?,
+    error: RelaySetupError?,
     groupId: String?,
     busy: Boolean,
     active: Boolean,
@@ -307,8 +306,10 @@ private fun RelayDetails(
             Text(
                 stringResource(
                     when (error) {
-                        RelayUrlError.Invalid -> Res.string.relay_url_invalid
-                        RelayUrlError.Insecure -> Res.string.relay_url_insecure
+                        RelaySetupError.Invalid, RelaySetupError.Unsupported -> Res.string.relay_url_invalid
+                        RelaySetupError.Insecure -> Res.string.relay_url_insecure
+                        RelaySetupError.Unreachable -> Res.string.relay_probe_unreachable
+                        is RelaySetupError.Refused -> error.refusal.message()
                         null -> Res.string.relay_url_hint
                     },
                 ),

@@ -246,6 +246,49 @@ class LiveSyncActionsTest : StringSpec({
         }
     }
 
+    "relay connect checks the URL and lists first; refused or unreachable, it keeps the backend" {
+        val settings = TodoSettings(MapSettings())
+        var plug: BackendPlug = CountingPlug()
+
+        coroutineScope {
+            val live = LiveSyncActions(
+                replica = replica(),
+                identity = StoredIdentity(MemoryRootStore()),
+                settings = settings,
+                folderPick = NoPick,
+                fileStoreFactory = { error("no folder") },
+                scope = this,
+                relay = RelayOptions(plugFactory = { _, _ -> plug }),
+            )
+            live.connectRelay("relay.example") shouldBe RelaySetupError.Invalid
+            live.connectRelay("http://relay.example") shouldBe RelaySetupError.Insecure
+            live.connectRelay(" https://relay.example/ ").shouldBeNull()
+            live.backend.value shouldBe SyncBackend.Relay("https://relay.example")
+
+            plug = ThrowingPlug(RelayRefused(RelayRefusal.Unauthorized, 401))
+            live.connectRelay("https://other.example") shouldBe RelaySetupError.Refused(RelayRefusal.Unauthorized)
+            plug = ThrowingPlug(IOException("no route"))
+            live.connectRelay("https://other.example") shouldBe RelaySetupError.Unreachable
+            live.backend.value shouldBe SyncBackend.Relay("https://relay.example")
+            live.setBackend(SyncBackend.None)
+        }
+    }
+
+    "without a relay plug, connect says so" {
+        coroutineScope {
+            val live = LiveSyncActions(
+                replica = replica(),
+                identity = StoredIdentity(MemoryRootStore()),
+                settings = TodoSettings(MapSettings()),
+                folderPick = NoPick,
+                fileStoreFactory = { error("no folder") },
+                scope = this,
+            )
+            live.connectRelay("https://relay.example") shouldBe RelaySetupError.Unsupported
+            live.backend.value shouldBe SyncBackend.None
+        }
+    }
+
     "a relay refusal is carried on the status" {
         val refusal = RelayRefused(RelayRefusal.Unauthorized, 401)
         val settings = TodoSettings(MapSettings())

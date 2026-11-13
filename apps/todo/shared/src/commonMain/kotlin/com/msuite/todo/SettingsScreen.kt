@@ -89,7 +89,6 @@ enum class SettingsDestination { Pairing, Recovery }
 fun SettingsScreen(
     container: TodoContainer,
     version: String,
-    allowInsecureRelay: Boolean,
     onBack: () -> Unit,
     onOpen: (SettingsDestination) -> Unit,
 ) {
@@ -117,7 +116,7 @@ fun SettingsScreen(
             HorizontalDivider(Modifier.padding(top = 24.dp))
             SyncSection(container.sync)
             HorizontalDivider(Modifier.padding(top = 24.dp))
-            SyncBackendSection(container.live, allowInsecureRelay)
+            SyncBackendSection(container.live)
             HorizontalDivider(Modifier.padding(top = 24.dp))
             PairingSection { onOpen(SettingsDestination.Pairing) }
             HorizontalDivider(Modifier.padding(top = 24.dp))

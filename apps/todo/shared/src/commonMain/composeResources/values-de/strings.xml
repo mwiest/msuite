@@ -76,6 +76,7 @@
     <string name="relay_group_id">Gruppen-ID: %1$s</string>
     <string name="relay_group_id_hint">Gib diese ID dem Relay-Betreiber, wenn das Relay eine Allowlist hat.</string>
     <string name="relay_unreachable">Relay nicht erreichbar. Neuer Versuch alle 10 Sekunden; Änderungen bleiben auf diesem Gerät erhalten.</string>
+    <string name="relay_probe_unreachable">Relay nicht erreichbar. Prüfe die Adresse und die Verbindung dieses Geräts.</string>
     <string name="relay_unauthorized">Das Relay hat den Schlüssel dieses Geräts abgelehnt. Prüfe, ob beide Geräte gekoppelt sind und dasselbe Relay nutzen.</string>
     <string name="relay_forbidden">Dieses Relay erlaubt diese Gruppe nicht. Bitte den Betreiber, die Gruppen-ID hinzuzufügen.</string>
     <string name="relay_full">Das Relay ist für diese Gruppe voll. Bitte den Betreiber, das Limit zu erhöhen oder alte Objekte zu entfernen.</string>

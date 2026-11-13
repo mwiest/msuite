@@ -34,10 +34,6 @@ class MainActivity : ComponentActivity() {
             qr = ZxingQrCodes(this),
             clipboard = app.clipboard,
             fileStoreFactory = { uri -> SafFileStore(applicationContext, android.net.Uri.parse(uri)) },
-            relayPlugFactory = RelayPlugFactory { url, root ->
-                RelayPlug(url, "todo", root, app.httpClient)
-            },
-            allowInsecureRelay = debug,
         )
         liveSync = LiveSyncActions(
             replica = app.replica,
@@ -47,8 +43,8 @@ class MainActivity : ComponentActivity() {
             fileStoreFactory = shell.fileStoreFactory,
             scope = lifecycleScope,
             relay = RelayOptions(
-                plugFactory = shell.relayPlugFactory,
-                allowInsecure = shell.allowInsecureRelay,
+                plugFactory = RelayPlugFactory { url, root -> RelayPlug(url, "todo", root, app.httpClient) },
+                allowInsecure = debug,
             ),
             s3 = S3Options(
                 plugFactory = S3PlugFactory { config, credentials -> S3Plug(config, credentials, app.httpClient) },
