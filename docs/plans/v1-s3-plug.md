@@ -101,9 +101,9 @@ Each item is settled during slice 6.
    as if the setup was accepted. Connect also feels wrong for a small edit such as the prefix.
    Rethink both actions and their labels, e.g. Connect runs a first sync and reports its refusal
    in the form; needs a decision on the options.
-10. **`'` shows in English UI text** (found 2026-11-11). Compose resources don't unescape `'`, so
-    17 English strings (`Can't reach …`, `device's key`, …) show the backslash; German has none.
-    Write a plain `'` and add a test that no `strings.xml` contains `'`.
+10. **`\'` showed in English UI text.** Settled 2026-11-13: Compose resources don't unescape
+    `\'`, so the 17 English strings now use a plain `'`, and `StringResourcesTest` (in
+    `apps/todo/domain`, as `shared` has no tests) fails on any `\'`.
 
 ## Test plan (slice 6)
 
@@ -181,7 +181,7 @@ the monitor).
   through the 2026-11-10 upgrade; the words weren't noted, so rerun it on a fresh device.
 
 Next session: on R2 checks 5, 6, 7 (`http://` in a release build), 9 to 15, 17, 18, 20, 21; then
-B2 (19); then settle open items 1, 2 (B2), 4 to 10.
+B2 (19); then settle open items 1, 2 (B2), 4 to 9.
 
 ## How to verify
 
