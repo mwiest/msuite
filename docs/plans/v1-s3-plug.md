@@ -102,10 +102,9 @@ Each item is settled during slice 6.
    release runtime classpath (Ktor, OkHttp, Okio, cryptography-kotlin, Kermit and kotlinx-io were
    missing), and SLF4J apart, as it is MIT, not Apache 2.0.
 9. **Connect and Sync now** (relay and S3 forms; found 2026-11-11). Settled 2026-11-13: Connect
-   probes before saving (decision 0086); listing in `4f916fb` (S3) and `df3bdc7` (relay), write and delete in
-   `83f7af3`. With that, "stored
-   on this device" only appears for a working setup, and Connect fits a small edit too, so the
-   labels stay.
+   probes before saving (decision 0086); listing in `4f916fb` (S3) and `df3bdc7` (relay), write
+   and delete in `83f7af3`. With that, "stored on this device" only appears for a working setup,
+   and Connect fits a small edit too, so the labels stay.
 10. **`\'` showed in English UI text.** Settled 2026-11-13: Compose resources don't unescape
     `\'`, so the 17 English strings now use a plain `'`, and `StringResourcesTest` (in
     `apps/todo/domain`, as `shared` has no tests) fails on any `\'`.
