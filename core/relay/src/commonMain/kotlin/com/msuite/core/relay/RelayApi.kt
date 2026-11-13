@@ -2,6 +2,7 @@ package com.msuite.core.relay
 
 import com.msuite.core.crypto.hkdf
 import com.msuite.core.sync.ObjectKey
+import com.msuite.core.sync.ProbeKey
 import com.msuite.core.sync.encodeBase32Hex
 
 /** HKDF info prefix that binds the relay bearer token to an app (decision 0030). */
@@ -56,7 +57,7 @@ object RelayApi {
 
     /**
      * Parses a relay path into its key or namespace, or `null` when it isn't one. A listing accepts
-     * both `/v1/{app}/{group}` and `/v1/{app}/{group}/`; objects require the full 0029 grammar.
+     * both `/v1/{app}/{group}` and `/v1/{app}/{group}/`; objects require the 0029 grammar or a probe name.
      */
     fun parsePath(path: String): RelayPath? = path
         .takeIf { it.startsWith(API_PREFIX) }
@@ -90,11 +91,11 @@ object RelayApi {
             .toList()
     }
 
-    /** Whether [key] is a complete object key with the safe app/group segments and the 0029 grammar. */
+    /** Whether [key] is a complete key with the safe app/group segments: the 0029 grammar or a [ProbeKey]. */
     fun isValidKey(key: String): Boolean {
         val parts = key.split('/')
         if (parts.size != KEY_SEGMENTS || !isValidAppId(parts[0]) || !isValidGroupId(parts[1])) return false
-        return runCatching { ObjectKey.parse(key) }.isSuccess
+        return ProbeKey.isProbeName(parts[2]) || runCatching { ObjectKey.parse(key) }.isSuccess
     }
 
     private fun isValidNamespace(namespace: String): Boolean {

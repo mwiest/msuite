@@ -4,6 +4,7 @@ import com.msuite.core.model.DeviceId
 import com.msuite.core.model.Hlc
 import com.msuite.core.sync.BatchType
 import com.msuite.core.sync.ObjectKeyPrefix
+import com.msuite.core.sync.ProbeKey
 import com.msuite.core.sync.groupId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
@@ -65,6 +66,14 @@ class RelayApiTest : StringSpec({
         shouldThrow<IllegalArgumentException> { RelayApi.keyPath("todo/$GROUP/notaname") }
         RelayApi.isValidKey("todo/$GROUP/$NAME") shouldBe true
         RelayApi.isValidKey("todo/$GROUP/..") shouldBe false
+    }
+
+    "a probe name is a valid object name besides the 0029 keys" {
+        val probe = ProbeKey.random("todo", GROUP)
+        RelayApi.isValidKey(probe) shouldBe true
+        RelayApi.keyPath(probe) shouldBe "/v1/$probe"
+        RelayApi.parseListing("todo/$GROUP/", probe.substringAfterLast('/')) shouldContainExactly listOf(probe)
+        RelayApi.isValidKey("todo/$GROUP/probe_xyz") shouldBe false
     }
 
     "parsePath rejects another version and missing segments" {

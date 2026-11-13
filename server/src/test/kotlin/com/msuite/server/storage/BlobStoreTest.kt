@@ -7,6 +7,7 @@ import com.msuite.core.relay.RelayPath
 import com.msuite.core.relay.relayToken
 import com.msuite.core.sync.BatchType
 import com.msuite.core.sync.ObjectKeyPrefix
+import com.msuite.core.sync.ProbeKey
 import com.msuite.core.sync.ciphertextHash
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly
@@ -60,6 +61,16 @@ class BlobStoreTest : StringSpec({
         store.get(path, TOKEN).bytes() shouldBe bytes
         store.list(NAMESPACE, TOKEN) shouldBe ListResult.Ok(listOf(checkNotNull(path.name)))
         store.usedBytes(NAMESPACE) shouldBe bytes.size.toLong()
+    }
+
+    "a probe name takes any body, lists, and deletes" {
+        val path = pathOf(ProbeKey.random(APP, GROUP))
+        val name = checkNotNull(path.name)
+
+        store.put(path, TOKEN, bytesOf("probe")) shouldBe PutResult.Created
+        store.list(NAMESPACE, TOKEN) shouldBe ListResult.Ok(listOf(name))
+        store.delete(path, TOKEN) shouldBe DeleteResult.Deleted
+        store.list(NAMESPACE, TOKEN) shouldBe ListResult.Ok(emptyList())
     }
 
     "a body whose hash doesn't match its key is refused" {

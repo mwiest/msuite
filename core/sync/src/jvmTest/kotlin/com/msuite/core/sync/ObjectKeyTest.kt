@@ -94,4 +94,15 @@ class ObjectKeyTest : StringSpec({
         shouldThrow<IllegalArgumentException> { ObjectKey.parse(text.dropLast(1) + "W") }
         shouldThrow<IllegalArgumentException> { ObjectKey.parse(text.replace("_s_", "_x_")) }
     }
+
+    "a probe key sits in the namespace but is no object key" {
+        val key = ProbeKey.random("todo", GROUP_ID)
+        key shouldMatch Regex("todo/$GROUP_ID/probe_[0-9a-f]{32}")
+        ProbeKey.isProbeName(key.substringAfterLast('/')) shouldBe true
+        ProbeKey.random("todo", GROUP_ID) shouldNotBe key
+        shouldThrow<IllegalArgumentException> { ObjectKey.parse(key) }
+        ProbeKey.isProbeName("probe_" + "g".repeat(32)) shouldBe false
+        ProbeKey.isProbeName("probe_" + "A".repeat(32)) shouldBe false
+        ProbeKey.isProbeName("probe_abc") shouldBe false
+    }
 })

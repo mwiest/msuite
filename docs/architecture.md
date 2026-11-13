@@ -308,7 +308,8 @@ joins (0033) and the periodic compaction of 0002.
 ### Relay
 
 `core/relay` owns the wire contract and the client plug (decision 0079): `RelayApi` builds and
-parses `/v1/{appId}/{groupId}/{name}` and the `/v1/{appId}/{groupId}/` listing, `RelayStatus` names
+parses `/v1/{appId}/{groupId}/{name}` (a 0029 key or a probe name, decision 0086) and the
+`/v1/{appId}/{groupId}/` listing, `RelayStatus` names
 the statuses, `relayToken` derives the bearer token, and `RelayPlug` is the `BackendPlug` over a
 Ktor `HttpClient`. The client, and the engine behind it (OkHttp on Android), belongs to the shell
 that builds it; `core/relay` never picks an engine. Reachability maps to `RelayRefused(refusal)` for
@@ -317,7 +318,7 @@ that builds it; `core/relay` never picks an engine. Reachability maps to `RelayR
 `server/` is one Ktor CIO binary with filesystem blobs and manual wiring (decision 0017). It uses
 the same `RelayApi` so the two sides cannot drift. `BlobStore` stores `{dataDir}/{appId}/{groupId}/
 {name}` and links a complete temp file into place, so a listed name is always complete; the hash
-in the name is checked against the body, and a temp file left by a crashed publish is deleted
+in the name is checked against the body (a `ProbeKey` name, which has none, takes any body; 0086), and a temp file left by a crashed publish is deleted
 when the relay starts. The first `put` to a namespace registers it by linking
 `SHA-256(token)` into `.token` (decision 0030); later requests must present the same bearer token.
 `RelayConfig` reads `MSUITE_RELAY_PORT` (falling back to a host's `PORT`, decision 0081), `_DATA`,
@@ -344,12 +345,12 @@ credentials, access denied, a missing bucket, a wrong region (`AuthorizationHead
 `MockEngine` that re-checks each signature from the URL it received. `S3Section.toConfig()` turns a
 pairing section into an `S3Config`, or `null` where the config's stricter check refuses it.
 
-In the ToDo app, `connectRelay(url)` and `connectS3(...)` both list the group's prefix with the
-new settings before saving them (a relay lists an unregistered namespace as empty, so a new group
-passes). A list doesn't prove write rights: a read-only key or a relay allowlist that refuses
-registration shows at the first publish. `LiveSyncActions` takes `S3Options` (the shell's `S3PlugFactory`, the
+In the ToDo app, `connectRelay(url)` and `connectS3(...)` both check the new settings before saving
+them (decision 0086): list the group's prefix, put a `ProbeKey` object there and delete it. A relay
+lists an unregistered namespace as empty, and the probe's put registers it, so a new group passes.
+`LiveSyncActions` takes `S3Options` (the shell's `S3PlugFactory`, the
 `SecretStore`, and whether http is allowed). `connectS3(backend, secret)` checks the config, then
-lists the group's prefix with it through a plug of its own: a refusal comes back as
+runs that check through a plug of its own: a refusal comes back as
 `S3SetupError.Refused`, any other failure as `Unreachable`, and the current backend and secret stay.
 Only then does it save the secret and choose the backend, so S3 is never chosen without one; a
 blank secret keeps the stored one, and a connect always restarts the sync, so a new secret takes

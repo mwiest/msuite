@@ -4,6 +4,7 @@ import com.msuite.core.crypto.sha256
 import com.msuite.core.relay.RelayApi
 import com.msuite.core.relay.RelayPath
 import com.msuite.core.sync.ObjectKey
+import com.msuite.core.sync.ProbeKey
 import com.msuite.core.sync.ciphertextHash
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -92,8 +93,7 @@ class BlobStore(private val root: Path, private val io: CoroutineContext = Dispa
         mayRegister: Boolean = true,
     ): PutResult = withContext(io) {
         val name = path.name ?: return@withContext PutResult.BadRequest
-        if (!RelayApi.isValidKey(path.key)) return@withContext PutResult.BadRequest
-        if (ciphertextHash(bytes) != ObjectKey.parse(path.key).hash) return@withContext PutResult.BadRequest
+        if (!isWellFormed(path, name, bytes)) return@withContext PutResult.BadRequest
         if (bytes.size > limits.maxObjectBytes) return@withContext PutResult.TooLarge
 
         when (access(path, token)) {
@@ -125,6 +125,11 @@ class BlobStore(private val root: Path, private val io: CoroutineContext = Dispa
             Files.deleteIfExists(temp)
         }
     }
+
+    /** A 0029 key whose hash is the body's, or a probe name, which takes any body. */
+    private suspend fun isWellFormed(path: RelayPath, name: String, bytes: ByteArray): Boolean =
+        RelayApi.isValidKey(path.key) &&
+            (ProbeKey.isProbeName(name) || ciphertextHash(bytes) == ObjectKey.parse(path.key).hash)
 
     /** The names under [path]'s namespace, without the namespace prefix; unregistered lists empty. */
     suspend fun list(path: RelayPath, token: String): ListResult = withContext(io) {

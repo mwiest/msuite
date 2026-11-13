@@ -44,11 +44,8 @@ when the plan closes):
 
 Decided 2026-11-13:
 
-- **Connect probes before saving** (relay and S3), over "save, then sync" and relabelling only:
-  it lists the group's prefix with the new settings and saves only if that works; otherwise the
-  form shows the refusal and the current backend stays. A scanned code skips the probe (it comes
-  from a working device; a join must not need the network). A list doesn't prove write rights:
-  check 5's read-only token, or a relay allowlist, still fails only at the first publish.
+- **Connect probes before saving** (relay and S3): list, write a probe object, delete it; only then
+  save. Recorded as decision 0086.
 
 ## Slices
 
@@ -105,7 +102,8 @@ Each item is settled during slice 6.
    release runtime classpath (Ktor, OkHttp, Okio, cryptography-kotlin, Kermit and kotlinx-io were
    missing), and SLF4J apart, as it is MIT, not Apache 2.0.
 9. **Connect and Sync now** (relay and S3 forms; found 2026-11-11). Settled 2026-11-13: Connect
-   probes before saving (see Decisions); S3 in `4f916fb`, the relay in `df3bdc7`. With that, "stored
+   probes before saving (decision 0086); listing in `4f916fb` (S3) and `df3bdc7` (relay), write and delete in
+   `<hash>`. With that, "stored
    on this device" only appears for a working setup, and Connect fits a small edit too, so the
    labels stay.
 10. **`\'` showed in English UI text.** Settled 2026-11-13: Compose resources don't unescape
@@ -187,7 +185,8 @@ the monitor).
 - **18 Upgrade:** partly: device 2 had run a pre-refactor build since 2026-10-27 and kept its data
   through the 2026-11-10 upgrade; the words weren't noted, so rerun it on a fresh device.
 
-Next session: on R2 checks 5, 6, 7 (`http://` in a release build), 9 to 15, 17, 18, 20, 21; then
+Next session: redeploy the hosted relay (an older one refuses the probe, decision 0086); on R2
+checks 5, 6, 7 (`http://` in a release build), 9 to 15, 17, 18, 20, 21; then
 B2 (19); then settle open items 1, 2 (B2), 4 to 7.
 
 ## How to verify

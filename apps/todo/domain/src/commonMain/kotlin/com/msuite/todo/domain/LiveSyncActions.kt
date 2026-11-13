@@ -17,6 +17,7 @@ import com.msuite.core.sync.BackendPlug
 import com.msuite.core.sync.FileStore
 import com.msuite.core.sync.FolderPlug
 import com.msuite.core.sync.LiveSync
+import com.msuite.core.sync.ProbeKey
 import com.msuite.core.sync.Replica
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -33,6 +34,8 @@ import kotlin.time.Instant
 
 /** The app segment of every object key (decision 0029) and of the relay token (0030). */
 const val TODO_APP_ID = "todo"
+
+private val PROBE_BYTES = "msuite probe".encodeToByteArray()
 
 /** Builds the relay plug for [url] under the group [root]; the shell injects the HTTP engine (0079). */
 fun interface RelayPlugFactory {
@@ -225,11 +228,18 @@ class LiveSyncActions(
         }
     }
 
-    /** Lists this group's objects through [plug]: what it threw, or `null` if the backend answered. */
+    /**
+     * Lists this group's objects through [plug], then writes and deletes a [ProbeKey] there, so a
+     * key without write or delete rights is refused here; what it threw, or `null` if all worked.
+     */
     // Plugs throw platform exceptions (IOException and others), so catch broadly.
     @Suppress("TooGenericExceptionCaught")
     private suspend fun probe(plug: BackendPlug): Exception? = try {
-        plug.list(groupId()?.let { "$TODO_APP_ID/$it/" } ?: "$TODO_APP_ID/")
+        val group = requireNotNull(groupId()) { "no root" }
+        plug.list("$TODO_APP_ID/$group/")
+        val probe = ProbeKey.random(TODO_APP_ID, group)
+        plug.put(probe, PROBE_BYTES)
+        plug.delete(probe)
         null
     } catch (e: CancellationException) {
         throw e

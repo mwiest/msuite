@@ -32,21 +32,24 @@ private object NoFolder : FolderPick {
     override suspend fun pick(): String? = null
 }
 
-/** Records every plug it builds; each one is [plug], or throws [error] while that is set. */
+/** Records every plug it builds; each one is [plug], or throws [error] (or [putError], [deleteError]) while set. */
 private class RecordingFactory(var error: Exception? = null) : S3PlugFactory {
+    var putError: Exception? = null
+    var deleteError: Exception? = null
     val built = mutableListOf<Pair<S3Config, S3Credentials>>()
     val plug = MemoryPlug()
 
     override fun create(config: S3Config, credentials: S3Credentials): BackendPlug {
         built += config to credentials
         return object : BackendPlug {
-            override suspend fun put(key: String, bytes: ByteArray) = live().put(key, bytes)
+            override suspend fun put(key: String, bytes: ByteArray) =
+                (putError?.let { throw it } ?: live()).put(key, bytes)
 
             override suspend fun list(prefix: String): List<String> = live().list(prefix)
 
             override suspend fun get(key: String): ByteArray? = live().get(key)
 
-            override suspend fun delete(key: String) = live().delete(key)
+            override suspend fun delete(key: String) = (deleteError?.let { throw it } ?: live()).delete(key)
         }
     }
 
@@ -203,6 +206,25 @@ class S3SyncTest : StringSpec({
             f.live.backend.value shouldBe backend
             f.secrets.stored shouldBe "OLD"
             f.factory.built.map { it.first.region }.distinct() shouldBe listOf("auto", "eu")
+            f.live.setBackend(SyncBackend.None)
+        }
+    }
+
+    "connect writes and deletes a probe; either refused, it says why and keeps the backend" {
+        coroutineScope {
+            val f = Fixture(this)
+            val readOnly = S3Refused(S3Refusal.Forbidden, 403, "AccessDenied")
+            f.factory.putError = readOnly
+            f.live.connectS3(backend, "S") shouldBe S3SetupError.Refused(S3Refusal.Forbidden)
+            f.factory.putError = null
+            f.factory.deleteError = readOnly
+            f.live.connectS3(backend, "S") shouldBe S3SetupError.Refused(S3Refusal.Forbidden)
+            f.live.backend.value shouldBe SyncBackend.None
+
+            f.factory.deleteError = null
+            f.factory.plug.list("todo/").forEach { f.factory.plug.delete(it) }
+            f.live.connectS3(backend, "S").shouldBeNull()
+            f.factory.plug.list("todo/").shouldBeEmpty()
             f.live.setBackend(SyncBackend.None)
         }
     }

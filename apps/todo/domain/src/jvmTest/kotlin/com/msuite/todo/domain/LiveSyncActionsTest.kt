@@ -17,6 +17,7 @@ import com.msuite.core.sync.testing.TestClock
 import com.russhwolf.settings.MapSettings
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempdir
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -248,7 +249,8 @@ class LiveSyncActionsTest : StringSpec({
 
     "relay connect checks the URL and lists first; refused or unreachable, it keeps the backend" {
         val settings = TodoSettings(MapSettings())
-        var plug: BackendPlug = CountingPlug()
+        val relayStore = MemoryPlug()
+        var plug: BackendPlug = relayStore
 
         coroutineScope {
             val live = LiveSyncActions(
@@ -264,7 +266,13 @@ class LiveSyncActionsTest : StringSpec({
             live.connectRelay("http://relay.example") shouldBe RelaySetupError.Insecure
             live.connectRelay(" https://relay.example/ ").shouldBeNull()
             live.backend.value shouldBe SyncBackend.Relay("https://relay.example")
+            relayStore.list("todo/").filter { "probe_" in it }.shouldBeEmpty()
 
+            plug = object : BackendPlug by MemoryPlug() {
+                override suspend fun put(key: String, bytes: ByteArray) =
+                    throw RelayRefused(RelayRefusal.Forbidden, 403)
+            }
+            live.connectRelay("https://other.example") shouldBe RelaySetupError.Refused(RelayRefusal.Forbidden)
             plug = ThrowingPlug(RelayRefused(RelayRefusal.Unauthorized, 401))
             live.connectRelay("https://other.example") shouldBe RelaySetupError.Refused(RelayRefusal.Unauthorized)
             plug = ThrowingPlug(IOException("no route"))

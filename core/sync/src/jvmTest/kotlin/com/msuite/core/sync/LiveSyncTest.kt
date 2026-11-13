@@ -473,4 +473,21 @@ class LiveSyncTest : StringSpec({
 
         plug.list("todo/") shouldHaveSize 1
     }
+
+    "a probe object is neither read, nor unreadable, nor deleted" {
+        val writer = Replica(driver(), local, TestClock(1_000))
+        val reader = Replica(driver(), peer, TestClock(1_000))
+        val plug = MemoryPlug()
+        val written = writer.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to title))
+        publish(writer, plug)
+        val key = plug.list("todo/").single()
+        val probe = ProbeKey.random("todo", key.split('/')[1])
+        plug.put(probe, byteArrayOf(1))
+
+        pull(reader, plug)
+
+        reader.cells() shouldContainExactlyInAnyOrder written
+        reader.isCorrupt(plugId, probe) shouldBe false
+        plug.list("todo/") shouldContainExactlyInAnyOrder listOf(key, probe)
+    }
 })
