@@ -184,11 +184,14 @@ fun SyncBackendSection(live: LiveSyncActions, allowInsecureRelay: Boolean) {
                 backend = backend,
                 live = live,
                 busy = busy,
-                onSync = {
+                runBusy = { work ->
                     scope.launch {
                         busy = true
-                        live.syncNow()
-                        busy = false
+                        try {
+                            work()
+                        } finally {
+                            busy = false
+                        }
                     }
                 },
             )
@@ -411,7 +414,7 @@ private fun RelayRefusal.message(): StringResource = when (this) {
     RelayRefusal.ObjectTooLarge -> Res.string.relay_too_large
 }
 
-private fun S3Refusal.message(): StringResource = when (this) {
+internal fun S3Refusal.message(): StringResource = when (this) {
     S3Refusal.BadCredentials -> Res.string.s3_bad_credentials
     S3Refusal.Forbidden -> Res.string.s3_forbidden
     S3Refusal.NoSuchBucket -> Res.string.s3_no_bucket

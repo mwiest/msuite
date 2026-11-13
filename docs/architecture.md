@@ -345,14 +345,17 @@ credentials, access denied, a missing bucket, a wrong region (`AuthorizationHead
 pairing section into an `S3Config`, or `null` where the config's stricter check refuses it.
 
 In the ToDo app, `LiveSyncActions` takes `S3Options` (the shell's `S3PlugFactory`, the
-`SecretStore`, and whether http is allowed). `connectS3(backend, secret)` checks the config, saves
-the secret first and then chooses the backend, so S3 is never chosen without one; a blank secret
-keeps the stored one, and a connect always restarts the sync, so a new secret takes effect.
+`SecretStore`, and whether http is allowed). `connectS3(backend, secret)` checks the config, then
+lists the group's prefix with it through a plug of its own: a refusal comes back as
+`S3SetupError.Refused`, any other failure as `Unreachable`, and the current backend and secret stay.
+Only then does it save the secret and choose the backend, so S3 is never chosen without one; a
+blank secret keeps the stored one, and a connect always restarts the sync, so a new secret takes
+effect.
 Choosing any other backend clears the secret. Without a readable secret (the KeyStore key was
 lost) the backend stays chosen but doesn't sync, and `needsS3Secret()` lets Settings ask for it.
 `pairingBackend()` builds the device's QR descriptor, with the S3 section and its secret; S3
-without a secret shows as `manual`. A scanned S3 code joins or switches through the same
-`connectS3`, and a code of the device's own group naming another bucket is offered as a switch
+without a secret shows as `manual`. A scanned S3 code joins or switches with the same checks but no listing (the code comes
+from a working device, and a join must not need the network), and a code of the device's own group naming another bucket is offered as a switch
 (`JoinPreview.SwitchBackend(type, target)`). Refusals reach `SyncStatus.s3Refused`, which Settings
 maps to one message each. The plug ID is `s3:{endpoint}/{bucket}/{prefix}`.
 

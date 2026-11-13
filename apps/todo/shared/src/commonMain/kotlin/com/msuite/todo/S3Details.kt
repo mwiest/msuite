@@ -35,6 +35,7 @@ import com.msuite.todo.resources.s3_insecure
 import com.msuite.todo.resources.s3_invalid
 import com.msuite.todo.resources.s3_missing_secret
 import com.msuite.todo.resources.s3_prefix
+import com.msuite.todo.resources.s3_probe_unreachable
 import com.msuite.todo.resources.s3_region
 import com.msuite.todo.resources.s3_region_hint
 import com.msuite.todo.resources.s3_secret
@@ -81,7 +82,7 @@ internal fun S3Details(
     backend: SyncBackend,
     live: LiveSyncActions,
     busy: Boolean,
-    onSync: () -> Unit,
+    runBusy: (suspend () -> Unit) -> Unit,
 ) {
     val secretState = live.s3Secret(backend)
     var endpoint by remember(initial) { mutableStateOf(initial.endpoint) }
@@ -114,10 +115,12 @@ internal fun S3Details(
             secret = true,
         ) { secret = it }
     }
-    val message = when (error) {
+    val message = when (val setup = error) {
         S3SetupError.Invalid, S3SetupError.Unsupported -> Res.string.s3_invalid
         S3SetupError.Insecure -> Res.string.s3_insecure
         S3SetupError.MissingSecret -> Res.string.s3_missing_secret
+        S3SetupError.Unreachable -> Res.string.s3_probe_unreachable
+        is S3SetupError.Refused -> setup.refusal.message()
         null -> Res.string.s3_secret_missing.takeIf { secretState == S3Secret.Missing }
     }
     message?.let {
@@ -139,17 +142,19 @@ internal fun S3Details(
                     prefix.trim(),
                     accessKey.trim(),
                 )
-                error = live.connectS3(typed, secret)
-                if (error == null) {
-                    secret = ""
-                    changingSecret = false
+                runBusy {
+                    error = live.connectS3(typed, secret)
+                    if (error == null) {
+                        secret = ""
+                        changingSecret = false
+                    }
                 }
             },
         ) {
             Text(stringResource(Res.string.relay_save))
         }
         if (secretState == S3Secret.Stored) {
-            TextButton(enabled = !busy, onClick = onSync) {
+            TextButton(enabled = !busy, onClick = { runBusy { live.syncNow() } }) {
                 Text(stringResource(Res.string.sync_now))
             }
         }

@@ -23,6 +23,7 @@ import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.yield
+import java.io.IOException
 import java.util.Properties
 
 private val backend = SyncBackend.S3("https://acc.r2.cloudflarestorage.com", "auto", "msuite", "todo", "AKID")
@@ -31,25 +32,28 @@ private object NoFolder : FolderPick {
     override suspend fun pick(): String? = null
 }
 
-/** Records every plug it builds; each one is [plug], or throws [error] when set. */
-private class RecordingFactory(private val error: Exception? = null) : S3PlugFactory {
+/** Records every plug it builds; each one is [plug], or throws [error] while that is set. */
+private class RecordingFactory(var error: Exception? = null) : S3PlugFactory {
     val built = mutableListOf<Pair<S3Config, S3Credentials>>()
     val plug = MemoryPlug()
 
     override fun create(config: S3Config, credentials: S3Credentials): BackendPlug {
         built += config to credentials
-        return error?.let(::failing) ?: plug
+        return object : BackendPlug {
+            override suspend fun put(key: String, bytes: ByteArray) = live().put(key, bytes)
+
+            override suspend fun list(prefix: String): List<String> = live().list(prefix)
+
+            override suspend fun get(key: String): ByteArray? = live().get(key)
+
+            override suspend fun delete(key: String) = live().delete(key)
+        }
     }
-}
 
-private fun failing(error: Exception) = object : BackendPlug {
-    override suspend fun put(key: String, bytes: ByteArray) = throw error
+    private fun live(): BackendPlug = error?.let { throw it } ?: plug
 
-    override suspend fun list(prefix: String): List<String> = throw error
-
-    override suspend fun get(key: String): ByteArray? = throw error
-
-    override suspend fun delete(key: String) = throw error
+    /** The distinct (prefix, secret) pairs plugs were built with, in order. */
+    fun prefixesAndSecrets() = built.map { it.first.prefix to it.second.secretAccessKey }.distinct()
 }
 
 private class Fixture(
@@ -88,7 +92,8 @@ class S3SyncTest : StringSpec({
             f.live.backend.value shouldBe backend
             f.secrets.stored shouldBe "SECRET"
             f.storedValues().contains("SECRET") shouldBe false
-            val (config, credentials) = f.factory.built.single()
+            f.factory.prefixesAndSecrets() shouldBe listOf("todo" to "SECRET")
+            val (config, credentials) = f.factory.built.last()
             config shouldBe S3Config(backend.endpoint, "auto", "msuite", "todo")
             credentials.accessKeyId shouldBe "AKID"
             credentials.secretAccessKey shouldBe "SECRET"
@@ -129,8 +134,7 @@ class S3SyncTest : StringSpec({
             f.live.connectS3(backend.copy(prefix = "other"), "").shouldBeNull()
             f.live.connectS3(backend.copy(prefix = "other"), "B").shouldBeNull()
 
-            f.factory.built.map { it.first.prefix to it.second.secretAccessKey } shouldBe
-                listOf("todo" to "A", "other" to "A", "other" to "B")
+            f.factory.prefixesAndSecrets() shouldBe listOf("todo" to "A", "other" to "A", "other" to "B")
             f.live.setBackend(SyncBackend.None)
         }
     }
@@ -146,7 +150,7 @@ class S3SyncTest : StringSpec({
             f.live.needsS3Secret() shouldBe true
             f.live.connectS3(backend, "NEW").shouldBeNull()
             f.live.needsS3Secret() shouldBe false
-            f.factory.built.single().second.secretAccessKey shouldBe "NEW"
+            f.factory.prefixesAndSecrets() shouldBe listOf("todo" to "NEW")
             f.live.setBackend(SyncBackend.None)
         }
     }
@@ -186,11 +190,39 @@ class S3SyncTest : StringSpec({
         }
     }
 
+    "connect lists the bucket first; refused or unreachable, it says why and keeps the backend" {
+        coroutineScope {
+            val f = Fixture(this)
+            f.live.connectS3(backend, "OLD").shouldBeNull()
+
+            f.factory.error = S3Refused(S3Refusal.WrongRegion, 400, "InvalidRegionName")
+            f.live.connectS3(backend.copy(region = "eu"), "NEW") shouldBe S3SetupError.Refused(S3Refusal.WrongRegion)
+            f.factory.error = IOException("no route")
+            f.live.connectS3(backend.copy(region = "eu"), "NEW") shouldBe S3SetupError.Unreachable
+
+            f.live.backend.value shouldBe backend
+            f.secrets.stored shouldBe "OLD"
+            f.factory.built.map { it.first.region }.distinct() shouldBe listOf("auto", "eu")
+            f.live.setBackend(SyncBackend.None)
+        }
+    }
+
+    "a joined code needs no reachable bucket" {
+        coroutineScope {
+            val f = Fixture(this, factory = RecordingFactory(IOException("offline")))
+            val section = S3Section(backend.endpoint, "auto", "msuite", "todo", "AKID", "QRSECRET")
+            f.live.applyJoinedBackend(BackendType.S3, section.encode())
+            f.live.backend.value shouldBe backend
+            f.secrets.stored shouldBe "QRSECRET"
+            f.live.setBackend(SyncBackend.None)
+        }
+    }
+
     "an S3 refusal is carried on the status" {
         coroutineScope {
-            val refusal = S3Refused(S3Refusal.BadCredentials, 403, "SignatureDoesNotMatch")
-            val f = Fixture(this, factory = RecordingFactory(refusal))
+            val f = Fixture(this)
             f.live.connectS3(backend, "SECRET").shouldBeNull()
+            f.factory.error = S3Refused(S3Refusal.BadCredentials, 403, "SignatureDoesNotMatch")
             yield()
             f.live.syncNow()
 

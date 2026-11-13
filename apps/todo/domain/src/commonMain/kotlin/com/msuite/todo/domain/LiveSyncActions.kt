@@ -8,6 +8,7 @@ import com.msuite.core.model.PlugId
 import com.msuite.core.relay.RelayRefused
 import com.msuite.core.s3.S3Config
 import com.msuite.core.s3.S3Credentials
+import com.msuite.core.s3.S3Refusal
 import com.msuite.core.s3.S3Refused
 import com.msuite.core.s3.credentials
 import com.msuite.core.s3.toConfig
@@ -24,9 +25,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+
+private const val APP_ID = "todo"
 
 /** Builds the relay plug for [url] under the group [root]; the shell injects the HTTP engine (0079). */
 fun interface RelayPlugFactory {
@@ -52,18 +56,24 @@ data class S3Options(
 )
 
 /** Why [LiveSyncActions.connectS3] refused a configuration. */
-enum class S3SetupError {
+sealed interface S3SetupError {
     /** A field is blank, or the endpoint is not an `http(s)://host[:port]`. */
-    Invalid,
+    data object Invalid : S3SetupError
 
     /** An `http://` endpoint in a release build (as for the relay, decision 0079). */
-    Insecure,
+    data object Insecure : S3SetupError
 
     /** No secret typed and none stored. */
-    MissingSecret,
+    data object MissingSecret : S3SetupError
 
     /** This build has no S3 plug. */
-    Unsupported,
+    data object Unsupported : S3SetupError
+
+    /** The bucket refused the listing made before saving. */
+    data class Refused(val refusal: S3Refusal) : S3SetupError
+
+    /** The listing made before saving failed without an answer from the bucket. */
+    data object Unreachable : S3SetupError
 }
 
 /**
@@ -133,28 +143,59 @@ class LiveSyncActions(
     fun setBackend(value: SyncBackend) = switchTo(value, restart = false)
 
     /**
-     * Chooses the S3 bucket [backend] with [secret], or the stored secret when [secret] is blank.
-     * The secret is saved before the backend is chosen, so S3 is never chosen without one.
+     * Chooses the S3 bucket [backend] with [secret], or the stored secret when [secret] is blank,
+     * after listing this group's objects with them: a refusal keeps the current backend and secret.
      */
-    fun connectS3(backend: SyncBackend.S3, secret: String): S3SetupError? {
-        val options = s3 ?: return S3SetupError.Unsupported
+    suspend fun connectS3(backend: SyncBackend.S3, secret: String): S3SetupError? {
         val typed = secret.trim()
-        val section = backend.section(typed.ifEmpty { options.secrets.load().orEmpty() })
-        val wellFormed = section.toConfig() != null &&
+        val section = s3?.let { backend.section(typed.ifEmpty { it.secrets.load().orEmpty() }) }
+        return checkS3(section) ?: probeS3(requireNotNull(section)) ?: run {
+            commitS3(backend, typed)
+            null
+        }
+    }
+
+    /** Chooses an S3 bucket from a pairing code without listing it: the code came from a working device. */
+    private fun connectS3Unchecked(section: S3Section): Boolean {
+        val usable = checkS3(section) == null
+        if (usable) commitS3(section.backend(), section.secretAccessKey.trim())
+        return usable
+    }
+
+    private fun checkS3(section: S3Section?): S3SetupError? {
+        val options = s3
+        val wellFormed = section?.toConfig() != null &&
             PairingPayload.s3Section(section.copy(secretAccessKey = "-").encode()) != null
         return when {
+            options == null || section == null -> S3SetupError.Unsupported
             !wellFormed -> S3SetupError.Invalid
-
-            !isAllowedServerUrl(backend.endpoint, options.allowInsecure) -> S3SetupError.Insecure
-
+            !isAllowedServerUrl(section.endpoint, options.allowInsecure) -> S3SetupError.Insecure
             section.secretAccessKey.isBlank() -> S3SetupError.MissingSecret
-
-            else -> {
-                if (typed.isNotEmpty()) options.secrets.save(typed)
-                switchTo(backend, restart = true)
-                null
-            }
+            else -> null
         }
+    }
+
+    // Plugs throw platform exceptions (IOException and others), so anything but a refusal reads as unreachable.
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun probeS3(section: S3Section): S3SetupError? {
+        val plug = requireNotNull(s3).plugFactory.create(requireNotNull(section.toConfig()), section.credentials())
+        val prefix = groupId()?.let { "$APP_ID/$it/" } ?: "$APP_ID/"
+        return try {
+            plug.list(prefix)
+            null
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: S3Refused) {
+            S3SetupError.Refused(e.refusal)
+        } catch (_: Exception) {
+            S3SetupError.Unreachable
+        }
+    }
+
+    /** The secret is saved before the backend is chosen, so S3 is never chosen without one. */
+    private fun commitS3(backend: SyncBackend.S3, typedSecret: String) {
+        if (typedSecret.isNotEmpty()) requireNotNull(s3).secrets.save(typedSecret)
+        switchTo(backend, restart = true)
     }
 
     /** Whether the chosen S3 backend lacks its secret (lost with the KeyStore key): Settings asks for it. */
@@ -193,7 +234,7 @@ class LiveSyncActions(
         identity.root(KEY_GEN_V1)
             ?.let(::connectionFor)
             ?.let { (plug, plugId) ->
-                val sync = LiveSync(replica, plug, plugId, "todo", identity, scope, 10.seconds)
+                val sync = LiveSync(replica, plug, plugId, APP_ID, identity, scope, 10.seconds)
                 liveSync = sync
                 startJob = scope.launch { sync.start() }
                 if (pollingWanted) startPolling()
@@ -259,10 +300,7 @@ class LiveSyncActions(
             url != null
         }
 
-        BackendType.S3 -> {
-            val joined = PairingPayload.s3Section(section)
-            joined != null && connectS3(joined.backend(), joined.secretAccessKey) == null
-        }
+        BackendType.S3 -> PairingPayload.s3Section(section)?.let(::connectS3Unchecked) ?: false
 
         BackendType.Manual, BackendType.Folder -> false
     }

@@ -157,6 +157,7 @@
     <string name="s3_insecure">This build only accepts https:// endpoints.</string>
     <string name="s3_missing_secret">Enter the secret access key.</string>
     <string name="s3_unreachable">Can't reach the bucket. Retrying every 10 seconds; your changes are kept on this device.</string>
+    <string name="s3_probe_unreachable">Can't reach the endpoint. Check its address and this device's connection.</string>
     <string name="s3_bad_credentials">The storage rejected the access key. Check the key ID and the secret.</string>
     <string name="s3_forbidden">This access key may not use the bucket. Check the bucket name, and that the key has read, write, list and delete rights on it.</string>
     <string name="s3_no_bucket">The bucket doesn't exist. Check its name and the endpoint.</string>

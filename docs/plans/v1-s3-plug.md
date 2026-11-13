@@ -96,12 +96,13 @@ Each item is settled during slice 6.
 8. **The licences line.** Settled 2026-11-13: it now names every non-AndroidX library in the
    release runtime classpath (Ktor, OkHttp, Okio, cryptography-kotlin, Kermit and kotlinx-io were
    missing), and SLF4J apart, as it is MIT, not Apache 2.0.
-9. **Connect and Sync now** (relay and S3 forms; found 2026-11-11). Connect only validates the form
-   and saves; it doesn't check that the backend works, so a wrong region or bucket shows only after
-   the next sync, while the form already says the secret is "stored on this device", which reads
-   as if the setup was accepted. Connect also feels wrong for a small edit such as the prefix.
-   Rethink both actions and their labels, e.g. Connect runs a first sync and reports its refusal
-   in the form; needs a decision on the options.
+9. **Connect and Sync now** (relay and S3 forms; found 2026-11-11). Decided 2026-11-13: Connect
+   probes before saving (over "save, then sync" and relabelling only): it lists the group's prefix
+   with the new settings and saves only if that works; otherwise the form shows the refusal and the
+   current backend stays. With that, "stored on this device" only appears for a working setup, and
+   Connect fits a small edit too, so the labels stay. A list doesn't prove write rights (check 5's
+   read-only token passes it and fails at the first publish). S3 done (`<hash>`); the relay's
+   Connect is next.
 10. **`\'` showed in English UI text.** Settled 2026-11-13: Compose resources don't unescape
     `\'`, so the 17 English strings now use a plain `'`, and `StringResourcesTest` (in
     `apps/todo/domain`, as `shared` has no tests) fails on any `\'`.
