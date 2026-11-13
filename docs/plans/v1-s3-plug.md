@@ -1,8 +1,8 @@
 # Plan: the S3 plug (v1 step 17)
 
 Status: **slices 1 to 5 done (all code, green in `allTests`); slice 6, the device check against
-real buckets, in progress: R2 checks 1 to 4, 8 and 16 passed on 2026-11-11 (see Results), B2 not
-started.** Started 2026-11-10.
+real buckets, in progress: on R2 every check passed (2026-11-11 and 2026-11-13) but the `http://`
+release case of 7, which was skipped (see Results); B2 not started.** Started 2026-11-10.
 
 ## Goal
 
@@ -92,10 +92,10 @@ Each item is settled during slice 6.
    mapped to `WrongRegion`.
 4. **No S3-specific signature vector.** The signer passes AWS's generic suite; the S3 parts (the
    payload-hash header, single path encoding) are proven only by a real bucket accepting requests.
-5. **The KeyStore refactor on an existing install.** It is designed to change nothing for the
-   root; only an upgrade on a device proves that.
-6. **QR size.** An R2 code is about 230 bytes. Check that it scans quickly from a phone screen at
-   normal brightness.
+   R2 accepts signed list, put, get and delete (2026-11-13); B2 still to confirm.
+5. **The KeyStore refactor on an existing install.** Settled 2026-11-13 by check 18: same words,
+   same data, `identity.root` untouched.
+6. **QR size.** Settled 2026-11-11 by check 8: the R2 code scans quickly from a monitor.
 7. **`needsS3Secret()` reads the KeyStore during composition** (Settings recomposes on every poll).
    Cheap per call, but measure; cache it in `LiveSyncActions` if Settings stutters.
 8. **The licences line.** Settled 2026-11-13: it now names every non-AndroidX library in the
@@ -108,6 +108,15 @@ Each item is settled during slice 6.
 10. **`\'` showed in English UI text.** Settled 2026-11-13: Compose resources don't unescape
     `\'`, so the 17 English strings now use a plain `'`, and `StringResourcesTest` (in
     `apps/todo/domain`, as `shared` has no tests) fails on any `\'`.
+11. **"Never synced" after Connect** (found 2026-11-13, checks 3 and 4). A successful Connect
+    restarts the sync and resets the status, so it reads "Never synced" until the next poll, even
+    on a device that synced a minute ago. Fix: sync once right after a successful Connect.
+12. **`Last sync` shows a raw UTC instant** (found 2026-11-13): `2026-11-13T21:56:47.135563Z`, in
+    both languages. Show local time, formatted for the language.
+13. **Bookkeeping of abandoned plugs stays** (found 2026-11-13, check 11): `plug_watermark`,
+    `ingested_batch` and `unreadable_batch` keep rows for every plug the device ever used (an old
+    Dropbox folder, the relay, `todo-check2`). Harmless, but it grows; consider clearing a plug's
+    rows when another backend is chosen.
 
 ## Test plan (slice 6)
 
@@ -184,9 +193,34 @@ the monitor).
 - **18 Upgrade:** partly: device 2 had run a pre-refactor build since 2026-10-27 and kept its data
   through the 2026-11-10 upgrade; the words weren't noted, so rerun it on a fresh device.
 
-Next session: redeploy the hosted relay (an older one refuses the probe, decision 0086); on R2
-checks 5, 6, 7 (`http://` in a release build), 9 to 15, 17, 18, 20, 21; then
-B2 (19); then settle open items 1, 2 (B2), 4 to 7.
+R2 again, 2026-11-13, same devices, build with Connect's probe (decision 0086):
+
+- **2, 3, 4 rerun:** each refusal now shows in the form on Connect, the old setup keeps syncing,
+  and no probe object is left. 3 shows the Forbidden text ("Check the bucket name"), which doesn't
+  quote the name; accepted. Restoring the right value reads "Never synced" until the next poll
+  (open item 11).
+- **5 Too few rights:** passed: a read-only token is refused on Connect ("may not use the bucket").
+- **6 Clock off:** passed.
+- **7 `http://` in a release build:** skipped; the rule is covered by `S3SyncTest` (`Insecure`).
+- **9 Switch offer:** passed, with device 2 on a second prefix (`todo-check2`) instead of a relay,
+  as the hosted relay still runs a build without the probe.
+- **10 Edits, 12 Compaction, 13 Prefix wiped, 14 Ciphertext only:** passed.
+- **11 Soak:** passed: `field_state` identical, 319 cells; `unconfirmed_publish` empty on both.
+  The phone's one `unreadable_batch` row was from an old Dropbox folder plug (open item 13).
+- **15 Secret lifecycle:** passed: Off deletes `files/s3.secret` and the S3 settings; the prefs
+  never held the secret.
+- **17 Lost secret:** passed: after deleting `s3.secret` and a restart the phone says the secret
+  is missing and doesn't sync; scanning the emulator's code restored the secret and sync.
+- **18 Upgrade:** passed on a fresh tablet emulator (API 29): `7856935` with three tasks, then
+  this build over it: the same 24 words (compared as files), the same tasks, `identity.root`
+  untouched.
+- **20 Reboot and reinstall:** passed: both resumed after a reboot; the phone, uninstalled and
+  paired again by QR, rebuilt from the bucket alone, identical cell for cell (319 cells, both
+  bookkeeping tables empty).
+- **21 German:** passed.
+
+Next session: B2 (checks 1, 8, 10, 13 and 19); settle open items 1, 2 (B2), 4 (B2), 7, 11 to 13;
+push `main` and redeploy the hosted relay (an older one refuses the probe, decision 0086).
 
 ## How to verify
 
