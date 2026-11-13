@@ -31,7 +31,8 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
-private const val APP_ID = "todo"
+/** The app segment of every object key (decision 0029) and of the relay token (0030). */
+const val TODO_APP_ID = "todo"
 
 /** Builds the relay plug for [url] under the group [root]; the shell injects the HTTP engine (0079). */
 fun interface RelayPlugFactory {
@@ -228,7 +229,7 @@ class LiveSyncActions(
     // Plugs throw platform exceptions (IOException and others), so catch broadly.
     @Suppress("TooGenericExceptionCaught")
     private suspend fun probe(plug: BackendPlug): Exception? = try {
-        plug.list(groupId()?.let { "$APP_ID/$it/" } ?: "$APP_ID/")
+        plug.list(groupId()?.let { "$TODO_APP_ID/$it/" } ?: "$TODO_APP_ID/")
         null
     } catch (e: CancellationException) {
         throw e
@@ -278,7 +279,7 @@ class LiveSyncActions(
         identity.root(KEY_GEN_V1)
             ?.let(::connectionFor)
             ?.let { (plug, plugId) ->
-                val sync = LiveSync(replica, plug, plugId, APP_ID, identity, scope, 10.seconds)
+                val sync = LiveSync(replica, plug, plugId, TODO_APP_ID, identity, scope, 10.seconds)
                 liveSync = sync
                 startJob = scope.launch { sync.start() }
                 if (pollingWanted) startPolling()

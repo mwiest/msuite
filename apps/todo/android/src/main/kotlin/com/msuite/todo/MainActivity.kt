@@ -15,6 +15,7 @@ import com.msuite.todo.domain.RelayOptions
 import com.msuite.todo.domain.RelayPlugFactory
 import com.msuite.todo.domain.S3Options
 import com.msuite.todo.domain.S3PlugFactory
+import com.msuite.todo.domain.TODO_APP_ID
 import com.msuite.todo.domain.ThemeMode
 import kotlinx.coroutines.launch
 
@@ -43,7 +44,7 @@ class MainActivity : ComponentActivity() {
             fileStoreFactory = shell.fileStoreFactory,
             scope = lifecycleScope,
             relay = RelayOptions(
-                plugFactory = RelayPlugFactory { url, root -> RelayPlug(url, "todo", root, app.httpClient) },
+                plugFactory = RelayPlugFactory { url, root -> RelayPlug(url, TODO_APP_ID, root, app.httpClient) },
                 allowInsecure = debug,
             ),
             s3 = S3Options(
