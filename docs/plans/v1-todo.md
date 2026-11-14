@@ -189,8 +189,8 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [ ] S3: run the device check on Backblaze B2 (Connect, join by QR, edits, prefix wiped); capture
   B2's answer to `If-None-Match` with `aws s3api put-object --if-none-match '*' --debug`, narrow
   the header fallback to it with a test (decision 0087), and add B2's responses as fixtures
-- [ ] Relay: push `main` and redeploy the hosted relay; one older than decision 0086 refuses
-  Connect's probe
+- [x] Relay: push `main` and redeploy the hosted relay; one older than decision 0086 refuses
+  Connect's probe (redeployed from `58190b7` 2026-11-14)
 
 ## Open questions
 
