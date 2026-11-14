@@ -38,6 +38,9 @@ object TodoFields {
     /** Task: `Bool`. */
     val STARRED = FieldId(15)
 
-    /** Task: `Bool`. */
+    /** Task: `Bool`. Legacy, replaced by [DONE_AT]; only [TaskCommands.migrateDone] still reads it. */
     val DONE = FieldId(16)
+
+    /** Task: `Int64`, epoch milliseconds when it was done; absent while open (decision 0088). */
+    val DONE_AT = FieldId(17)
 }

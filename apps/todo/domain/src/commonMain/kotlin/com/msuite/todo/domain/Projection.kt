@@ -9,6 +9,7 @@ import com.msuite.core.sync.Replica
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 data class TodoList(val id: Uuid, val title: String, val position: String) {
@@ -23,13 +24,16 @@ data class Task(
     val notes: String,
     val due: LocalDate?,
     val starred: Boolean,
-    val done: Boolean,
+    val doneAt: Instant?,
     val position: String,
-)
+) {
+    val done: Boolean get() = doneAt != null
+}
 
 /**
  * What the UI shows: live lists sorted by `(position, id)` (decision 0004), and their visible
- * tasks, open ones before done ones, each by `(position, id)` (decision 0065).
+ * tasks: open ones by `(position, id)`, then done ones, the latest done first, ties by ID
+ * (decisions 0065, 0088).
  */
 class TodoState(val lists: List<TodoList>, private val tasksByList: Map<Uuid, List<Task>>) {
     fun tasks(listId: Uuid): List<Task> = tasksByList[listId].orEmpty()
@@ -63,17 +67,24 @@ fun projectTodos(cells: Iterable<Cell>): TodoState {
             notes = f.text(TodoFields.NOTES),
             due = f.date(TodoFields.DUE),
             starred = f.bool(TodoFields.STARRED),
-            done = f.bool(TodoFields.DONE),
+            doneAt = f.int64(TodoFields.DONE_AT)?.let(Instant::fromEpochMilliseconds),
             position = f.text(TodoFields.POSITION),
         )
-    }.sortedWith(compareBy<Task> { it.done }.thenBy { it.position }.thenBy { it.id })
+    }.sortedWith(taskOrder)
     return TodoState(lists, tasks.groupBy { it.listId })
 }
+
+private val taskOrder: Comparator<Task> = compareBy<Task> { it.done }
+    .thenBy { if (it.done) null else it.position }
+    .thenByDescending { it.doneAt }
+    .thenBy { it.id }
 
 private class Fields(cells: List<Cell>) {
     private val values: Map<FieldId, Value?> = cells.associate { it.key.fieldId to ValueCodec.decode(it.value) }
 
-    fun type(): Long? = (values[CoreFields.TYPE] as? Value.Int64)?.value
+    fun type(): Long? = int64(CoreFields.TYPE)
+
+    fun int64(field: FieldId): Long? = (values[field] as? Value.Int64)?.value
 
     fun text(field: FieldId): String = (values[field] as? Value.Text)?.value.orEmpty()
 

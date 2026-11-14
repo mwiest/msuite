@@ -160,7 +160,9 @@ edit checks that its ID is a record of the right type (hidden ones included) and
   task without a live list. A value of an unexpected type reads as absent.
 - Lists and tasks sort by `(position, id)`; positions compare by code unit, which for base62 keys
   is bytewise (decision 0044). Within a list, open tasks come before done ones, and a task moves
-  only among tasks with its done state (decision 0065).
+  only among open tasks (decision 0065). Done tasks sort by `DONE_AT` (field 17, epoch ms),
+  latest first, then by ID; at start, `TaskCommands.migrateDone` turns the legacy `DONE` flag
+  (field 16) into `DONE_AT` from the flag cell's HLC and clears the flag (decision 0088).
 
 ### ToDo app wiring and UI
 

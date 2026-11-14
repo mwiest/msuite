@@ -14,6 +14,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import kotlinx.datetime.LocalDate
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 private val stamp = Stamp(Hlc.of(1, 0), DeviceId(1))
@@ -71,14 +72,23 @@ class ProjectionTest : StringSpec({
                     TodoFields.NOTES to Value.Text("2 l"),
                     TodoFields.DUE to Value.Date(LocalDate(2026, 10, 20)),
                     TodoFields.STARRED to Value.Bool(true),
-                    TodoFields.DONE to Value.Bool(true),
+                    TodoFields.DONE_AT to Value.Int64(5),
                 ) +
                 task(id(3), id(1), "Call", "b"),
         )
         state.lists shouldContainExactly listOf(TodoList(id(1), "Home", "a"))
         state.tasks(id(1)) shouldContainExactly listOf(
-            Task(id(3), id(1), "Call", "", due = null, starred = false, done = false, "b"),
-            Task(id(2), id(1), "Buy milk", "2 l", LocalDate(2026, 10, 20), starred = true, done = true, "a"),
+            Task(id(3), id(1), "Call", "", due = null, starred = false, doneAt = null, "b"),
+            Task(
+                id(2),
+                id(1),
+                "Buy milk",
+                "2 l",
+                LocalDate(2026, 10, 20),
+                starred = true,
+                doneAt = Instant.fromEpochMilliseconds(5),
+                "a",
+            ),
         )
     }
 
@@ -91,13 +101,20 @@ class ProjectionTest : StringSpec({
         state.tasks(id(1)).map { it.id } shouldContainExactly listOf(id(4), id(5), id(6))
     }
 
-    "done tasks come after open ones, each by position" {
-        val done = TodoFields.DONE to Value.Bool(true)
+    "open tasks come first by position, then done ones, the latest done first, ties by ID" {
+        fun doneAt(millis: Long) = TodoFields.DONE_AT to Value.Int64(millis)
         val state = projectTodos(
-            list(id(1), "L", "a") + task(id(2), id(1), "done first", "a", done) + task(id(3), id(1), "open", "b") +
-                task(id(4), id(1), "done second", "c", done),
+            list(id(1), "L", "a") + task(id(2), id(1), "done earlier", "a", doneAt(10)) +
+                task(id(3), id(1), "open", "b") + task(id(4), id(1), "done later", "c", doneAt(20)) +
+                task(id(6), id(1), "done earlier too", "0", doneAt(10)) + task(id(5), id(1), "open first", "a"),
         )
-        state.tasks(id(1)).map { it.id } shouldContainExactly listOf(id(3), id(2), id(4))
+        state.tasks(id(1)).map { it.id } shouldContainExactly listOf(id(5), id(3), id(4), id(2), id(6))
+    }
+
+    "a legacy done flag without a done time reads as open until migrated" {
+        val state =
+            projectTodos(list(id(1), "L", "a") + task(id(2), id(1), "t", "a", TodoFields.DONE to Value.Bool(true)))
+        state.tasks(id(1)).single().done shouldBe false
     }
 
     "positions compare bytewise, not by locale or case" {
@@ -139,7 +156,7 @@ class ProjectionTest : StringSpec({
 
     "a value of an unexpected type reads as absent" {
         val state = projectTodos(
-            list(id(1), "L", "a") + task(id(2), id(1), "t", "a", TodoFields.DONE to Value.Text("yes")),
+            list(id(1), "L", "a") + task(id(2), id(1), "t", "a", TodoFields.DONE_AT to Value.Text("yes")),
         )
         state.tasks(id(1)).single().done shouldBe false
     }

@@ -182,7 +182,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [ ] Tasks: collapse done tasks
 - [ ] Tasks: sync with a pull-down gesture
 - [ ] Tasks: scroll to the top after adding a task
-- [ ] Tasks: order done tasks by completion time, newest first
+- [x] Tasks: order done tasks by completion time, newest first (`447e8e1`, decision 0088)
 - [ ] Sync: bookkeeping of plugs no longer used stays (`plug_watermark`, `ingested_batch`,
   `unreadable_batch` rows of an old folder, relay or prefix); clear a plug's rows when another
   backend is chosen

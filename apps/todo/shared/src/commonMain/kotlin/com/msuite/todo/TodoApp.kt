@@ -34,7 +34,10 @@ private data object RecoveryRoute
 @Composable
 fun TodoApp(container: TodoContainer, version: String, shell: ShellServices) {
     val myTasks = stringResource(Res.string.my_tasks)
-    LaunchedEffect(container) { container.lists.createMyTasksIfMissing(myTasks) }
+    LaunchedEffect(container) {
+        container.lists.createMyTasksIfMissing(myTasks)
+        container.tasks.migrateDone()
+    }
     val theme by container.settings.themeMode.collectAsState()
     val dark = when (theme) {
         ThemeMode.System -> isSystemInDarkTheme()

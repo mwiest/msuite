@@ -9,6 +9,7 @@ import com.msuite.core.model.ValueCodec
 import com.msuite.core.sync.Replica
 import kotlinx.datetime.LocalDate
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /** List edits, each one [Replica.write]. [random] is the position jitter (decision 0004), [newId] makes record IDs. */
@@ -55,11 +56,15 @@ class ListCommands(
     private suspend fun state() = projectTodos(replica.cells())
 }
 
-/** Task edits, each one [Replica.write]. [random] is the position jitter (decision 0004), [newId] makes record IDs. */
+/**
+ * Task edits, each one [Replica.write]. [random] is the position jitter (decision 0004), [newId] makes record IDs,
+ * [clock] dates completions.
+ */
 class TaskCommands(
     private val replica: Replica,
     private val random: Random = Random.Default,
     private val newId: () -> Uuid = Uuid::random,
+    private val clock: Clock = Clock.System,
 ) {
     /** Creates a task at the top of the live list [listId]. */
     suspend fun create(listId: Uuid, title: String): Uuid {
@@ -102,7 +107,42 @@ class TaskCommands(
         TodoFields.STARRED to Value.Bool(starred),
     )
 
-    suspend fun setDone(id: Uuid, done: Boolean) = replica.edit(id, TodoTypes.TASK, TodoFields.DONE to Value.Bool(done))
+    suspend fun setDone(id: Uuid, done: Boolean) = replica.edit(
+        id,
+        TodoTypes.TASK,
+        TodoFields.DONE_AT to if (done) Value.Int64(clock.now().toEpochMilliseconds()) else null,
+    )
+
+    /**
+     * Turns each legacy `DONE = true` without a done time into `DONE_AT` = the done cell's HLC time, and clears the
+     * flag, so it runs once per task (decision 0088). Every device derives the same value. Returns how many it wrote.
+     */
+    suspend fun migrateDone(): Int {
+        val legacy = replica.cells().groupBy { it.key.recordId }.mapNotNull { (id, cells) ->
+            val flag = cells.find { it.key.fieldId == TodoFields.DONE } ?: return@mapNotNull null
+            val dated = cells.any { it.key.fieldId == TodoFields.DONE_AT && ValueCodec.decode(it.value) != null }
+            if (ValueCodec.decode(flag.value) !=
+                Value.Bool(true)
+            ) {
+                null
+            } else {
+                id to flag.stamp.hlc.pt.takeUnless { dated }
+            }
+        }
+        legacy.forEach { (id, pt) ->
+            replica.write(
+                id,
+                listOfNotNull<Pair<FieldId, Value?>>(
+                    TodoFields.DONE to null,
+                    pt?.let {
+                        TodoFields.DONE_AT to
+                            Value.Int64(it)
+                    },
+                ),
+            )
+        }
+        return legacy.size
+    }
 
     suspend fun delete(id: Uuid) = replica.edit(id, TodoTypes.TASK, CoreFields.DELETED to Value.Bool(true))
 

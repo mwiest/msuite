@@ -46,7 +46,9 @@ val FIRST_RUN_TITLES = listOf("My Tasks", "Meine Aufgaben")
 class TodoSimulation(wallOffsets: List<Long>, seed: Long) : Cluster(wallOffsets, seed, ::ReplicaState) {
     private val replicas = devices.map { (it.state as ReplicaState).replica }
     private val lists = replicas.mapIndexed { i, r -> ListCommands(r, Random(seed + i), ids(seed, i)) }
-    private val tasks = replicas.mapIndexed { i, r -> TaskCommands(r, Random(seed + i + 100), ids(seed, i)) }
+    private val tasks = replicas.mapIndexed { i, r ->
+        TaskCommands(r, Random(seed + i + 100), ids(seed, i), devices[i].wall)
+    }
 
     /** Every list and task any device created: invariant 16 says none is lost. */
     val created = mutableSetOf<Uuid>()

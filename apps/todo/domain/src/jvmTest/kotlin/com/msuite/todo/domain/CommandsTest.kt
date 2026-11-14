@@ -31,6 +31,11 @@ private class SteppingClock : Clock {
     override fun now(): Instant = Instant.fromEpochMilliseconds(millis++)
 }
 
+/** A wall clock for task commands that stays put until [now] is set. */
+private class SettableClock(var now: Instant) : Clock {
+    override fun now(): Instant = now
+}
+
 private class Todo {
     val replica = Replica(
         JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY, Properties(), LocalStore.Schema),
@@ -38,7 +43,8 @@ private class Todo {
         SteppingClock(),
     )
     val lists = ListCommands(replica, Random(1))
-    val tasks = TaskCommands(replica, Random(2))
+    val taskClock = SettableClock(Instant.fromEpochMilliseconds(500))
+    val tasks = TaskCommands(replica, Random(2), clock = taskClock)
 
     suspend fun state() = projectTodos(replica.cells())
 }
@@ -130,9 +136,57 @@ class CommandsTest : StringSpec({
         todo.tasks.setStarred(id, true)
         todo.tasks.setDone(id, true)
         todo.state().tasks(list).single().copy(position = "") shouldBe
-            Task(id, list, "title", "notes", LocalDate(2026, 10, 20), starred = true, done = true, position = "")
+            Task(
+                id,
+                list,
+                "title",
+                "notes",
+                LocalDate(2026, 10, 20),
+                starred = true,
+                doneAt = Instant.fromEpochMilliseconds(500),
+                position = "",
+            )
         todo.tasks.setDue(id, null)
         todo.state().tasks(list).single().due shouldBe null
+    }
+
+    "done records the time, the latest done shows first, and reopening clears it" {
+        val todo = Todo()
+        val list = todo.lists.create("L")
+        val (first, second) = listOf("first", "second").map { todo.tasks.create(list, it) }
+        todo.tasks.setDone(first, true)
+        todo.taskClock.now = Instant.fromEpochMilliseconds(600)
+        todo.tasks.setDone(second, true)
+        todo.state().tasks(list).map { it.id to it.doneAt?.toEpochMilliseconds() } shouldContainExactly
+            listOf(second to 600L, first to 500L)
+        todo.tasks.setDone(second, false)
+        todo.state().tasks(list).map { it.id to it.done } shouldContainExactly listOf(second to false, first to true)
+    }
+
+    "migration turns a legacy done flag into the done time of its cell's HLC, once" {
+        val todo = Todo()
+        val list = todo.lists.create("L")
+        val (legacy, open, current) = listOf("legacy", "open", "current").map { todo.tasks.create(list, it) }
+        todo.replica.write(
+            mapOf(
+                CellKey(legacy, TodoFields.DONE) to ValueCodec.encode(Value.Bool(true)),
+                CellKey(open, TodoFields.DONE) to ValueCodec.encode(Value.Bool(false)),
+            ),
+        )
+        todo.tasks.setDone(current, true)
+        val flagged = todo.replica.cells(legacy).single { it.key.fieldId == TodoFields.DONE }.stamp.hlc.pt
+
+        todo.tasks.migrateDone() shouldBe 1
+        val tasks = todo.state().tasks(list).associateBy { it.id }
+        tasks.getValue(legacy).doneAt shouldBe Instant.fromEpochMilliseconds(flagged)
+        tasks.getValue(open).done shouldBe false
+        tasks.getValue(current).doneAt shouldBe Instant.fromEpochMilliseconds(500)
+        val flag = todo.replica.cells(legacy).single { it.key.fieldId == TodoFields.DONE }
+        ValueCodec.decode(flag.value) shouldBe null
+
+        todo.tasks.setDone(legacy, false)
+        todo.tasks.migrateDone() shouldBe 0
+        todo.state().tasks(list).single { it.id == legacy }.done shouldBe false
     }
 
     "a deleted task is hidden" {
@@ -189,7 +243,7 @@ class CommandsTest : StringSpec({
         val task = todo.tasks.create(list, "t")
         todo.lists.delete(list)
         todo.tasks.setDone(task, true)
-        todo.replica.cells(task).any { it.key.fieldId == TodoFields.DONE } shouldBe true
+        todo.replica.cells(task).any { it.key.fieldId == TodoFields.DONE_AT } shouldBe true
     }
 
     "new IDs come from the injected source" {
