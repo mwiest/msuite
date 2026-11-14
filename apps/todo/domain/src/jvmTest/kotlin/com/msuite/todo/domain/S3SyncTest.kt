@@ -85,12 +85,10 @@ private class Fixture(
 }
 
 class S3SyncTest : StringSpec({
-    "connecting S3 keeps the secret out of settings and syncs with it" {
+    "connecting S3 keeps the secret out of settings and syncs with it at once" {
         coroutineScope {
             val f = Fixture(this)
             f.live.connectS3(backend, "SECRET").shouldBeNull()
-            yield()
-            f.live.syncNow()
 
             f.live.backend.value shouldBe backend
             f.secrets.stored shouldBe "SECRET"

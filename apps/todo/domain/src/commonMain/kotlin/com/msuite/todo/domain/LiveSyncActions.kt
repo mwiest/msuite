@@ -165,7 +165,10 @@ class LiveSyncActions(
      */
     fun setBackend(value: SyncBackend) = switchTo(value, restart = false)
 
-    /** Chooses the relay at [url] after listing this group's objects there; a refusal keeps the current backend. */
+    /**
+     * Chooses the relay at [url] after listing this group's objects there, then syncs once; a refusal keeps the
+     * current backend.
+     */
     suspend fun connectRelay(url: String): RelaySetupError? {
         val address = url.trim().trimEnd('/')
         val factory = relay.plugFactory
@@ -182,19 +185,23 @@ class LiveSyncActions(
                 else -> RelaySetupError.Unreachable
             }
         }
-        if (error == null) setBackend(SyncBackend.Relay(address))
+        if (error == null) {
+            setBackend(SyncBackend.Relay(address))
+            syncNow()
+        }
         return error
     }
 
     /**
      * Chooses the S3 bucket [backend] with [secret], or the stored secret when [secret] is blank,
-     * after listing this group's objects with them: a refusal keeps the current backend and secret.
+     * after listing this group's objects with them, then syncs once: a refusal keeps the current backend and secret.
      */
     suspend fun connectS3(backend: SyncBackend.S3, secret: String): S3SetupError? {
         val typed = secret.trim()
         val section = s3?.let { backend.section(typed.ifEmpty { it.secrets.load().orEmpty() }) }
         return checkS3(section) ?: probeS3(requireNotNull(section)) ?: run {
             commitS3(backend, typed)
+            syncNow()
             null
         }
     }
@@ -363,6 +370,7 @@ class LiveSyncActions(
     /** Manually triggers a sync (pull from the backend). */
     suspend fun syncNow() {
         val sync = liveSync ?: return
+        startJob?.join()
         sync.pull()
         report(sync)
     }

@@ -247,7 +247,7 @@ class LiveSyncActionsTest : StringSpec({
         }
     }
 
-    "relay connect checks the URL and lists first; refused or unreachable, it keeps the backend" {
+    "relay connect checks the URL and lists first, then syncs; refused or unreachable, it keeps the backend" {
         val settings = TodoSettings(MapSettings())
         val relayStore = MemoryPlug()
         var plug: BackendPlug = relayStore
@@ -266,6 +266,7 @@ class LiveSyncActionsTest : StringSpec({
             live.connectRelay("http://relay.example") shouldBe RelaySetupError.Insecure
             live.connectRelay(" https://relay.example/ ").shouldBeNull()
             live.backend.value shouldBe SyncBackend.Relay("https://relay.example")
+            live.status.value.lastSync.shouldNotBeNull()
             relayStore.list("todo/").filter { "probe_" in it }.shouldBeEmpty()
 
             plug = object : BackendPlug by MemoryPlug() {

@@ -171,7 +171,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
   clears the S3 fields)
 - [ ] Settings: after scanning a code, go back to Settings and show a toast
 - [x] Settings: English texts showed `\'` escapes (`441ace5`)
-- [ ] Settings: after a successful Connect the status reads "Never synced" until the next poll,
+- [x] Settings: after a successful Connect the status reads "Never synced" until the next poll,
   even on a device that just synced; sync once right after Connect
 - [ ] Settings: `Last sync` shows a raw UTC instant (`2026-11-13T21:56:47.135563Z`); show local
   time, formatted for the language

@@ -22,7 +22,7 @@ how many tasks go with it ("My Tasks" can't be deleted). The gear opens the sett
 or S3 storage) that picks the folder, takes the relay's https address, or takes a bucket's endpoint,
 region, bucket name, optional folder and access key pair (the secret is never shown again: the form
 says it is stored on the device and offers Change to replace it; Connect first checks that it can read, write and
-delete on the relay or bucket and, if not, says why and keeps the current method), shows the group ID an operator's allowlist needs, and reports the last sync
+delete on the relay or bucket and, if not, says why and keeps the current method; if so, it syncs at once), shows the group ID an operator's allowlist needs, and reports the last sync
 or why it is failing (folder, relay or bucket unreachable, key refused, registration refused,
 namespace full, access key rejected or not allowed, no such bucket, wrong region, device clock
 off, or a bucket secret this device no longer has), with sync on demand, a Sync
