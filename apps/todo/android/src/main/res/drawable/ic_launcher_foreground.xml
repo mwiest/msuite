@@ -1,32 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- From mocks/todo.svg (512 viewport), scaled into the 66dp safe zone of the 108dp canvas. -->
+<!-- The teal artboard of mocks/todo.svg (512 units), centred and scaled so every point lies within 32dp
+     of the centre: inside the 66dp safe zone of the 108dp canvas, whatever the launcher's mask. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:scaleX="0.148"
-        android:scaleY="0.148"
-        android:translateX="13.754"
-        android:translateY="16.195">
+        android:scaleX="0.165"
+        android:scaleY="0.165"
+        android:translateX="12.232"
+        android:translateY="13.265">
         <path
-            android:fillColor="#72D2E3"
-            android:pathData="M159.997,128.016 m-53.332,0 a53.332,53.321 0 1 0 106.664,0 a53.332,53.321 0 1 0 -106.664,0 Z M159.997,128.016 m-36.756,0 a36.756,36.747 0 0 1 73.512,0 a36.756,36.747 0 0 1 -73.512,0 Z" />
+            android:fillColor="#DCEFF9"
+            android:pathData="M163.416,136.67 m-48.94,0 a48.94,48.94 0 1 0 97.88,0 a48.94,48.94 0 1 0 -97.88,0 Z M163.416,136.67 m-30.108,0 a30.108,30.108 0 0 1 60.216,0 a30.108,30.108 0 0 1 -60.216,0 Z" />
         <path
-            android:fillColor="#58B7CB"
-            android:pathData="M159.997,257.025 m-53.332,0 a53.332,53.31 0 1 0 106.664,0 a53.332,53.31 0 1 0 -106.664,0 Z M159.997,257.025 m-36.756,0 a36.756,36.74 0 0 1 73.512,0 a36.756,36.74 0 0 1 -73.512,0 Z" />
+            android:fillColor="#D0EDFC"
+            android:pathData="M163.416,249.768 m-48.94,0 a48.94,47.843 0 1 0 97.88,0 a48.94,47.843 0 1 0 -97.88,0 Z M163.416,249.768 m-29.179,0 a29.179,29.179 0 0 1 58.358,0 a29.179,29.179 0 0 1 -58.358,0 Z" />
         <path
-            android:fillColor="#659EAC"
-            android:pathData="M108.665,385.109 a51.05,51.05 0 1 0 102.1,0 a51.05,51.05 0 1 0 -102.1,0 Z" />
+            android:fillColor="#A6CAE3"
+            android:pathData="M119.792,362.915 a43.101,43.111 0 1 0 86.202,0 a43.101,43.111 0 1 0 -86.202,0 Z" />
         <path
-            android:fillColor="#72D2E3"
-            android:pathData="M277.329,107.364 h149.331 a21.333,21.333 0 0 1 0,42.666 h-149.331 a21.333,21.333 0 0 1 0,-42.666 Z" />
+            android:fillColor="#DFEEF8"
+            android:pathData="M208.01,120.356 h175.795 a8,8 0 0 1 8,8 v16.627 a8,8 0 0 1 -8,8 h-175.795 a8,8 0 0 1 -8,-8 v-16.627 a8,8 0 0 1 8,-8 Z" />
         <path
-            android:fillColor="#58B7CB"
-            android:pathData="M277.329,235.362 h149.331 a21.333,21.333 0 0 1 0,42.666 h-149.331 a21.333,21.333 0 0 1 0,-42.666 Z" />
+            android:fillColor="#D5ECFB"
+            android:pathData="M208.01,233.477 h175.795 a8,8 0 0 1 8,8 v17.701 a8,8 0 0 1 -8,8 h-175.795 a8,8 0 0 1 -8,-8 v-17.701 a8,8 0 0 1 8,-8 Z" />
         <path
-            android:fillColor="#659EAC"
-            android:pathData="M277.329,363.36 h149.331 a21.333,21.333 0 0 1 0,42.666 h-149.331 a21.333,21.333 0 0 1 0,-42.666 Z" />
+            android:fillColor="#A6CAE3"
+            android:pathData="M199.997,347.376 h183.808 a8,8 0 0 1 8,8 v17.996 a8,8 0 0 1 -8,8 h-183.808 a8,8 0 0 1 -8,-8 v-17.996 a8,8 0 0 1 8,-8 Z" />
     </group>
 </vector>

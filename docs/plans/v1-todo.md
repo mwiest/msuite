@@ -155,7 +155,7 @@ closes. Each problem slice removes its line from `roadmap.md` → Known problems
 Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 
 - [ ] General: color scheme from the icon, and an adaptive-colors setting
-- [ ] General: fix the app icon's margins; white on a teal background
+- [x] General: fix the app icon's margins; white on a teal background
 - [x] General: make the app name just "ToDo"
 - [ ] Pairing: give an "account" (the group key) a name that paired devices show, so the user
   recognises it
