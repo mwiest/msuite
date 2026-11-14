@@ -182,7 +182,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [ ] Tasks: collapse done tasks
 - [ ] Tasks: sync with a pull-down gesture
 - [ ] Tasks: scroll to the top after adding a task
-- [x] Tasks: order done tasks by completion time, newest first (`447e8e1`, decision 0088)
+- [x] Tasks: order done tasks by completion time, newest first (`451ba18`, decision 0088)
 - [ ] Sync: bookkeeping of plugs no longer used stays (`plug_watermark`, `ingested_batch`,
   `unreadable_batch` rows of an old folder, relay or prefix); clear a plug's rows when another
   backend is chosen
@@ -190,7 +190,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
   B2's answer to `If-None-Match` with `aws s3api put-object --if-none-match '*' --debug`, narrow
   the header fallback to it with a test (decision 0087), and add B2's responses as fixtures
 - [x] Relay: push `main` and redeploy the hosted relay; one older than decision 0086 refuses
-  Connect's probe (redeployed from `58190b7` 2026-11-14)
+  Connect's probe (redeployed 2026-11-14)
 
 ## Open questions
 
