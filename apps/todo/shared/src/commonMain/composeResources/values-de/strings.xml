@@ -132,7 +132,7 @@
     <string name="restore_done">Wiederhergestellt. Dieses Gerät und die anderen Geräte der Gruppe teilen nun einen Schlüssel.</string>
     <string name="restore_unreadable">Diese Wörter ergeben keinen Wiederherstellungsschlüssel. Prüfe Schreibweise und Reihenfolge.</string>
     <string name="about">Über</string>
-    <string name="app_name">msuite ToDo</string>
+    <string name="app_name">ToDo</string>
     <string name="version">Version</string>
     <string name="author">Autor</string>
     <string name="license">Lizenz</string>
