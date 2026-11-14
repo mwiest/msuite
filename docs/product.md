@@ -29,7 +29,8 @@ off, or a bucket secret this device no longer has), with sync on demand, a Sync
 section that exports the device's whole state to an
 encrypted file or merges one in (the file is ciphertext under the group's root, so it imports on
 another device once the two are paired), a Pairing section that shows this device's QR code or scans
-another's with the camera (joining asks first and says the device's tasks will be shared), a
+another's with the camera (joining asks first and says the device's tasks will be shared; a join or
+switch that worked returns to Settings and says so in a snackbar), a
 Recovery section that shows this device's 24 words, copies them as a sensitive clipboard entry that
 clears after 60 seconds, or restores the key from typed words (after the same confirmation), and an
 About section with the version, author, licence (GPL v3 or later), a link to the source code and the

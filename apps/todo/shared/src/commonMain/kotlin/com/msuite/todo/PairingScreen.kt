@@ -70,35 +70,34 @@ import com.msuite.todo.resources.pair_unsupported
 import com.msuite.todo.resources.pairing_hint
 import com.msuite.todo.resources.restore_done
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
  * Pairing, both directions: this device shows its code, or scans another's (decisions 0008, 0033,
  * 0072). A code is shown on demand and never stored: whoever photographs it has the group root.
+ * A join or switch that worked ends the screen with [onDone] and its message; a refusal stays here.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit) {
+fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit, onDone: (StringResource) -> Unit) {
     var code by remember { mutableStateOf<ByteArray?>(null) }
     var scanned by remember { mutableStateOf<ByteArray?>(null) }
     var switchTo by remember { mutableStateOf<Pair<ByteArray, JoinPreview.SwitchBackend>?>(null) }
     var result by remember { mutableStateOf<JoinResult?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val finish = { outcome: JoinResult ->
+        if (outcome is JoinResult.Joined ||
+            outcome is JoinResult.SwitchedBackend
+        ) {
+            onDone(outcome.label())
+        } else {
+            result = outcome
+        }
+    }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.pair_devices)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(painterResource(Res.drawable.ic_arrow_back), stringResource(Res.string.back))
-                    }
-                },
-            )
-        },
-    ) { padding ->
+    Scaffold(topBar = { PairingTopBar(onBack) }) { padding ->
         Column(
             Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -129,18 +128,29 @@ fun PairingScreen(pairing: PairingActions, qr: QrCodes, onBack: () -> Unit) {
         scope.launch {
             busy = true
             val joined = pairing.join(bytes)
-            // The root may have changed; the old code must not stay on screen.
-            if (joined is JoinResult.Joined) code = null
-            result = joined
             busy = false
+            finish(joined)
         }
     }
 
     ConfirmSwitch(switchTo?.second, { switchTo = null }) {
         val bytes = switchTo?.first ?: return@ConfirmSwitch
         switchTo = null
-        scope.launch { result = pairing.switchBackend(bytes) }
+        scope.launch { finish(pairing.switchBackend(bytes)) }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PairingTopBar(onBack: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(Res.string.pair_devices)) },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(painterResource(Res.drawable.ic_arrow_back), stringResource(Res.string.back))
+            }
+        },
+    )
 }
 
 /** Moving a device already in the group to the relay or bucket its scanned code names (0080, 0085). */

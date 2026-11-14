@@ -169,7 +169,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [ ] Settings: move About into its own screen, like Voclet
 - [ ] Settings: switching the sync method doesn't lose the other methods' settings (today Off
   clears the S3 fields)
-- [ ] Settings: after scanning a code, go back to Settings and show a toast
+- [x] Settings: after scanning a code, go back to Settings and show a toast (a snackbar)
 - [x] Settings: English texts showed `\'` escapes (`441ace5`)
 - [x] Settings: after a successful Connect the status reads "Never synced" until the next poll,
   even on a device that just synced; sync once right after Connect
