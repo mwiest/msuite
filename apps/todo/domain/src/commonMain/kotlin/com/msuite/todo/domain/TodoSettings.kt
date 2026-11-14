@@ -52,6 +52,16 @@ class TodoSettings(private val settings: Settings) {
         last.value = id
     }
 
+    private val collapsed = MutableStateFlow(settings.getBoolean(DONE_COLLAPSED, false))
+
+    /** Whether the done tasks are hidden under their header (decision 0065). */
+    val doneCollapsed: StateFlow<Boolean> = collapsed.asStateFlow()
+
+    fun setDoneCollapsed(value: Boolean) {
+        settings.putBoolean(DONE_COLLAPSED, value)
+        collapsed.value = value
+    }
+
     private val backend = MutableStateFlow(loadBackend())
 
     /** The chosen backend; one at a time (plan v1 step 9). */
@@ -113,6 +123,7 @@ class TodoSettings(private val settings: Settings) {
     private companion object {
         const val THEME = "theme"
         const val LAST_LIST = "lastList"
+        const val DONE_COLLAPSED = "doneCollapsed"
         const val SYNCED_FOLDER_URI = "syncedFolderUri"
         const val SYNC_BACKEND = "syncBackend"
         const val S3 = "s3"

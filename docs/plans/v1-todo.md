@@ -179,7 +179,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
   and cache it in `LiveSyncActions` if Settings stutters
 - [ ] Tasks: set details from the start, with icons as in Google Tasks
 - [ ] Tasks: round checkboxes (filled when done), a completion animation (ripple) and more padding
-- [ ] Tasks: collapse done tasks
+- [x] Tasks: collapse done tasks
 - [x] Tasks: sync with a pull-down gesture
 - [x] Tasks: scroll to the top after adding a task
 - [x] Tasks: order done tasks by completion time, newest first (`451ba18`, decision 0088)

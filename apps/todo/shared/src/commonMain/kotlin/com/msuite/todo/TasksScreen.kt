@@ -33,6 +33,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,9 +55,14 @@ import com.msuite.todo.domain.LiveSyncActions
 import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.domain.Task
 import com.msuite.todo.domain.TodoList
+import com.msuite.todo.domain.TodoSettings
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.app_title
+import com.msuite.todo.resources.done_header
+import com.msuite.todo.resources.hide_done
 import com.msuite.todo.resources.ic_add
+import com.msuite.todo.resources.ic_expand_less
+import com.msuite.todo.resources.ic_expand_more
 import com.msuite.todo.resources.ic_settings
 import com.msuite.todo.resources.new_list
 import com.msuite.todo.resources.new_task
@@ -63,6 +70,7 @@ import com.msuite.todo.resources.no_lists
 import com.msuite.todo.resources.no_tasks
 import com.msuite.todo.resources.save
 import com.msuite.todo.resources.settings
+import com.msuite.todo.resources.show_done
 import com.msuite.todo.resources.task_title
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -82,7 +90,7 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
     var adding by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var listDialog by rememberSaveable { mutableStateOf<ListDialog?>(null) }
-    var reveal by remember { mutableStateOf<Uuid?>(null) }
+    val reveal = remember { mutableStateOf<Uuid?>(null) }
 
     Scaffold(
         topBar = {
@@ -105,7 +113,7 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
             if (selected == null) {
                 Centered(stringResource(Res.string.no_lists))
             } else {
-                Tasks(state.tasks(selected.id), app, reveal, onRevealed = { reveal = null }) {
+                Tasks(state.tasks(selected.id), app, reveal) {
                     editingId = it.toString()
                 }
             }
@@ -116,7 +124,7 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
         NewTaskSheet(
             onSave = { title ->
                 adding = false
-                if (title.isNotBlank()) scope.launch { reveal = app.tasks.create(selected.id, title.trim()) }
+                if (title.isNotBlank()) scope.launch { reveal.value = app.tasks.create(selected.id, title.trim()) }
             },
             onDismiss = { adding = false },
         )
@@ -142,20 +150,14 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
 }
 
 @Composable
-private fun Tasks(
-    tasks: List<Task>,
-    app: TodoContainer,
-    reveal: Uuid?,
-    onRevealed: () -> Unit,
-    onOpen: (Uuid) -> Unit,
-) {
+private fun Tasks(tasks: List<Task>, app: TodoContainer, reveal: MutableState<Uuid?>, onOpen: (Uuid) -> Unit) {
     val scope = rememberCoroutineScope()
     if (tasks.isEmpty()) {
         Centered(stringResource(Res.string.no_tasks))
         return
     }
     SyncOnPull(app.live) {
-        TaskList(tasks, reveal, onRevealed, onMove = { id, to ->
+        TaskList(tasks, reveal, app.settings, onMove = { id, to ->
             scope.launch { app.tasks.move(id, to) }
         }) { task, handle ->
             TaskRow(
@@ -171,13 +173,14 @@ private fun Tasks(
 
 /**
  * Open tasks, then done ones (decisions 0065, 0088). A long-press drag reorders the open ones, written
- * once when the drag ends (decision 0063); done tasks don't move. Scrolls to [reveal] once it shows.
+ * once when the drag ends (decision 0063); done tasks don't move and collapse under their header.
+ * Scrolls to [reveal] once it shows, then clears it.
  */
 @Composable
 private fun TaskList(
     tasks: List<Task>,
-    reveal: Uuid?,
-    onRevealed: () -> Unit,
+    reveal: MutableState<Uuid?>,
+    settings: TodoSettings,
     onMove: (Uuid, Int) -> Unit,
     row: @Composable (Task, Modifier) -> Unit,
 ) {
@@ -187,11 +190,12 @@ private fun TaskList(
     val reorder = rememberReorderableLazyListState(listState) { from, to ->
         order = order.toMutableList().apply { add(to.index, removeAt(from.index)) }
     }
-    LaunchedEffect(reveal, order) {
-        val index = order.indexOfFirst { it.id == reveal }
+    val collapsed by settings.doneCollapsed.collectAsState()
+    LaunchedEffect(reveal.value, order) {
+        val index = order.indexOfFirst { it.id == reveal.value }
         if (index >= 0) {
             listState.animateScrollToItem(index)
-            onRevealed()
+            reveal.value = null
         }
     }
     LazyColumn(Modifier.fillMaxSize(), state = listState) {
@@ -209,7 +213,33 @@ private fun TaskList(
                 }
             }
         }
-        items(done, key = { it.id.toString() }) { task -> row(task, Modifier.alpha(DONE_ALPHA)) }
+        if (done.isNotEmpty()) {
+            item(key = DONE_HEADER) { DoneHeader(done.size, collapsed) { settings.setDoneCollapsed(!collapsed) } }
+        }
+        if (!collapsed) items(done, key = { it.id.toString() }) { task -> row(task, Modifier.alpha(DONE_ALPHA)) }
+    }
+}
+
+@Composable
+private fun DoneHeader(count: Int, collapsed: Boolean, onToggle: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(
+            role = Role.Button,
+            onClick = onToggle,
+        ).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(Res.string.done_header, count),
+            Modifier.weight(1f),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Icon(
+            painterResource(if (collapsed) Res.drawable.ic_expand_more else Res.drawable.ic_expand_less),
+            stringResource(if (collapsed) Res.string.show_done else Res.string.hide_done),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -292,6 +322,7 @@ private fun NewTaskSheet(onSave: (String) -> Unit, onDismiss: () -> Unit) {
 }
 
 private const val DONE_ALPHA = 0.5f
+private const val DONE_HEADER = "done-header"
 
 /** Pulling down syncs now, while a sync method is chosen; otherwise [content] alone. */
 @OptIn(ExperimentalMaterial3Api::class)

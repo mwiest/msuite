@@ -10,8 +10,8 @@ an encrypted whole-state snapshot file, pairs a second device by QR, and shows o
 key as 24 recovery words.** On first
 start it
 creates "My Tasks" (in the device language). The lists are tabs at the top, and the app reopens on
-the list last shown. The selected list shows its open tasks, newest first, then its done tasks,
-the latest done first, grayed out and struck through; each has a checkbox, a star, and its notes' first line and due date
+the list last shown. The selected list shows its open tasks, newest first, then its done tasks
+under a "Done (n)" header that collapses them, the latest done first, grayed out and struck through; each has a checkbox, a star, and its notes' first line and due date
 below the title. The add button opens a sheet to type a new task's title; the list scrolls to the new task. Tapping a task opens its
 editor in a sheet: title, notes, star, a due date picked from a calendar (display only, no reminder),
 mark done or not done, and delete in the overflow menu. Title and notes are saved when you leave the

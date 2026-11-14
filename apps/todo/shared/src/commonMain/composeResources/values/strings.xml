@@ -173,4 +173,7 @@
     <string name="pair_switch_s3_body">This device is already in that group. Its code syncs through the S3 bucket %1$s; this device will sync through it too.</string>
     <string name="pair_switch_s3_confirm">Use bucket</string>
     <string name="pair_switched_s3">This device now syncs through the group's S3 bucket.</string>
+    <string name="done_header">Done (%1$d)</string>
+    <string name="show_done">Show done tasks</string>
+    <string name="hide_done">Hide done tasks</string>
 </resources>

@@ -173,4 +173,7 @@
     <string name="pair_switch_s3_body">Dieses Gerät ist schon in dieser Gruppe. Der Code synchronisiert über den S3-Bucket %1$s; dieses Gerät synchronisiert dann auch darüber.</string>
     <string name="pair_switch_s3_confirm">Bucket verwenden</string>
     <string name="pair_switched_s3">Dieses Gerät synchronisiert jetzt über den S3-Bucket der Gruppe.</string>
+    <string name="done_header">Erledigt (%1$d)</string>
+    <string name="show_done">Erledigte Aufgaben einblenden</string>
+    <string name="hide_done">Erledigte Aufgaben ausblenden</string>
 </resources>

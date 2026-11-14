@@ -27,6 +27,13 @@ class TodoSettingsTest : StringSpec({
         TodoSettings(MapSettings("lastList" to "not a uuid")).lastList.value shouldBe null
     }
 
+    "done tasks show until collapsed, and the choice is kept" {
+        val stored = MapSettings()
+        TodoSettings(stored).doneCollapsed.value shouldBe false
+        TodoSettings(stored).setDoneCollapsed(true)
+        TodoSettings(stored).doneCollapsed.value shouldBe true
+    }
+
     "an unknown stored theme reads as the system's" {
         TodoSettings(MapSettings("theme" to "Sepia")).themeMode.value shouldBe ThemeMode.System
     }
