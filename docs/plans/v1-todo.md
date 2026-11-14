@@ -180,7 +180,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [ ] Tasks: set details from the start, with icons as in Google Tasks
 - [ ] Tasks: round checkboxes (filled when done), a completion animation (ripple) and more padding
 - [ ] Tasks: collapse done tasks
-- [ ] Tasks: sync with a pull-down gesture
+- [x] Tasks: sync with a pull-down gesture
 - [x] Tasks: scroll to the top after adding a task
 - [x] Tasks: order done tasks by completion time, newest first (`451ba18`, decision 0088)
 - [ ] Sync: bookkeeping of plugs no longer used stays (`plug_watermark`, `ingested_batch`,

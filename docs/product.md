@@ -15,7 +15,7 @@ the latest done first, grayed out and struck through; each has a checkbox, a sta
 below the title. The add button opens a sheet to type a new task's title; the list scrolls to the new task. Tapping a task opens its
 editor in a sheet: title, notes, star, a due date picked from a calendar (display only, no reminder),
 mark done or not done, and delete in the overflow menu. Title and notes are saved when you leave the
-field or close the sheet. A long press drags an open task to a new place. The "+" tab creates a list;
+field or close the sheet. A long press drags an open task to a new place. With a sync method chosen, pulling the list down syncs now. The "+" tab creates a list;
 the top bar's menu renames the selected list, moves it left or right, or deletes it after confirming
 how many tasks go with it ("My Tasks" can't be deleted). The gear opens the settings: the theme
 (system default, light or dark), a Sync method chooser (off, a synced folder, a self-hosted relay,

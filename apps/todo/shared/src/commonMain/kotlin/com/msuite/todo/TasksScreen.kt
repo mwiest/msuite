@@ -30,6 +30,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,6 +49,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.msuite.todo.domain.LiveSyncActions
+import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.domain.Task
 import com.msuite.todo.domain.TodoList
 import com.msuite.todo.resources.Res
@@ -151,16 +154,18 @@ private fun Tasks(
         Centered(stringResource(Res.string.no_tasks))
         return
     }
-    TaskList(tasks, reveal, onRevealed, onMove = { id, to ->
-        scope.launch { app.tasks.move(id, to) }
-    }) { task, handle ->
-        TaskRow(
-            task,
-            handle,
-            onOpen = { onOpen(task.id) },
-            onDone = { scope.launch { app.tasks.setDone(task.id, it) } },
-            onStar = { scope.launch { app.tasks.setStarred(task.id, it) } },
-        )
+    SyncOnPull(app.live) {
+        TaskList(tasks, reveal, onRevealed, onMove = { id, to ->
+            scope.launch { app.tasks.move(id, to) }
+        }) { task, handle ->
+            TaskRow(
+                task,
+                handle,
+                onOpen = { onOpen(task.id) },
+                onDone = { scope.launch { app.tasks.setDone(task.id, it) } },
+                onStar = { scope.launch { app.tasks.setStarred(task.id, it) } },
+            )
+        }
     }
 }
 
@@ -287,6 +292,32 @@ private fun NewTaskSheet(onSave: (String) -> Unit, onDismiss: () -> Unit) {
 }
 
 private const val DONE_ALPHA = 0.5f
+
+/** Pulling down syncs now, while a sync method is chosen; otherwise [content] alone. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SyncOnPull(live: LiveSyncActions, content: @Composable () -> Unit) {
+    val backend by live.backend.collectAsState()
+    if (backend == SyncBackend.None) {
+        content()
+        return
+    }
+    var syncing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    PullToRefreshBox(
+        isRefreshing = syncing,
+        onRefresh = {
+            scope.launch {
+                syncing = true
+                try {
+                    live.syncNow()
+                } finally {
+                    syncing = false
+                }
+            }
+        },
+    ) { content() }
+}
 
 @Composable
 private fun Centered(text: String) {
