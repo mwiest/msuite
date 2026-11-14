@@ -173,7 +173,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [x] Settings: English texts showed `\'` escapes (`441ace5`)
 - [x] Settings: after a successful Connect the status reads "Never synced" until the next poll,
   even on a device that just synced; sync once right after Connect
-- [ ] Settings: `Last sync` shows a raw UTC instant (`2026-11-13T21:56:47.135563Z`); show local
+- [x] Settings: `Last sync` shows a raw UTC instant (`2026-11-13T21:56:47.135563Z`); show local
   time, formatted for the language
 - [ ] Settings: `needsS3Secret()` reads the KeyStore on every recomposition (each poll); measure,
   and cache it in `LiveSyncActions` if Settings stutters

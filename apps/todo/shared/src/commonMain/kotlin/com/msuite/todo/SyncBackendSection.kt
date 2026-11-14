@@ -365,7 +365,7 @@ private fun FolderPickDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
 @Composable
 private fun SyncStatusLines(status: SyncStatus, backend: SyncBackend, onConfirmEmpty: () -> Unit) {
     Text(
-        status.lastSync?.let { stringResource(Res.string.sync_last_sync, it.toString()) }
+        status.lastSync?.let { stringResource(Res.string.sync_last_sync, syncTimeText(it)) }
             ?: stringResource(Res.string.sync_never_synced),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,

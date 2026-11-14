@@ -2,6 +2,7 @@ package com.msuite.todo
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,22 +47,24 @@ fun TodoApp(container: TodoContainer, version: String, shell: ShellServices) {
     }
 
     MsuiteTheme(dark) {
-        val nav = rememberNavController()
-        NavHost(nav, startDestination = TasksRoute) {
-            composable<TasksRoute> { TasksScreen(container) { nav.navigate(SettingsRoute) } }
-            composable<SettingsRoute> {
-                SettingsScreen(container, version, { nav.popBackStack() }) {
-                    nav.navigate(
-                        when (it) {
-                            SettingsDestination.Pairing -> PairingRoute
-                            SettingsDestination.Recovery -> RecoveryRoute
-                        },
-                    )
+        CompositionLocalProvider(LocalIs24HourTime provides shell.is24HourTime) {
+            val nav = rememberNavController()
+            NavHost(nav, startDestination = TasksRoute) {
+                composable<TasksRoute> { TasksScreen(container) { nav.navigate(SettingsRoute) } }
+                composable<SettingsRoute> {
+                    SettingsScreen(container, version, { nav.popBackStack() }) {
+                        nav.navigate(
+                            when (it) {
+                                SettingsDestination.Pairing -> PairingRoute
+                                SettingsDestination.Recovery -> RecoveryRoute
+                            },
+                        )
+                    }
                 }
-            }
-            composable<PairingRoute> { PairingScreen(container.pairing, shell.qr) { nav.popBackStack() } }
-            composable<RecoveryRoute> {
-                RecoveryScreen(container.pairing, shell.clipboard) { nav.popBackStack() }
+                composable<PairingRoute> { PairingScreen(container.pairing, shell.qr) { nav.popBackStack() } }
+                composable<RecoveryRoute> {
+                    RecoveryScreen(container.pairing, shell.clipboard) { nav.popBackStack() }
+                }
             }
         }
     }

@@ -82,6 +82,10 @@
     <string name="relay_full">The relay is full for this group. Ask the operator to raise the limit or remove old objects.</string>
     <string name="relay_too_large">The relay's object limit is too small for this device's data.</string>
     <string name="sync_last_sync">Last sync: %1$s</string>
+    <string name="sync_time">%1$s, %2$s</string>
+    <string name="time_24h">%1$s</string>
+    <string name="time_am">%1$s AM</string>
+    <string name="time_pm">%1$s PM</string>
     <string name="sync_never_synced">Never synced</string>
     <string name="sync_now">Sync now</string>
     <string name="export">Export</string>

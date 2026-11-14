@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
             qr = ZxingQrCodes(this),
             clipboard = app.clipboard,
             fileStoreFactory = { uri -> SafFileStore(applicationContext, android.net.Uri.parse(uri)) },
+            is24HourTime = { android.text.format.DateFormat.is24HourFormat(this) },
         )
         liveSync = LiveSyncActions(
             replica = app.replica,

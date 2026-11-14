@@ -8,7 +8,8 @@ import com.msuite.todo.domain.SnapshotFiles
 
 /**
  * What only a platform shell can do for the UI: pick a file for the manual plug, pick a folder for
- * the folder plug, draw and scan a pairing code, copy the recovery key (decisions 0012, 0041, 0042).
+ * the folder plug, draw and scan a pairing code, copy the recovery key (decisions 0012, 0041, 0042),
+ * and say whether the device shows a 24 h clock (read on each use: the user may change it).
  * `TodoContainer` holds the domain side the same way, and the shell (`apps/todo/android`) builds
  * this one.
  */
@@ -18,4 +19,5 @@ class ShellServices(
     val qr: QrCodes,
     val clipboard: SensitiveClipboard,
     val fileStoreFactory: (String) -> FileStore,
+    val is24HourTime: () -> Boolean,
 )
