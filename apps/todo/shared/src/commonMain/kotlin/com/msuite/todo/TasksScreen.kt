@@ -61,7 +61,6 @@ import com.msuite.todo.resources.no_tasks
 import com.msuite.todo.resources.save
 import com.msuite.todo.resources.settings
 import com.msuite.todo.resources.task_title
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -80,6 +79,7 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
     var adding by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var listDialog by rememberSaveable { mutableStateOf<ListDialog?>(null) }
+    var reveal by remember { mutableStateOf<Uuid?>(null) }
 
     Scaffold(
         topBar = {
@@ -102,7 +102,9 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
             if (selected == null) {
                 Centered(stringResource(Res.string.no_lists))
             } else {
-                Tasks(state.tasks(selected.id), app, scope) { editingId = it.toString() }
+                Tasks(state.tasks(selected.id), app, reveal, onRevealed = { reveal = null }) {
+                    editingId = it.toString()
+                }
             }
         }
     }
@@ -111,7 +113,7 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
         NewTaskSheet(
             onSave = { title ->
                 adding = false
-                if (title.isNotBlank()) scope.launch { app.tasks.create(selected.id, title.trim()) }
+                if (title.isNotBlank()) scope.launch { reveal = app.tasks.create(selected.id, title.trim()) }
             },
             onDismiss = { adding = false },
         )
@@ -137,12 +139,21 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
 }
 
 @Composable
-private fun Tasks(tasks: List<Task>, app: TodoContainer, scope: CoroutineScope, onOpen: (Uuid) -> Unit) {
+private fun Tasks(
+    tasks: List<Task>,
+    app: TodoContainer,
+    reveal: Uuid?,
+    onRevealed: () -> Unit,
+    onOpen: (Uuid) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
     if (tasks.isEmpty()) {
         Centered(stringResource(Res.string.no_tasks))
         return
     }
-    TaskList(tasks, onMove = { id, to -> scope.launch { app.tasks.move(id, to) } }) { task, handle ->
+    TaskList(tasks, reveal, onRevealed, onMove = { id, to ->
+        scope.launch { app.tasks.move(id, to) }
+    }) { task, handle ->
         TaskRow(
             task,
             handle,
@@ -154,16 +165,29 @@ private fun Tasks(tasks: List<Task>, app: TodoContainer, scope: CoroutineScope, 
 }
 
 /**
- * Open tasks, then done ones (decision 0065). A long-press drag reorders the open ones, written
- * once when the drag ends (decision 0063); done tasks don't move.
+ * Open tasks, then done ones (decisions 0065, 0088). A long-press drag reorders the open ones, written
+ * once when the drag ends (decision 0063); done tasks don't move. Scrolls to [reveal] once it shows.
  */
 @Composable
-private fun TaskList(tasks: List<Task>, onMove: (Uuid, Int) -> Unit, row: @Composable (Task, Modifier) -> Unit) {
+private fun TaskList(
+    tasks: List<Task>,
+    reveal: Uuid?,
+    onRevealed: () -> Unit,
+    onMove: (Uuid, Int) -> Unit,
+    row: @Composable (Task, Modifier) -> Unit,
+) {
     val (open, done) = tasks.partition { !it.done }
     var order by remember(open) { mutableStateOf(open) }
     val listState = rememberLazyListState()
     val reorder = rememberReorderableLazyListState(listState) { from, to ->
         order = order.toMutableList().apply { add(to.index, removeAt(from.index)) }
+    }
+    LaunchedEffect(reveal, order) {
+        val index = order.indexOfFirst { it.id == reveal }
+        if (index >= 0) {
+            listState.animateScrollToItem(index)
+            onRevealed()
+        }
     }
     LazyColumn(Modifier.fillMaxSize(), state = listState) {
         items(order, key = { it.id.toString() }) { task ->
