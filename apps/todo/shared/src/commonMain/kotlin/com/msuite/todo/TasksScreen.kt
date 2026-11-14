@@ -153,7 +153,7 @@ fun TasksScreen(app: TodoContainer, onSettings: () -> Unit) {
 private fun Tasks(tasks: List<Task>, app: TodoContainer, reveal: MutableState<Uuid?>, onOpen: (Uuid) -> Unit) {
     val scope = rememberCoroutineScope()
     if (tasks.isEmpty()) {
-        Centered(stringResource(Res.string.no_tasks))
+        SyncOnPull(app.live) { Centered(stringResource(Res.string.no_tasks)) }
         return
     }
     SyncOnPull(app.live) {
@@ -350,10 +350,15 @@ private fun SyncOnPull(live: LiveSyncActions, content: @Composable () -> Unit) {
     ) { content() }
 }
 
+/** [text] centred, in a scrollable list so that a pull down still reaches [SyncOnPull]. */
 @Composable
 private fun Centered(text: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
     }
 }
 
