@@ -167,9 +167,9 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
   shows either "Share this device" (a blank QR code and a warning before revealing it) or "Connect
   to other device" (a scan button); both explained
 - [ ] Settings: move About into its own screen, like Voclet
-- [ ] Settings: switching the sync method doesn't lose the other methods' settings (today Off
+- [x] Settings: switching the sync method doesn't lose the other methods' settings (today Off
   clears the S3 fields); each type remembers its last destination, the S3 secret stays wrapped
-  (decided 2026-11-15, supersedes 0087's "deleted when another backend is chosen")
+  (decision 0090)
 - [x] Settings: after scanning a code, go back to Settings and show a toast (a snackbar)
 - [x] Settings: English texts showed `\'` escapes (`441ace5`)
 - [x] Settings: after a successful Connect the status reads "Never synced" until the next poll,

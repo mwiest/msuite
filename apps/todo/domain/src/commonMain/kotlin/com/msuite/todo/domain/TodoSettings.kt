@@ -28,6 +28,13 @@ sealed interface SyncBackend {
     ) : SyncBackend
 }
 
+/** The last destination of each backend type, chosen or not; `null` for a type never set up. */
+data class RememberedBackends(
+    val folder: SyncBackend.Folder? = null,
+    val relay: SyncBackend.Relay? = null,
+    val s3: SyncBackend.S3? = null,
+)
+
 /** Device-local, non-synced preferences (decision 0064). Never backend credentials. */
 class TodoSettings(private val settings: Settings) {
     private val theme = MutableStateFlow(
@@ -62,20 +69,36 @@ class TodoSettings(private val settings: Settings) {
         collapsed.value = value
     }
 
+    private val saved = MutableStateFlow(loadRemembered())
+
+    /** Each backend type's last destination, kept while another is chosen so switching back is easy. */
+    val remembered: StateFlow<RememberedBackends> = saved.asStateFlow()
+
+    private val folderUri = MutableStateFlow(saved.value.folder?.uri)
+
+    /** The remembered folder's URI, chosen or not (decision 0042). */
+    val syncedFolderUri: StateFlow<String?> = folderUri.asStateFlow()
+
+    // After the flows that loadBackend's migration writes to.
     private val backend = MutableStateFlow(loadBackend())
 
     /** The chosen backend; one at a time (plan v1 step 9). */
     val syncBackend: StateFlow<SyncBackend> = backend.asStateFlow()
 
-    private val folderUri = MutableStateFlow((backend.value as? SyncBackend.Folder)?.uri)
-
-    /** The synced folder's URI, or `null` if the backend isn't a folder (decision 0042). */
-    val syncedFolderUri: StateFlow<String?> = folderUri.asStateFlow()
-
+    /** Chooses [value] and makes it its type's remembered destination. */
     fun setSyncBackend(value: SyncBackend) {
-        setPersisted(value)
+        persist(value)
         backend.value = value
-        folderUri.value = (value as? SyncBackend.Folder)?.uri
+    }
+
+    private fun persist(value: SyncBackend) {
+        remember(value)
+        when (value) {
+            SyncBackend.None -> settings.remove(SYNC_BACKEND)
+            is SyncBackend.Folder -> settings.putString(SYNC_BACKEND, FOLDER)
+            is SyncBackend.Relay -> settings.putString(SYNC_BACKEND, RELAY)
+            is SyncBackend.S3 -> settings.putString(SYNC_BACKEND, S3)
+        }
     }
 
     /** Compatibility accessor for the folder-only UI; sets or clears a Folder backend. */
@@ -83,32 +106,53 @@ class TodoSettings(private val settings: Settings) {
         setSyncBackend(if (uri == null) SyncBackend.None else SyncBackend.Folder(uri))
     }
 
-    /** Reads the backend, migrating the step 8 `syncedFolderUri` key to `syncBackend`. */
-    private fun loadBackend(): SyncBackend = decode(settings.getStringOrNull(SYNC_BACKEND))
-        ?: settings.getStringOrNull(SYNCED_FOLDER_URI)?.let { legacy ->
-            settings.remove(SYNCED_FOLDER_URI)
-            SyncBackend.Folder(legacy).also { setPersisted(it) }
-        }
-        ?: SyncBackend.None
-
-    private fun setPersisted(value: SyncBackend) {
-        S3_KEYS.forEach(settings::remove)
+    private fun remember(value: SyncBackend) {
         when (value) {
-            SyncBackend.None -> settings.remove(SYNC_BACKEND)
+            SyncBackend.None -> return
 
-            is SyncBackend.Folder -> settings.putString(SYNC_BACKEND, "folder:${value.uri}")
+            is SyncBackend.Folder -> {
+                settings.putString(FOLDER_URI, value.uri)
+                saved.value = saved.value.copy(folder = value)
+                folderUri.value = value.uri
+            }
 
-            is SyncBackend.Relay -> settings.putString(SYNC_BACKEND, "relay:${value.url}")
+            is SyncBackend.Relay -> {
+                settings.putString(RELAY_URL, value.url)
+                saved.value = saved.value.copy(relay = value)
+            }
 
             is SyncBackend.S3 -> {
-                settings.putString(SYNC_BACKEND, S3)
                 settings.putString(S3_ENDPOINT, value.endpoint)
                 settings.putString(S3_REGION, value.region)
                 settings.putString(S3_BUCKET, value.bucket)
                 settings.putString(S3_PREFIX, value.prefix)
                 settings.putString(S3_ACCESS_KEY_ID, value.accessKeyId)
+                saved.value = saved.value.copy(s3 = value)
             }
         }
+    }
+
+    private fun loadRemembered() = RememberedBackends(
+        folder = settings.getStringOrNull(FOLDER_URI)?.let(SyncBackend::Folder),
+        relay = settings.getStringOrNull(RELAY_URL)?.let(SyncBackend::Relay),
+        s3 = loadS3(),
+    )
+
+    /** Reads the backend, migrating the step 8 `syncedFolderUri` key and the `folder:`/`relay:` values. */
+    private fun loadBackend(): SyncBackend {
+        val legacy = settings.getStringOrNull(SYNCED_FOLDER_URI)?.let(SyncBackend::Folder)
+            ?: decodeLegacy(settings.getStringOrNull(SYNC_BACKEND))
+        if (legacy != null) {
+            settings.remove(SYNCED_FOLDER_URI)
+            persist(legacy)
+            return legacy
+        }
+        return when (settings.getStringOrNull(SYNC_BACKEND)) {
+            FOLDER -> saved.value.folder
+            RELAY -> saved.value.relay
+            S3 -> saved.value.s3
+            else -> null
+        } ?: SyncBackend.None
     }
 
     /** The S3 backend from its own keys, or `null` if one is missing. */
@@ -126,20 +170,22 @@ class TodoSettings(private val settings: Settings) {
         const val DONE_COLLAPSED = "doneCollapsed"
         const val SYNCED_FOLDER_URI = "syncedFolderUri"
         const val SYNC_BACKEND = "syncBackend"
+        const val FOLDER = "folder"
+        const val RELAY = "relay"
         const val S3 = "s3"
 
+        const val FOLDER_URI = "folder.uri"
+        const val RELAY_URL = "relay.url"
         const val S3_ENDPOINT = "s3.endpoint"
         const val S3_REGION = "s3.region"
         const val S3_BUCKET = "s3.bucket"
         const val S3_PREFIX = "s3.prefix"
         const val S3_ACCESS_KEY_ID = "s3.accessKeyId"
-        val S3_KEYS = listOf(S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_PREFIX, S3_ACCESS_KEY_ID)
     }
 
-    private fun decode(stored: String?): SyncBackend? = when {
+    /** A backend stored with its destination in the value, as before 2026-11-15. */
+    private fun decodeLegacy(stored: String?): SyncBackend? = when {
         stored == null -> null
-        stored == S3 -> loadS3() ?: SyncBackend.None
-        stored == "none" -> SyncBackend.None
         stored.startsWith("folder:") -> SyncBackend.Folder(stored.removePrefix("folder:"))
         stored.startsWith("relay:") -> SyncBackend.Relay(stored.removePrefix("relay:"))
         else -> null

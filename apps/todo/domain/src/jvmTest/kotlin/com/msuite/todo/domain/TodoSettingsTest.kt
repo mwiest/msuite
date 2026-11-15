@@ -45,7 +45,17 @@ class TodoSettingsTest : StringSpec({
         TodoSettings(stored).syncBackend.value shouldBe SyncBackend.Folder("content://folder")
     }
 
-    "the chosen backend round-trips and drives the folder URI" {
+    "a legacy folder or relay value migrates to the remembered destination" {
+        val folder = MapSettings("syncBackend" to "folder:content://folder")
+        TodoSettings(folder).syncBackend.value shouldBe SyncBackend.Folder("content://folder")
+        TodoSettings(folder).remembered.value.folder shouldBe SyncBackend.Folder("content://folder")
+
+        val relay = MapSettings("syncBackend" to "relay:https://relay.example")
+        TodoSettings(relay).syncBackend.value shouldBe SyncBackend.Relay("https://relay.example")
+        TodoSettings(relay).remembered.value.relay shouldBe SyncBackend.Relay("https://relay.example")
+    }
+
+    "the chosen backend round-trips, and the folder URI is the remembered folder's" {
         val stored = MapSettings()
         TodoSettings(stored).syncBackend.value shouldBe SyncBackend.None
 
@@ -53,7 +63,7 @@ class TodoSettingsTest : StringSpec({
         settings.setSyncBackend(SyncBackend.Folder("content://folder"))
         settings.syncedFolderUri.value shouldBe "content://folder"
         settings.setSyncBackend(SyncBackend.Relay("https://relay.example"))
-        settings.syncedFolderUri.value shouldBe null
+        settings.syncedFolderUri.value shouldBe "content://folder"
 
         TodoSettings(stored).syncBackend.value shouldBe SyncBackend.Relay("https://relay.example")
         settings.setSyncBackend(SyncBackend.None)
@@ -70,15 +80,32 @@ class TodoSettingsTest : StringSpec({
             setOf("syncBackend", "s3.endpoint", "s3.region", "s3.bucket", "s3.prefix", "s3.accessKeyId")
     }
 
-    "leaving S3 removes its keys" {
+    "switching keeps every type's last destination, also across a restart" {
         val stored = MapSettings()
         val settings = TodoSettings(stored)
-        settings.setSyncBackend(SyncBackend.S3("https://e", "r", "b", "", "AKID"))
+        val s3 = SyncBackend.S3("https://e", "r", "b", "", "AKID")
+        settings.setSyncBackend(SyncBackend.Folder("content://folder"))
         settings.setSyncBackend(SyncBackend.Relay("https://relay.example"))
-        stored.keys shouldBe setOf("syncBackend")
-        settings.setSyncBackend(SyncBackend.S3("https://e", "r", "b", "", "AKID"))
+        settings.setSyncBackend(s3)
         settings.setSyncBackend(SyncBackend.None)
-        stored.keys shouldBe emptySet()
+
+        val expected = RememberedBackends(
+            SyncBackend.Folder("content://folder"),
+            SyncBackend.Relay("https://relay.example"),
+            s3,
+        )
+        settings.remembered.value shouldBe expected
+        TodoSettings(stored).remembered.value shouldBe expected
+        TodoSettings(stored).syncBackend.value shouldBe SyncBackend.None
+    }
+
+    "choosing a type again replaces only its own destination" {
+        val settings = TodoSettings(MapSettings())
+        settings.setSyncBackend(SyncBackend.Folder("content://a"))
+        settings.setSyncBackend(SyncBackend.Relay("https://relay.example"))
+        settings.setSyncBackend(SyncBackend.Folder("content://b"))
+        settings.remembered.value shouldBe
+            RememberedBackends(SyncBackend.Folder("content://b"), SyncBackend.Relay("https://relay.example"), null)
     }
 
     "an S3 backend with a field missing reads as none" {

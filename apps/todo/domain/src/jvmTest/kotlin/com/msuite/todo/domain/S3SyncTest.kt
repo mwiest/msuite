@@ -17,6 +17,7 @@ import com.msuite.core.sync.testing.TestClock
 import com.russhwolf.settings.MapSettings
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -99,9 +100,25 @@ class S3SyncTest : StringSpec({
             credentials.accessKeyId shouldBe "AKID"
             credentials.secretAccessKey shouldBe "SECRET"
             f.live.status.value.lastSync.shouldNotBeNull()
-
             f.live.setBackend(SyncBackend.None)
-            f.secrets.stored.shouldBeNull()
+        }
+    }
+
+    "leaving S3 keeps its configuration and secret, so choosing it again syncs at once" {
+        coroutineScope {
+            val f = Fixture(this)
+            f.live.connectS3(backend, "SECRET").shouldBeNull()
+            f.live.setBackend(SyncBackend.Relay("https://relay.example"))
+            f.live.setBackend(SyncBackend.None)
+
+            f.secrets.stored shouldBe "SECRET"
+            f.live.remembered.value.s3 shouldBe backend
+            f.live.hasS3Secret() shouldBe true
+            f.live.setBackend(backend)
+            f.live.backend.value shouldBe backend
+            f.factory.prefixesAndSecrets() shouldBe listOf("todo" to "SECRET")
+            f.factory.built.size shouldBeGreaterThan 2
+            f.live.setBackend(SyncBackend.None)
         }
     }
 
@@ -166,7 +183,7 @@ class S3SyncTest : StringSpec({
 
             f.live.applyJoinedBackend(BackendType.S3, section.copy(endpoint = "http://minio.lan").encode())
             f.live.backend.value shouldBe SyncBackend.None
-            f.secrets.stored.shouldBeNull()
+            f.secrets.stored shouldBe "QRSECRET"
 
             f.live.applySwitchedBackend(BackendType.S3, section.encode()) shouldBe true
             f.live.backend.value shouldBe backend

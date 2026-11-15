@@ -79,8 +79,9 @@ the app is open, or a self-hosted relay, where each device stores the same encry
 HTTP and authenticates with a token derived from the root, or an S3-compatible bucket (Cloudflare
 R2, Backblaze B2, AWS, MinIO), where each device stores the same encrypted objects and signs its
 requests with the bucket's access key. The bucket's secret key is kept wrapped under the Android
-KeyStore, like the group's root, never in the plain settings, and is deleted when the device
-switches to another backend. A folder, relay or bucket that can't be reached never closes the app;
+KeyStore, like the group's root, never in the plain settings. Each method keeps its last folder,
+address or bucket (and the bucket's secret) while another is chosen, so choosing it again starts
+from there. A folder, relay or bucket that can't be reached never closes the app;
 Settings says so and the edits wait on the device until it can. A relay speaks plain HTTP behind a
 TLS reverse proxy; the app only accepts https addresses for a relay or bucket (a debug build also
 accepts http for a LAN or emulator). A device periodically folds its own edits into one

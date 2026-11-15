@@ -142,8 +142,11 @@ class LiveSyncActions(
     /** The chosen backend, exposed for Settings. */
     val backend: StateFlow<SyncBackend> = settings.syncBackend
 
-    /** The configured folder URI, exposed for the step 8 folder UI. */
+    /** The remembered folder URI, exposed for the step 8 folder UI. */
     val folderUri: StateFlow<String?> = settings.syncedFolderUri
+
+    /** Each backend type's last destination, for Settings to offer when switching back. */
+    val remembered: StateFlow<RememberedBackends> = settings.remembered
 
     private var liveSync: LiveSync? = null
     private var startJob: Job? = null
@@ -160,8 +163,8 @@ class LiveSyncActions(
     fun clearFolder() = setBackend(SyncBackend.None)
 
     /**
-     * Chooses one backend, stopping the previous one first (plan v1 step 9). Leaving S3 deletes its
-     * stored secret, so no credential outlives its backend.
+     * Chooses one backend, stopping the previous one first (plan v1 step 9). Leaving S3 keeps its
+     * secret wrapped, so switching back needs nothing typed.
      */
     fun setBackend(value: SyncBackend) = switchTo(value, restart = false)
 
@@ -260,6 +263,9 @@ class LiveSyncActions(
         switchTo(backend, restart = true)
     }
 
+    /** Whether an S3 secret is stored, for the remembered bucket whether chosen or not. */
+    fun hasS3Secret(): Boolean = s3?.secrets?.load() != null
+
     /** Whether the chosen S3 backend lacks its secret (lost with the KeyStore key): Settings asks for it. */
     fun needsS3Secret(): Boolean = settings.syncBackend.value is SyncBackend.S3 && s3?.secrets?.load() == null
 
@@ -281,7 +287,6 @@ class LiveSyncActions(
             is SyncBackend.Relay -> value.copy(url = value.url.trimEnd('/'))
             else -> value
         }
-        if (normalized !is SyncBackend.S3) s3?.secrets?.clear()
         val changed = settings.syncBackend.value != normalized
         settings.setSyncBackend(normalized)
         if (!changed && !restart && liveSync != null) return

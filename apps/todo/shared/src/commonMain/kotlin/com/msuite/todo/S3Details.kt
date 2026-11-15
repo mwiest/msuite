@@ -22,6 +22,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.msuite.todo.domain.LiveSyncActions
+import com.msuite.todo.domain.RememberedBackends
 import com.msuite.todo.domain.S3SetupError
 import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.resources.Res
@@ -49,9 +50,9 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
-/** Whether a secret for the chosen S3 backend is on this device. */
+/** Whether a secret for the remembered S3 backend is on this device. */
 private enum class S3Secret {
-    /** S3 isn't the chosen backend yet: the form must have one. */
+    /** None stored and S3 isn't chosen: the form must have one. */
     None,
 
     /** Stored: an empty field keeps it. */
@@ -61,14 +62,14 @@ private enum class S3Secret {
     Missing,
 }
 
-/** What the S3 form starts from: the chosen bucket, or empty fields. */
-internal fun SyncBackend.s3Draft(): SyncBackend.S3 = this as? SyncBackend.S3 ?: SyncBackend.S3("", "", "", "", "")
+/** What the S3 form starts from: the remembered bucket, or empty fields. */
+internal fun RememberedBackends.s3Draft(): SyncBackend.S3 = s3 ?: SyncBackend.S3("", "", "", "", "")
 
 /** The secret state of [backend] for the S3 form. */
 private fun LiveSyncActions.s3Secret(backend: SyncBackend): S3Secret = when {
-    backend !is SyncBackend.S3 -> S3Secret.None
-    needsS3Secret() -> S3Secret.Missing
-    else -> S3Secret.Stored
+    hasS3Secret() -> S3Secret.Stored
+    backend is SyncBackend.S3 -> S3Secret.Missing
+    else -> S3Secret.None
 }
 
 /**
@@ -153,7 +154,7 @@ internal fun S3Details(
         ) {
             Text(stringResource(Res.string.relay_save))
         }
-        if (secretState == S3Secret.Stored) {
+        if (backend is SyncBackend.S3 && secretState == S3Secret.Stored) {
             TextButton(enabled = !busy, onClick = { runBusy { live.syncNow() } }) {
                 Text(stringResource(Res.string.sync_now))
             }

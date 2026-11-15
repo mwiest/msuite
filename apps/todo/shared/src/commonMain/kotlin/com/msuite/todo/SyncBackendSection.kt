@@ -88,6 +88,7 @@ fun SyncBackendSection(live: LiveSyncActions) {
     val backend by live.backend.collectAsState()
     val status by live.status.collectAsState()
     val folderUri by live.folderUri.collectAsState()
+    val remembered by live.remembered.collectAsState()
     var choice by remember(backend) { mutableStateOf(backend) }
     var relayUrl by remember(choice) { mutableStateOf((choice as? SyncBackend.Relay)?.url.orEmpty()) }
     var relayError by remember { mutableStateOf<RelaySetupError?>(null) }
@@ -119,9 +120,9 @@ fun SyncBackendSection(live: LiveSyncActions) {
         },
         onRelay = {
             relayError = null
-            choice = SyncBackend.Relay((backend as? SyncBackend.Relay)?.url.orEmpty())
+            choice = remembered.relay ?: SyncBackend.Relay("")
         },
-        onS3 = { choice = backend.s3Draft() },
+        onS3 = { choice = remembered.s3Draft() },
     )
 
     Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
