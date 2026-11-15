@@ -169,7 +169,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [ ] Settings: move About into its own screen, like Voclet
 - [x] Settings: switching the sync method doesn't lose the other methods' settings (today Off
   clears the S3 fields); each type remembers its last destination, the S3 secret stays wrapped
-  (decision 0090)
+  (decision 0090, `2e984fe`)
 - [x] Settings: after scanning a code, go back to Settings and show a toast (a snackbar)
 - [x] Settings: English texts showed `\'` escapes (`441ace5`)
 - [x] Settings: after a successful Connect the status reads "Never synced" until the next poll,
@@ -186,11 +186,11 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [x] Tasks: order done tasks by completion time, newest first (`451ba18`, decision 0088)
 - [x] Sync: a cell merged from elsewhere (another plug, a manual import) with an HLC at or below a
   plug's watermark never reaches that plug, e.g. on switching back from Dropbox to S3; rewind every
-  other plug's watermark below the merged cells (decision 0089)
+  other plug's watermark below the merged cells (decision 0089, `449b5ba`)
 - [x] Sync: bookkeeping of forgotten destinations stays (`plug_watermark`, `ingested_batch`,
   `unreadable_batch`, `unconfirmed_publish` rows of an old folder, relay or prefix). A destination
   is forgotten when one of its identifiers changes or is emptied (there is no "forget" button);
-  switching to another type keeps its rows, so switching back resumes where it left off
+  switching to another type keeps its rows, so switching back resumes where it left off (`e6849f7`)
 - [ ] S3: run the device check on Backblaze B2 (Connect, join by QR, edits, prefix wiped); capture
   B2's answer to `If-None-Match` with `aws s3api put-object --if-none-match '*' --debug`, narrow
   the header fallback to it with a test (decision 0087), and add B2's responses as fixtures
