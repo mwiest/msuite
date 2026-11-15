@@ -295,9 +295,15 @@ class LiveSyncActions(
         startSyncIfConfigured()
     }
 
-    /** Starts the chosen sync if there is one. Called on app startup. */
+    /**
+     * Starts the chosen sync if there is one, after deleting the bookkeeping of destinations no
+     * longer remembered. Called on app startup and after every switch.
+     */
     fun startSyncIfConfigured() {
         if (liveSync != null) return
+        val remembered = settings.remembered.value
+        val keep = listOfNotNull(remembered.folder, remembered.relay, remembered.s3).mapNotNull { it.plugId() }
+        scope.launch { replica.forgetAllBut(keep.toSet()) }
         identity.root(KEY_GEN_V1)
             ?.let(::connectionFor)
             ?.let { (plug, plugId) ->
@@ -319,14 +325,13 @@ class LiveSyncActions(
         when (val chosen = settings.syncBackend.value) {
             SyncBackend.None -> null
 
-            is SyncBackend.Folder ->
-                FolderPlug(fileStoreFactory(chosen.uri)) to PlugId("folder:${chosen.uri}")
+            is SyncBackend.Folder -> FolderPlug(fileStoreFactory(chosen.uri)) to chosen.plugId()
 
             is SyncBackend.Relay ->
                 if (!isAllowedServerUrl(chosen.url, relay.allowInsecure)) {
                     null
                 } else {
-                    relay.plugFactory?.let { it.create(chosen.url, root) to PlugId("relay:${chosen.url}") }
+                    relay.plugFactory?.let { it.create(chosen.url, root) to chosen.plugId() }
                 }
 
             is SyncBackend.S3 -> s3Connection(chosen)
@@ -337,11 +342,11 @@ class LiveSyncActions(
         val options = s3 ?: return null
         val section = options.secrets.load()?.let(chosen::section)
         val config = section?.toConfig()?.takeIf { isAllowedServerUrl(chosen.endpoint, options.allowInsecure) }
-        return if (section == null || config == null) {
+        val plugId = chosen.plugId()
+        return if (section == null || config == null || plugId == null) {
             null
         } else {
-            options.plugFactory.create(config, section.credentials()) to
-                PlugId("s3:${chosen.endpoint}/${chosen.bucket}/${config.keyPrefix}")
+            options.plugFactory.create(config, section.credentials()) to plugId
         }
     }
 
@@ -428,6 +433,25 @@ class LiveSyncActions(
         liveSync?.flush()
     }
 }
+
+/**
+ * The plug ID [LiveSync] keeps this destination's bookkeeping under: its type and address, or
+ * `null` for none or an S3 configuration the plug would refuse.
+ */
+fun SyncBackend.plugId(): PlugId? = when (this) {
+    SyncBackend.None -> null
+
+    is SyncBackend.Folder -> plugId()
+
+    is SyncBackend.Relay -> plugId()
+
+    is SyncBackend.S3 -> runCatching { S3Config(endpoint, region, bucket, prefix) }.getOrNull()
+        ?.let { PlugId("s3:$endpoint/$bucket/${it.keyPrefix}") }
+}
+
+fun SyncBackend.Folder.plugId(): PlugId = PlugId("folder:$uri")
+
+fun SyncBackend.Relay.plugId(): PlugId = PlugId("relay:$url")
 
 /** The pairing section for this backend under [secret] (decision 0085). */
 fun SyncBackend.S3.section(secret: String): S3Section = S3Section(endpoint, region, bucket, prefix, accessKeyId, secret)

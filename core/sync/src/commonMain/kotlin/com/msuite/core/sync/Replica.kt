@@ -172,6 +172,12 @@ class Replica private constructor(
         store.plugs.prune(plug, currentBackendKeys)
     }
 
+    /**
+     * Deletes the bookkeeping of every plug not in [keep], for destinations the app no longer
+     * remembers; returns the plugs it deleted. Coming back to one later starts it afresh.
+     */
+    suspend fun forgetAllBut(keep: Set<PlugId>): Set<PlugId> = serialized { store.forgetAllBut(keep) }
+
     override fun close() = store.close()
 
     /**

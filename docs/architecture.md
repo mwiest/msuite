@@ -361,7 +361,11 @@ blank secret keeps the stored one, and a connect always restarts the sync, so a 
 effect.
 Choosing another backend keeps the secret, and `TodoSettings.remembered` keeps each type's last
 folder, relay or bucket, so Settings starts each form from it (decision 0090); `hasS3Secret()`
-says whether the form may leave the secret field empty. Without a readable secret (the KeyStore key was
+says whether the form may leave the secret field empty. Bookkeeping is kept per plug ID
+(`SyncBackend.plugId()`: type plus folder URI, relay URL, or S3 endpoint, bucket and normalised
+prefix), and `startSyncIfConfigured` (on app start and after every switch) runs
+`Replica.forgetAllBut` with the remembered destinations' IDs, so a replaced destination's rows go
+and a remembered one resumes where it left off. Without a readable secret (the KeyStore key was
 lost) the backend stays chosen but doesn't sync, and `needsS3Secret()` lets Settings ask for it.
 `pairingBackend()` builds the device's QR descriptor, with the S3 section and its secret; S3
 without a secret shows as `manual`. A scanned S3 code joins or switches with the same checks but no listing (the code comes

@@ -187,7 +187,7 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [x] Sync: a cell merged from elsewhere (another plug, a manual import) with an HLC at or below a
   plug's watermark never reaches that plug, e.g. on switching back from Dropbox to S3; rewind every
   other plug's watermark below the merged cells (decision 0089)
-- [ ] Sync: bookkeeping of forgotten destinations stays (`plug_watermark`, `ingested_batch`,
+- [x] Sync: bookkeeping of forgotten destinations stays (`plug_watermark`, `ingested_batch`,
   `unreadable_batch`, `unconfirmed_publish` rows of an old folder, relay or prefix). A destination
   is forgotten when one of its identifiers changes or is emptied (there is no "forget" button);
   switching to another type keeps its rows, so switching back resumes where it left off

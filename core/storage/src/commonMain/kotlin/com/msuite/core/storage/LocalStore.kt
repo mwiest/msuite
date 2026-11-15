@@ -54,6 +54,19 @@ class LocalStore(private val driver: SqlDriver) : AutoCloseable {
     val plugs = PlugBook(db.plugStateQueries)
     val unconfirmed = UnconfirmedBook(db.plugStateQueries)
 
+    /** Deletes the bookkeeping of every plug not in [keep]; returns the plugs it deleted. */
+    fun forgetAllBut(keep: Set<PlugId>): Set<PlugId> = transaction {
+        val queries = db.plugStateQueries
+        val forgotten = queries.plugs().executeAsList().map(::PlugId).filterNot { it in keep }.toSet()
+        forgotten.forEach {
+            queries.forgetIngested(it.id)
+            queries.forgetUnreadable(it.id)
+            queries.clearWatermark(it.id)
+            queries.forgetUnconfirmed(it.id)
+        }
+        forgotten
+    }
+
     override fun close() = driver.close()
 
     companion object {

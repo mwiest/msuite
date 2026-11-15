@@ -212,6 +212,32 @@ class ReplicaTest : StringSpec({
         replica.delta(relay).shouldNotBeNull().cells shouldContainExactly listOf(newer)
     }
 
+    "forgetting plugs deletes all their bookkeeping and keeps the others'" {
+        val replica = Replica(driver(), deviceA, TestClock(1_000))
+        replica.write(mapOf(key(1) to byteArrayOf(1)))
+        val other = PlugId("other")
+        for (plug in listOf(folder, relay, other)) {
+            replica.ingest(plug, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(2, 500))))
+            repeat(MAX_DECODE_ATTEMPTS) { replica.unreadable(plug, "bad") }
+            replica.pushed(plug, replica.delta(plug).shouldNotBeNull(), key = "mine")
+        }
+
+        replica.forgetAllBut(setOf(relay)) shouldBe setOf(folder, other)
+
+        for (plug in listOf(folder, other)) {
+            replica.ingestedKeys(plug).shouldBeEmpty()
+            replica.hasSynced(plug) shouldBe false
+            replica.canRecover(plug) shouldBe false
+            replica.delta(plug).shouldNotBeNull().cells shouldHaveSize 2
+            replica.isCorrupt(plug, "bad") shouldBe false
+        }
+        replica.ingestedKeys(relay) shouldContainExactly setOf("k1")
+        replica.delta(relay).shouldBeNull()
+        replica.confirm(relay, setOf("mine"))
+        replica.canRecover(relay) shouldBe true
+        replica.forgetAllBut(setOf(relay)) shouldBe emptySet()
+    }
+
     "two replicas converge through their databases" {
         val a = Replica(driver(), deviceA, TestClock(1_000))
         val b = Replica(driver(), deviceB, TestClock(2_000))

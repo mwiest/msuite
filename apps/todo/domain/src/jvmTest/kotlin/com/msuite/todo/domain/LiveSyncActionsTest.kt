@@ -5,6 +5,7 @@ import com.msuite.core.crypto.BackendType
 import com.msuite.core.model.CellKey
 import com.msuite.core.model.DeviceId
 import com.msuite.core.model.FieldId
+import com.msuite.core.model.PlugId
 import com.msuite.core.relay.RelayRefusal
 import com.msuite.core.relay.RelayRefused
 import com.msuite.core.storage.LocalStore
@@ -22,6 +23,7 @@ import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
@@ -321,5 +323,55 @@ class LiveSyncActionsTest : StringSpec({
             live.status.value.refused?.status shouldBe 401
             live.setBackend(SyncBackend.None)
         }
+    }
+
+    "a destination replaced by another of its type loses its bookkeeping; one only switched away from keeps it" {
+        val replica = replica()
+        replica.write(mapOf(CellKey(Uuid.random(), FieldId(1)) to byteArrayOf(1)))
+        val folder = PlugId("folder:content://f")
+        val relayA = PlugId("relay:https://a.example")
+        val leftover = PlugId("folder:content://old")
+        for (plug in listOf(folder, relayA, leftover)) replica.pushed(plug, replica.delta(plug).shouldNotBeNull())
+        val settings = TodoSettings(MapSettings()).apply {
+            setSyncBackend(SyncBackend.Folder("content://f"))
+            setSyncBackend(SyncBackend.Relay("https://a.example"))
+        }
+        val identity = StoredIdentity(MemoryRootStore())
+        fun CoroutineScope.live() = LiveSyncActions(
+            replica = replica,
+            identity = identity,
+            settings = settings,
+            folderPick = NoPick,
+            fileStoreFactory = { error("no folder") },
+            scope = this,
+            relay = RelayOptions(plugFactory = { _, _ -> MemoryPlug() }),
+        )
+
+        coroutineScope {
+            val live = live()
+            live.startSyncIfConfigured()
+            live.setBackend(SyncBackend.None)
+        }
+        replica.hasSynced(leftover) shouldBe false
+        replica.hasSynced(folder) shouldBe true
+        replica.hasSynced(relayA) shouldBe true
+
+        coroutineScope {
+            val live = live()
+            live.setBackend(SyncBackend.Relay("https://b.example"))
+            live.setBackend(SyncBackend.None)
+        }
+        replica.hasSynced(relayA) shouldBe false
+        replica.hasSynced(folder) shouldBe true
+    }
+
+    "a destination's plug ID is its type and address; an S3 prefix is normalised as the plug uses it" {
+        SyncBackend.None.plugId().shouldBeNull()
+        SyncBackend.Folder("content://f").plugId() shouldBe PlugId("folder:content://f")
+        SyncBackend.Relay("https://r").plugId() shouldBe PlugId("relay:https://r")
+        val s3 = SyncBackend.S3("https://e", "auto", "b", "/todo/", "AKID")
+        s3.plugId() shouldBe PlugId("s3:https://e/b/todo/")
+        s3.copy(prefix = "todo").plugId() shouldBe s3.plugId()
+        s3.copy(bucket = " ").plugId().shouldBeNull()
     }
 })

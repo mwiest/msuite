@@ -90,3 +90,19 @@ UPDATE unconfirmed_publish SET misses = misses + 1 WHERE plug = ? AND batch_key 
 
 deleteUnconfirmed:
 DELETE FROM unconfirmed_publish WHERE plug = ? AND batch_key = ?;
+
+-- Every plug with bookkeeping in any table.
+plugs:
+SELECT plug FROM ingested_batch
+UNION SELECT plug FROM unreadable_batch
+UNION SELECT plug FROM plug_watermark
+UNION SELECT plug FROM unconfirmed_publish;
+
+forgetIngested:
+DELETE FROM ingested_batch WHERE plug = ?;
+
+forgetUnreadable:
+DELETE FROM unreadable_batch WHERE plug = ?;
+
+forgetUnconfirmed:
+DELETE FROM unconfirmed_publish WHERE plug = ?;
