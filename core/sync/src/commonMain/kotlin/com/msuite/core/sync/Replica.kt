@@ -69,7 +69,7 @@ class Replica private constructor(
     /** Merges [batch], fetched from [plug] under [batchKey]; a key ingested before is skipped. */
     suspend fun ingest(plug: PlugId, batchKey: String, batch: Batch): IngestResult = serialized {
         if (store.plugs.isIngested(plug, batchKey)) return@serialized IngestResult.Merged(emptyList())
-        mergeLocked(batch).also { result ->
+        mergeLocked(batch, from = plug).also { result ->
             if (result is IngestResult.Merged) store.plugs.markIngested(plug, batchKey)
         }
     }
@@ -93,7 +93,7 @@ class Replica private constructor(
     }
 
     /** Merges [batch] with no plug bookkeeping: the manual snapshot path (decision 0066). */
-    suspend fun mergeRemote(batch: Batch): IngestResult = serialized { mergeLocked(batch) }
+    suspend fun mergeRemote(batch: Batch): IngestResult = serialized { mergeLocked(batch, from = null) }
 
     /**
      * Whether [plug] has listed something for this device before: a batch was ingested from it, or
@@ -174,11 +174,18 @@ class Replica private constructor(
 
     override fun close() = store.close()
 
-    /** Merges under the lock, ticking when something changed; no plug bookkeeping. */
-    private fun mergeLocked(batch: Batch): IngestResult {
+    /**
+     * Merges under the lock, ticking when something changed. Every plug but [from] gets its
+     * watermark moved below the changed cells: a delta sends only cells above it, so a cell older
+     * than a plug's watermark that arrived from elsewhere would never reach that plug.
+     */
+    private fun mergeLocked(batch: Batch, from: PlugId?): IngestResult {
         val result = ingest(batch, store::cell, clock)
         if (result is IngestResult.Merged && result.changes.isNotEmpty()) {
             store.write(result.changes)
+            val oldest = result.changes.minOf { it.stamp.hlc }
+            val below = if (oldest == Hlc.ZERO) null else Hlc.fromPacked(oldest.packed - 1)
+            store.plugs.watermarkedPlugs().filter { it != from }.forEach { store.rewindWatermark(it, below) }
             ticks.update { it + 1 }
         }
         return result

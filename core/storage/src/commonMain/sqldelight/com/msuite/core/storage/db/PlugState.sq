@@ -47,6 +47,9 @@ SELECT hlc FROM plug_watermark WHERE plug = ?;
 setWatermark:
 INSERT OR REPLACE INTO plug_watermark VALUES (?, ?);
 
+watermarkedPlugs:
+SELECT plug FROM plug_watermark;
+
 -- Get all ingested batch keys for a plug (for pruning)
 ingestedKeys:
 SELECT batch_key FROM ingested_batch WHERE plug = ?;

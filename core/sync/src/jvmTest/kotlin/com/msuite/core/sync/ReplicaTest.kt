@@ -15,6 +15,7 @@ import com.msuite.core.sync.testing.TestClock
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
@@ -167,6 +168,48 @@ class ReplicaTest : StringSpec({
         val second = replica.write(mapOf(key(2) to byteArrayOf(2)))
         replica.delta(folder).shouldNotBeNull().cells shouldContainExactly second
         replica.delta(relay).shouldNotBeNull().cells shouldContainExactlyInAnyOrder first + second
+    }
+
+    "a cell ingested from one plug, older than another plug's watermark, goes into that plug's next delta" {
+        val replica = Replica(driver(), deviceA, TestClock(1_000))
+        replica.write(mapOf(key(1) to byteArrayOf(1)))
+        replica.pushed(relay, replica.delta(relay).shouldNotBeNull())
+        val older = remote(2, 500)
+        replica.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(older)))
+        replica.delta(relay).shouldNotBeNull().cells.map { it.key } shouldContain older.key
+        replica.delta(folder).shouldNotBeNull()
+        replica.canRecover(relay) shouldBe true
+    }
+
+    "an ingest leaves its own plug's watermark alone" {
+        val replica = Replica(driver(), deviceA, TestClock(1_000))
+        replica.write(mapOf(key(1) to byteArrayOf(1)))
+        replica.pushed(folder, replica.delta(folder).shouldNotBeNull())
+        replica.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(2, 500))))
+        replica.delta(folder).shouldBeNull()
+    }
+
+    "a manual merge rewinds every plug's watermark below the cells it changed" {
+        val replica = Replica(driver(), deviceA, TestClock(1_000))
+        replica.write(mapOf(key(1) to byteArrayOf(1)))
+        val delta = replica.delta(folder).shouldNotBeNull()
+        replica.pushed(folder, delta)
+        replica.pushed(relay, delta)
+        val older = remote(2, 500)
+        replica.mergeRemote(Batch(Model.DATA_MODEL_VERSION, listOf(older)))
+        replica.delta(folder).shouldNotBeNull().cells.map { it.key } shouldContain older.key
+        replica.delta(relay).shouldNotBeNull().cells.map { it.key } shouldContain older.key
+    }
+
+    "a merge that changes nothing, or only cells above a watermark, keeps it" {
+        val replica = Replica(driver(), deviceA, TestClock(1_000))
+        replica.write(mapOf(key(1) to byteArrayOf(1)))
+        replica.pushed(relay, replica.delta(relay).shouldNotBeNull())
+        replica.ingest(folder, "k1", Batch(Model.DATA_MODEL_VERSION, listOf(remote(1, 500))))
+        replica.delta(relay).shouldBeNull()
+        val newer = remote(2, 1_500)
+        replica.ingest(folder, "k2", Batch(Model.DATA_MODEL_VERSION, listOf(newer)))
+        replica.delta(relay).shouldNotBeNull().cells shouldContainExactly listOf(newer)
     }
 
     "two replicas converge through their databases" {

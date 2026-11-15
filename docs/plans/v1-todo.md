@@ -184,9 +184,9 @@ Collected 2026-11-13 from the old `todo.md` and the S3 device check.
 - [x] Tasks: sync with a pull-down gesture
 - [x] Tasks: scroll to the top after adding a task
 - [x] Tasks: order done tasks by completion time, newest first (`451ba18`, decision 0088)
-- [ ] Sync: a cell merged from elsewhere (another plug, a manual import) with an HLC at or below a
+- [x] Sync: a cell merged from elsewhere (another plug, a manual import) with an HLC at or below a
   plug's watermark never reaches that plug, e.g. on switching back from Dropbox to S3; rewind every
-  other plug's watermark below the merged cells
+  other plug's watermark below the merged cells (decision 0089)
 - [ ] Sync: bookkeeping of forgotten destinations stays (`plug_watermark`, `ingested_batch`,
   `unreadable_batch`, `unconfirmed_publish` rows of an old folder, relay or prefix). A destination
   is forgotten when one of its identifiers changes or is emptied (there is no "forget" button);

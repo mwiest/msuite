@@ -62,6 +62,7 @@ class LocalStore(private val driver: SqlDriver) : AutoCloseable {
     }
 }
 
+@Suppress("TooManyFunctions") // One facade over the per-plug tables; each function is one query.
 class PlugBook internal constructor(private val queries: PlugStateQueries) {
     fun isIngested(plug: PlugId, batchKey: String): Boolean = queries.isIngested(plug.id, batchKey).executeAsOne()
 
@@ -96,6 +97,9 @@ class PlugBook internal constructor(private val queries: PlugStateQueries) {
     fun clearWatermark(plug: PlugId) {
         queries.clearWatermark(plug.id)
     }
+
+    /** Every plug this device has pushed to. */
+    fun watermarkedPlugs(): List<PlugId> = queries.watermarkedPlugs().executeAsList().map(::PlugId)
 
     /** Get all ingested batch keys for a plug (for pruning). */
     fun ingestedKeys(plug: PlugId): List<String> = queries.ingestedKeys(plug.id).executeAsList()

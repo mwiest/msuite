@@ -112,7 +112,9 @@ in the client.
   that plug, and writes the winners and marks the key in one transaction. A delta is built from
   the plug's watermark, which moves on `pushed`; a published key stays unconfirmed until a listing
   shows it, and one missing from `MAX_CONFIRM_MISSES` listings rewinds the watermark so its cells
-  are sent again (decision 0077). Every operation holds a coroutine `Mutex` and
+  are sent again (decision 0077). A merge that changes cells moves every other plug's watermark
+  below the oldest changed cell, and a manual import moves every plug's, so cells that arrived
+  from elsewhere reach each plug this device has pushed to (decision 0089). Every operation holds a coroutine `Mutex` and
   runs in one transaction, in the replica's coroutine context (default `Dispatchers.Default`, so
   the blocking driver stays off the UI thread, decision 0059). The app opens one replica per database and writes only through it;
   the mutex doesn't cover a second one. `changes`, a `StateFlow`, ticks after each committed write
