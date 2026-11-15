@@ -1,5 +1,6 @@
 package com.msuite.todo
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,7 +34,6 @@ import com.msuite.todo.domain.SyncBackend
 import com.msuite.todo.domain.SyncStatus
 import com.msuite.todo.resources.Res
 import com.msuite.todo.resources.cancel
-import com.msuite.todo.resources.folder_clear
 import com.msuite.todo.resources.folder_looks_empty
 import com.msuite.todo.resources.folder_pick
 import com.msuite.todo.resources.folder_pick_continue
@@ -137,10 +137,6 @@ fun SyncBackendSection(live: LiveSyncActions) {
                 folder = selected,
                 busy = busy,
                 onPick = { showPickDialog = true },
-                onClear = {
-                    choice = SyncBackend.None
-                    live.setBackend(SyncBackend.None)
-                },
                 onSync = {
                     scope.launch {
                         busy = true
@@ -250,13 +246,7 @@ private fun BackendOption(label: StringResource, selected: Boolean, onSelect: ()
 }
 
 @Composable
-private fun FolderDetails(
-    folder: SyncBackend.Folder,
-    busy: Boolean,
-    onPick: () -> Unit,
-    onClear: () -> Unit,
-    onSync: () -> Unit,
-) {
+private fun FolderDetails(folder: SyncBackend.Folder, busy: Boolean, onPick: () -> Unit, onSync: () -> Unit) {
     Text(stringResource(Res.string.folder_sync_configured), style = MaterialTheme.typography.bodyMedium)
     if (folder.uri.isNotEmpty()) {
         Text(
@@ -266,14 +256,11 @@ private fun FolderDetails(
             modifier = Modifier.padding(bottom = 8.dp),
         )
     }
-    Row {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(enabled = !busy, onClick = onPick) {
             Text(stringResource(Res.string.folder_pick))
         }
         if (folder.uri.isNotEmpty()) {
-            TextButton(enabled = !busy, onClick = onClear) {
-                Text(stringResource(Res.string.folder_clear))
-            }
             Button(enabled = !busy, onClick = onSync) {
                 Text(stringResource(Res.string.sync_now))
             }

@@ -148,7 +148,7 @@ class LiveSyncActionsTest : StringSpec({
             live.status.value.failing shouldBe false
             live.status.value.lastSync.shouldNotBeNull()
 
-            live.clearFolder()
+            live.setBackend(SyncBackend.None)
         }
     }
 

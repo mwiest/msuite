@@ -159,9 +159,6 @@ class LiveSyncActions(
         setBackend(SyncBackend.Folder(uri))
     }
 
-    /** Clears the backend and stops the sync. */
-    fun clearFolder() = setBackend(SyncBackend.None)
-
     /**
      * Chooses one backend, stopping the previous one first (plan v1 step 9). Leaving S3 keeps its
      * secret wrapped, so switching back needs nothing typed.
